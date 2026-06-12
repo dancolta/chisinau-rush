@@ -1,0 +1,18 @@
+{
+  "name": "chisinau-rush-2d",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Chișinău Rush — 16-bit pixel-art top-down arcade game (Phaser 3). Phase 0 / Act 1: Centru.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173"
+  },
+  "dependencies": {
+    "phaser": "^3.80.1"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}
