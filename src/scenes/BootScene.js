@@ -43,6 +43,9 @@ export default class BootScene extends Phaser.Scene {
     this.makeNPCs()
     this.makeCollectibles()
     this.makeMarker()
+    this.makeTopCars()
+    this.makeCivilians()
+    this.makeQuestIcon()
     // Residential
     this.makeKhrushchyovka()
     this.makeScanlines()
@@ -745,6 +748,56 @@ export default class BootScene extends Phaser.Scene {
       g.fillStyle(0xffd24a, 1); g.fillTriangle(2, 2, 12, 2, 7, 16)
       g.fillStyle(0xfff0b0, 1); g.fillTriangle(4, 3, 8, 3, 6, 9)
       g.fillStyle(0x8f2f1f, 1); g.fillRect(6, 2, 2, 2)
+    })
+  }
+
+  // top-down (roof view) cars that rotate 360° — for the player-driven car
+  makeTopCar(key, body, roof) {
+    const W = 24, H = 40
+    this.tex(key, W, H, (g) => {
+      g.fillStyle(0x000000, 0.16); g.fillEllipse(W / 2, H / 2 + 1, W - 2, H - 4)
+      g.fillStyle(0x141417, 1); g.fillRect(1, 9, 4, 8); g.fillRect(W - 5, 9, 4, 8); g.fillRect(1, H - 17, 4, 8); g.fillRect(W - 5, H - 17, 4, 8) // wheels
+      g.fillStyle(body, 1); g.fillRect(3, 3, W - 6, H - 6)              // body (front = top)
+      g.fillStyle(0xffffff, 0.14); g.fillRect(3, 3, 4, H - 6)
+      g.fillStyle(0x000000, 0.12); g.fillRect(W - 7, 3, 4, H - 6)
+      g.fillStyle(roof, 1); g.fillRect(5, 12, W - 10, 16)              // cabin
+      g.fillStyle(0x2a3a4a, 1); g.fillRect(6, 9, W - 12, 4); g.fillRect(6, 27, W - 12, 4) // windshield + rear
+      g.fillStyle(0x9ec0dc, 0.5); g.fillRect(6, 9, W - 12, 1)
+      g.fillStyle(0xffe08a, 1); g.fillRect(4, 3, 3, 2); g.fillRect(W - 7, 3, 3, 2) // headlights (front)
+      g.fillStyle(0xcc3b30, 1); g.fillRect(4, H - 5, 3, 2); g.fillRect(W - 7, H - 5, 3, 2) // taillights
+    })
+  }
+
+  makeTopCars() {
+    this.makeTopCar('topcar_sedan', 0xb23b3b, 0x8f2f2f)
+    this.makeTopCar('topcar_cayenne', 0x2f5bb0, 0x244a8f)
+    this.makeTopCar('topcar_gwagon', 0x26262a, 0x15151a)
+    this.makeTopCar('topcar_cruiser', 0x2f6b3a, 0x245530)
+  }
+
+  // colour-varied civilians (front-facing) for street life
+  makeCivilians() {
+    const base = [
+      '....hhhh....', '...hhhhhh...', '...hssssh...', '...hssssh...',
+      '...kssssk...', '....ssss....', '...bbbbbb...', '..bbbbbbbb..',
+      '..sbbbbbbs..', '..sbbbbbbs..', '...bbbbbb...', '...pppppp...',
+      '...pp..pp...', '...pp..pp...', '...oo..oo...', '...oo..oo...',
+    ]
+    const pals = [
+      { h: 0x3a2a1a, b: 0x9a2f2f, p: 0x33343d }, { h: 0x6b4a2f, b: 0x2f7d5c, p: 0x2a2a33 },
+      { h: 0x1a1a1a, b: 0xe6b800, p: 0x33343d }, { h: 0x8a8a8a, b: 0x4a6b82, p: 0x2a2a33 },
+      { h: 0x5a3a22, b: 0x7a4f9a, p: 0x33343d }, { h: 0x3a2a1a, b: 0xcfd6dd, p: 0x2a3a4a },
+      { h: 0xa05a2a, b: 0xc3812d, p: 0x33343d }, { h: 0x2a2a2a, b: 0x2f5bb0, p: 0x232a44 },
+    ]
+    pals.forEach((p, i) => this.drawGrid('npc_c' + i, base, { h: p.h, s: 0xe8b894, k: 0x2a2024, b: p.b, p: p.p, o: 0x1a1a1f }))
+  }
+
+  makeQuestIcon() {
+    this.tex('questicon', 12, 16, (g) => {
+      g.fillStyle(0x10121a, 0.9); g.fillRect(1, 0, 10, 11)
+      g.fillStyle(0xffd24a, 1); g.fillRect(2, 1, 8, 9)
+      g.fillStyle(0x10121a, 1); g.fillRect(5, 2, 2, 4); g.fillRect(5, 7, 2, 2) // "!"
+      g.fillStyle(0xffd24a, 1); g.fillTriangle(4, 10, 8, 10, 5, 15)            // tail
     })
   }
 

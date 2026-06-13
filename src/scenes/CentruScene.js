@@ -265,14 +265,16 @@ export default class CentruScene extends Phaser.Scene {
     vstop(VX[4] - VHALF - SW - 12, 760, false, 'Stadionul Republican')
 
     const veh = (key, x, vx) => {
-      const lane = vx > 0 ? ROAD_Y - 20 : ROAD_Y + 36 // eastbound north lane / westbound south lane
-      const s = this.add.image(x, lane, key).setOrigin(0.5, 1)
-      s.vx = vx; s.setFlipX(vx < 0); s.setDepth(lane)
+      const lane = vx > 0 ? ROAD_Y - 22 : ROAD_Y + 30 // eastbound north lane / westbound south lane
+      const s = this.add.image(x, lane, key)
+      if (key.startsWith('topcar')) { s.setOrigin(0.5, 0.5); s.setRotation(vx > 0 ? Math.PI / 2 : -Math.PI / 2) }
+      else { s.setOrigin(0.5, 1); s.setFlipX(vx < 0) } // bus/trolley stay side-view
+      s.vx = vx; s.setDepth(lane)
       this.traffic.push(s)
     }
     veh('trolleybus', 200, 62); veh('trolleybus', 1500, 70); veh('bus', 2300, -78)
-    // 3D-style cars, many models
-    const styles = ['car_sedan', 'car_cayenne', 'car_gwagon', 'car_cruiser', 'car_logan']
+    // top-down cars (match the player car), many models
+    const styles = ['topcar_sedan', 'topcar_cayenne', 'topcar_gwagon', 'topcar_cruiser']
     let si = 0
     const carVeh = (x, vx) => veh(styles[si++ % styles.length], x, vx)
     carVeh(500, 100); carVeh(1000, 135); carVeh(2050, 90)
@@ -436,6 +438,13 @@ export default class CentruScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-THREE', () => this.copChoice(3))
     this.syncHud()
     this.registry.set('mission', 'Vorbește cu Baba Zina (E) ca să începi.')
+    // minimap data
+    this.registry.set('mapMeta', { ww: WORLD_W, wh: WORLD_H, roadY: ROAD_Y })
+    this.registry.set('mapStatic', [
+      { x: 1310, y: 965 }, { x: 1360, y: 1176 }, { x: 1360, y: 1504 },
+      { x: 560, y: BD_TOP }, { x: 900, y: BD_TOP }, { x: 1860, y: BD_TOP }, { x: 2300, y: BD_TOP },
+      { x: 1690, y: 1180 }, { x: COLS[5].cx, y: 1300 }, { x: COLS[6].cx, y: 1220 },
+    ])
   }
 
   buildFoodSpots() {
@@ -470,16 +479,53 @@ export default class CentruScene extends Phaser.Scene {
 
   buildEnterCars() {
     this.enterCars = []
-    ;[[760, 'car_sedan'], [1120, 'car_cayenne'], [1620, 'car_gwagon'], [2000, 'car_cruiser']].forEach(([x, key]) => {
-      const s = this.add.image(x, BD_TOP + 18, key).setOrigin(0.5, 1).setDepth(BD_TOP + 18)
+    ;[[760, 'topcar_sedan'], [1120, 'topcar_cayenne'], [1620, 'topcar_gwagon'], [2000, 'topcar_cruiser']].forEach(([x, key]) => {
+      const s = this.add.image(x, BD_TOP + 30, key).setOrigin(0.5, 0.5).setDepth(BD_TOP + 30)
+      s.setRotation(Math.PI / 2) // parked along the curb
       this.enterCars.push(s)
     })
   }
 
   buildNPCs() {
+    // quest giver — clearly marked
     this.zina = this.add.image(1250, BD_BOT + 74, 'npc_zina').setOrigin(0.5, 1).setDepth(BD_BOT + 74)
-    this.add.image(640, BD_TOP - 14, 'npc_cop').setOrigin(0.5, 1).setDepth(BD_TOP - 14) // ambient cop
+    this.landmarks.push({ x: this.zina.x, y: this.zina.y - 6, name: 'Baba Zina', desc: 'Pensionară, știe tot cartierul. Vorbește cu ea (E).' })
+    this.zinaIcon = this.add.image(this.zina.x, this.zina.y - 38, 'questicon').setOrigin(0.5, 1).setDepth(99970)
+
+    // named locals (Moldovan name + profession) — flavour, approach/click to read
+    const locals = [
+      ['npc_c0', 320, 960, 'Vasile Lupu', 'taximetrist'],
+      ['npc_c1', 980, 1120, 'Maria Ciobanu', 'vânzătoare'],
+      ['npc_c2', 1500, 960, 'Tudor Postolache', 'profesor'],
+      ['npc_c3', 2000, 1120, 'Aurel Cebotari', 'pensionar'],
+      ['npc_c4', 560, 1120, 'Veronica Bivol', 'doctoriță'],
+      ['npc_c5', 1700, 1120, 'Mihai Cojocaru', 'șofer de troleibuz'],
+      ['npc_c6', 1180, 960, 'Nadejda Rusu', 'bibliotecară'],
+      ['npc_c7', 2250, 960, 'Dorel Bostan', 'instalator'],
+      ['npc_c1', 1760, 1360, 'Liuba Catană', 'bucătăreasă'],
+      ['npc_c5', 560, 800, 'Ștefan Gîrbu', 'student'],
+      ['npc_c4', 960, 800, 'Valentina Moraru', 'florăreasă'],
+      ['npc_c2', 2500, 1300, 'Grigore Ursu', 'hamal la Piață'],
+    ]
+    locals.forEach(([key, x, y, name, prof]) => {
+      this.add.image(x, y, key).setOrigin(0.5, 1).setDepth(y)
+      this.landmarks.push({ x, y: y - 6, name, desc: `${prof} · localnic din Centru` })
+    })
+
+    // visible policemen (named) at key spots
+    const cops = [
+      [1310, BD_TOP - 14, 'Sergent Petru Sîrbu', 'la Casa Guvernului'],
+      [1860, BD_TOP - 14, 'Caporal Ion Bejan', 'la Parlament'],
+      [760, BD_BOT + 16, 'Sergent Radu Cazacu', 'la trecere'],
+      [1760, BD_BOT + 16, 'Plutonier Oleg Rusu', 'la Grădina Publică'],
+    ]
+    cops.forEach(([x, y, name, where]) => {
+      this.add.image(x, y, 'npc_cop').setOrigin(0.5, 1).setDepth(y)
+      this.landmarks.push({ x, y: y - 6, name, desc: `Polițist ${where}.` })
+    })
+
     this.marker = this.add.image(0, 0, 'marker').setOrigin(0.5, 1).setDepth(99980).setVisible(false)
+    this.copSprite = this.add.image(0, 0, 'npc_cop').setOrigin(0.5, 1).setDepth(99975).setVisible(false)
   }
 
   syncHud() {
@@ -503,6 +549,7 @@ export default class CentruScene extends Phaser.Scene {
 
   enterCar(carSprite) {
     this.state.driving = true; this.car = carSprite
+    this.car.speed = 0; this.car.heading = carSprite.rotation || Math.PI / 2 // start facing along the curb
     this.ion.setVisible(false); this.ion.body.enable = false
     this.cameras.main.startFollow(this.car, true, 0.12, 0.12)
     this.toast('Ai urcat în mașină. WASD conduce, E coboară.')
@@ -567,10 +614,24 @@ export default class CentruScene extends Phaser.Scene {
   startCopStop() {
     this.cop = true
     this.copBribe = 20 + Math.round(this.state.heat / 3)
-    if (this.car) this.car.vx = 0
+    if (this.car) this.car.speed = 0
+    const openers = [
+      'Sergent Sîrbu: Bună ziua. Documentele... știți de ce v-am oprit?',
+      'Sergent Sîrbu: Băi, șefu, încotro așa grăbit? Hai actele.',
+      'Sergent Sîrbu: Ai cam zburat pe bulevard. De ce încălcăm?',
+      'Sergent Sîrbu: Control de rutină. Văd că ne grăbim tare...',
+    ]
+    const q = openers[Math.floor(Math.random() * openers.length)]
+    if (this.car && this.copSprite) {
+      this.copSprite.setPosition(this.car.x + 26, this.car.y + 4).setVisible(true).setDepth(this.car.y + 2)
+    }
     this.registry.set('cop', {
-      q: 'Polițistul: De ce încălcăm?',
-      opts: [`1 · Mită  (-${this.copBribe} lei)`, '2 · Vorbește', '3 · Fugi'],
+      q,
+      opts: [
+        `1 · Mită — „pentru cafea, șefu"  (-${this.copBribe} lei)`,
+        '2 · Vorbește frumos — „n-am văzut semnul"  (riști amendă)',
+        '3 · Calci pedala și fugi  (+cred, dar te caută)',
+      ],
     })
   }
 
@@ -588,6 +649,7 @@ export default class CentruScene extends Phaser.Scene {
     }
     this.cop = false
     this.copGrace = this.time.now + 6000 // no back-to-back stops
+    if (this.copSprite) this.copSprite.setVisible(false)
     this.registry.set('cop', null)
     this.syncHud()
   }
@@ -616,26 +678,30 @@ export default class CentruScene extends Phaser.Scene {
   }
 
   driveCar(d) {
-    const k = this.keys, c = this.cursors
-    const fast = k.SHIFT.isDown
-    const speed = fast ? 360 : 230
-    let vx = 0, vy = 0
-    if (k.A.isDown || c.left.isDown) vx -= 1
-    if (k.D.isDown || c.right.isDown) vx += 1
-    if (k.W.isDown || c.up.isDown) vy -= 1
-    if (k.S.isDown || c.down.isDown) vy += 1
-    const v = new Phaser.Math.Vector2(vx, vy)
-    if (v.length() > 0) {
-      v.normalize().scale(speed * d)
-      const nx = Phaser.Math.Clamp(this.car.x + v.x, 20, WORLD_W - 20)
-      const ny = Phaser.Math.Clamp(this.car.y + v.y, 20, WORLD_H - 20)
-      if (!this.blocked(nx, this.car.y)) this.car.x = nx // slide on X
-      if (!this.blocked(this.car.x, ny)) this.car.y = ny // slide on Y (buildings block)
-      if (vx < 0) this.car.setFlipX(true); else if (vx > 0) this.car.setFlipX(false)
-      this.moving = fast ? 2 : 1
-    } else { this.moving = 0 }
-    this.car.setDepth(this.car.y)
-    this.ion.setPosition(this.car.x, this.car.y)
+    const k = this.keys, c = this.cursors, car = this.car
+    // car-like steering: W/S throttle, A/D steer, rotates 360°
+    const throttle = ((k.W.isDown || c.up.isDown) ? 1 : 0) - ((k.S.isDown || c.down.isDown) ? 1 : 0)
+    const steer = ((k.D.isDown || c.right.isDown) ? 1 : 0) - ((k.A.isDown || c.left.isDown) ? 1 : 0)
+    const accel = 460, maxF = (k.SHIFT.isDown ? 380 : 300), maxR = -130, turn = 3.0
+    car.speed += throttle * accel * d
+    if (throttle === 0) car.speed *= 0.93 // drag
+    car.speed = Phaser.Math.Clamp(car.speed, maxR, maxF)
+    if (Math.abs(car.speed) > 6) {
+      const grip = Math.min(1, Math.abs(car.speed) / 130) // can't spin in place; turn scales with speed
+      car.heading += steer * turn * d * grip * (car.speed >= 0 ? 1 : -1)
+    }
+    const vx = Math.sin(car.heading) * car.speed
+    const vy = -Math.cos(car.heading) * car.speed
+    const nx = Phaser.Math.Clamp(car.x + vx * d, 20, WORLD_W - 20)
+    const ny = Phaser.Math.Clamp(car.y + vy * d, 20, WORLD_H - 20)
+    let hit = false
+    if (!this.blocked(nx, car.y)) car.x = nx; else hit = true
+    if (!this.blocked(car.x, ny)) car.y = ny; else hit = true
+    if (hit) car.speed *= 0.35 // bump
+    car.rotation = car.heading
+    car.setDepth(car.y)
+    this.moving = Math.abs(car.speed) > 210 ? 2 : (Math.abs(car.speed) > 12 ? 1 : 0)
+    this.ion.setPosition(car.x, car.y)
   }
 
   updateTraffic(dt) {
@@ -719,13 +785,19 @@ export default class CentruScene extends Phaser.Scene {
 
   updateMarker() {
     const m = this.state.mission
+    const bob = Math.sin(this.time.now / 250) * 4
     let target = null
     if (m === 1) target = this.breadTarget
     else if (m === 2) target = this.zina
-    if (target) {
-      const bob = Math.sin(this.time.now / 250) * 4
-      this.marker.setVisible(true).setPosition(target.x, target.y - 44 + bob).setDepth(99980)
-    } else this.marker.setVisible(false)
+    this.curTarget = target
+    if (target) this.marker.setVisible(true).setPosition(target.x, target.y - 44 + bob).setDepth(99980)
+    else this.marker.setVisible(false)
+    // quest "!" floats over Baba Zina whenever she has something for you
+    if (this.zinaIcon) {
+      const show = (m === 0 || m === 2)
+      this.zinaIcon.setVisible(show)
+      if (show) this.zinaIcon.setPosition(this.zina.x, this.zina.y - 38 + bob)
+    }
   }
 
   update(t, dt) {
@@ -739,5 +811,12 @@ export default class CentruScene extends Phaser.Scene {
     this.updateSurvival(d)
     this.updateMarker()
     this.updateNameplate()
+    const ex = this.state.driving ? this.car.x : this.ion.x
+    const ey = this.state.driving ? this.car.y : this.ion.y
+    this.registry.set('mapDyn', {
+      px: ex, py: ey,
+      tx: this.curTarget ? this.curTarget.x : null, ty: this.curTarget ? this.curTarget.y : null,
+      zx: this.zina.x, zy: this.zina.y,
+    })
   }
 }

@@ -57,6 +57,10 @@ export default class UiScene extends Phaser.Scene {
     // CRT
     this.crt = this.add.tileSprite(0, 0, W, H, 'scan').setOrigin(0).setAlpha(0.16)
 
+    // minimap
+    this.mapG = this.add.graphics().setDepth(50)
+    this.mapLabel = this.add.text(0, 0, 'HARTĂ', { fontFamily: F, fontSize: '9px', color: '#aeb5c0' }).setOrigin(0, 1).setDepth(51)
+
     this.scale.on('resize', (gs) => this.relayout(gs.width, gs.height))
   }
 
@@ -113,5 +117,31 @@ export default class UiScene extends Phaser.Scene {
     if (on) { this.copQ.setText(cop.q); this.copOpts.setText(cop.opts.join('\n')) }
 
     this.crt.setVisible(this.registry.get('crt') !== false)
+    this.drawMinimap()
+  }
+
+  drawMinimap() {
+    const meta = this.registry.get('mapMeta')
+    if (!meta) return
+    const g = this.mapG; g.clear()
+    const W = this.scale.width, H = this.scale.height
+    const mw = 150, mh = Math.round(mw * meta.wh / meta.ww)
+    const x0 = W - mw - 10, y0 = H - mh - 10
+    this.mapLabel.setPosition(x0, y0 - 3)
+    g.fillStyle(0x10121a, 0.74); g.fillRect(x0 - 2, y0 - 2, mw + 4, mh + 4)
+    g.lineStyle(1, 0x4a515c, 1); g.strokeRect(x0 - 2, y0 - 2, mw + 4, mh + 4)
+    g.fillStyle(0x274d2a, 0.7); g.fillRect(x0, y0, mw, mh)
+    const sx = mw / meta.ww, sy = mh / meta.wh
+    g.lineStyle(2, 0x3a3e46, 1); g.beginPath(); g.moveTo(x0, y0 + meta.roadY * sy); g.lineTo(x0 + mw, y0 + meta.roadY * sy); g.strokePath()
+    const stat = this.registry.get('mapStatic') || []
+    g.fillStyle(0xcdd2dc, 1); stat.forEach((p) => g.fillRect(x0 + p.x * sx - 1, y0 + p.y * sy - 1, 3, 3))
+    const dyn = this.registry.get('mapDyn'); if (!dyn) return
+    g.fillStyle(0xffd24a, 0.9); g.fillRect(x0 + dyn.zx * sx - 1, y0 + dyn.zy * sy - 1, 3, 3) // Baba Zina
+    if (dyn.tx != null) { // mission target, pulsing
+      const r = 2 + (Math.sin(this.time.now / 200) + 1) * 1.6
+      g.fillStyle(0xcc3b30, 1); g.fillCircle(x0 + dyn.tx * sx, y0 + dyn.ty * sy, r)
+    }
+    g.fillStyle(0x4caf50, 1); g.fillCircle(x0 + dyn.px * sx, y0 + dyn.py * sy, 3) // player
+    g.lineStyle(1, 0xffffff, 0.85); g.strokeCircle(x0 + dyn.px * sx, y0 + dyn.py * sy, 3)
   }
 }
