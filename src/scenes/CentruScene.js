@@ -636,6 +636,11 @@ export default class CentruScene extends Phaser.Scene {
       { x: 560, y: BD_TOP }, { x: 900, y: BD_TOP }, { x: 1860, y: BD_TOP }, { x: 2300, y: BD_TOP },
       { x: 1690, y: 1180 }, { x: COLS[5].cx, y: 1300 }, { x: COLS[6].cx, y: 1220 },
     ])
+    // one-time intro so the goal is clear from the start (fresh games only)
+    if (!this.registry.get('continueSave')) {
+      this.time.delayedCall(400, () => this.openDialog('Chișinău Rush',
+        'Ai venit înapoi în Chișinău. Scopul: să ajungi PRIMAR. Fă bani, adună amintiri și strânge 5 dovezi că Ceon Eban lucrează cu Moscova, apoi demască-l. Începe: vorbește cu Pensionara de pe bancă (apasă E).'))
+    }
   }
 
   buildFoodSpots() {
@@ -708,7 +713,7 @@ export default class CentruScene extends Phaser.Scene {
       ['npc_c7', 1920, 1480, 'Mecanicul din Garaj', 'Băi frate, motorul de Logan? Îi pun turbină, faci drift pe Dacia.'],
       ['npc_c1', 1620, 1480, 'Blogherița', 'Salutare, gașcă! Azi vă arăt cel mai aesthetic kofe din Chișinău, link în bio.'],
       ['npc_c6', 1480, 1180, 'Viticultorul', 'Gustă vinul, ăsta-i de Cricova, nu apă chioară. Da\' primarul ăla ascunde ceva.'],
-      ['npc_c2', 560, 690, 'Directorul de Fabrică', 'Hai să discutăm, băiete. O fabrică mică, nu contează care. Numerar, da?'],
+      ['npc_c2', 560, 690, 'Directorul de Fabrică', 'Hai să discutăm, băiete. O fabrică de mobilă, nu contează care. Numerar, da?'],
     ]
     cast.forEach(([key, x, y, label, line]) => {
       this.add.image(x, y, key).setOrigin(0.5, 1).setDepth(y)
@@ -739,7 +744,7 @@ export default class CentruScene extends Phaser.Scene {
     // Borea Țigan — trader living half-in a gropă (Grădina Publică)
     this.add.image(1860, 1450, 'gropa').setOrigin(0.5, 0.5).setDepth(1448)
     this.borea = this.add.image(1860, 1452, 'npc_borea').setOrigin(0.5, 1).setDepth(1452)
-    this.landmarks.push({ x: 1860, y: 1446, name: 'Negustorul', desc: 'Negustor. Trăiește jumate în gropă.' })
+    this.landmarks.push({ x: 1860, y: 1446, name: 'Borea Țigan', desc: 'Negustor. Trăiește jumate în gropă.' })
     this.boreaIcon = this.add.image(1860, 1416, 'questicon').setOrigin(0.5, 1).setDepth(99970).setVisible(false)
 
     // Primarul — satirical mayor at a permanent ribbon-cutting by Casa Guvernului
@@ -810,7 +815,7 @@ export default class CentruScene extends Phaser.Scene {
 
   menuData() {
     const s = this.state, r = this.ranks[this.rankIdx], next = this.ranks[this.rankIdx + 1]
-    const names = { zina: 'Pensionara', gopnik: 'Gopnicii', borea: 'Negustorul', cop: 'Plutonierul', homeless: 'Omul din Parc' }
+    const names = { zina: 'Pensionara', gopnik: 'Gopnicii', borea: 'Borea Țigan', cop: 'Plutonierul', homeless: 'Omul din Parc' }
     const clues = Object.keys(this.clues).map((k) => `${this.clues[k] ? '✔' : '✗'} ${names[k]}`).join('    ')
     return {
       name: this.playerName, type: this.playerTypeName,
@@ -872,7 +877,7 @@ export default class CentruScene extends Phaser.Scene {
   // ---- Borea Țigan — black market ---------------------------------------
   openBorea() {
     this.shopOpen = true
-    this.toast('Negustorul: Frate! Am tot ce-ți trebuie, da\' și ce nu-ți trebuie.')
+    this.toast('Borea: Frate! Am tot ce-ți trebuie, da\' și ce nu-ți trebuie.')
     this.renderShop()
   }
 
@@ -887,7 +892,7 @@ export default class CentruScene extends Phaser.Scene {
     if (!s.speedBoost) opts.push('5 · Tuning motor (-200 lei) — mașina zboară')
     if (!s.smuggling) opts.push('6 · Misiune: cară un PET baban (+lei)')
     opts.push('E · Pleacă')
-    this.registry.set('shop', { q: 'Negustorul: marfa-i curată, mai mult sau mai puțin. Ce iei?', opts })
+    this.registry.set('shop', { q: 'Borea: marfa-i curată, mai mult sau mai puțin. Ce iei?', opts })
   }
 
   closeShop() { this.shopOpen = false; this.registry.set('shop', null) }
@@ -915,7 +920,7 @@ export default class CentruScene extends Phaser.Scene {
   startSmuggle() {
     this.state.smuggling = true
     this.dropPoint = this.add.image(2500, 1300, 'marker').setOrigin(0.5, 1).setDepth(99950).setTint(0xff8a4a)
-    this.toast('Negustorul: cară babanul la gară. Fugi de gabori, auzi?')
+    this.toast('Borea: cară babanul la gară. Fugi de gabori, auzi?')
   }
 
   deliverSmuggle() {
@@ -923,8 +928,8 @@ export default class CentruScene extends Phaser.Scene {
     this.state.smuggling = false
     if (this.dropPoint) { this.dropPoint.destroy(); this.dropPoint = null }
     this.state.lei += 90; this.addCred(15); this.addXp(60)
-    this.toast('Livrat! +90 lei. Negustorul: un client din est tot întreabă de marfă... ceva cu telefoane rusești.')
-    if (this.cluesEnabled) this.addClue('borea', 'negustorul fence-uiește pentru un „client din est": telefoane rusești')
+    this.toast('Livrat! +90 lei. Borea: un client din est tot întreabă de marfă... ceva cu telefoane rusești.')
+    if (this.cluesEnabled) this.addClue('borea', 'Borea fence-uiește pentru un „client din est": telefoane rusești')
   }
 
   // ---- Potholes (civic) -------------------------------------------------
@@ -1124,8 +1129,8 @@ export default class CentruScene extends Phaser.Scene {
       s.mission = 3; s.lei += 30; s.score += 150; this.addXp(150)
       this.cluesEnabled = true; this.clues.zina = true; this.addCivic(12)
       if (this._homelessFlipped) this.addClue('homeless', 'matryoshka și un telefon rusesc în beciul primăriei') // recover an early flip
-      this.registry.set('mission', 'Dovezi: cursă cu gopnicii · afaceri cu negustorul · omul din parc · scapă de poliție.')
-      this.toast('Pensionara: mulțumesc! (+30 lei) Caută dovezi: gopnicii, negustorul, omul din parc, poliția...')
+      this.registry.set('mission', 'Strânge 4 dovezi (Esc = listă): cursă cu gopnicii · vinde la Borea · ascultă omul din parc · scapă de poliție.')
+      this.toast('Pensionara: mulțumesc! (+30 lei) Acuma strânge dovezi că Ceon Eban lucrează cu Moscova. Vezi lista cu Esc.')
       this.syncHud()
     } else if (s.mission === 1) {
       this.toast('Pensionara: pâinea, maică, de la Linella!')
@@ -1230,8 +1235,8 @@ export default class CentruScene extends Phaser.Scene {
     const nx = Phaser.Math.Clamp(car.x + vx * d, 20, WORLD_W - 20)
     const ny = Phaser.Math.Clamp(car.y + vy * d, 20, WORLD_H - 20)
     let hit = false
-    if (!this.blocked(nx, car.y)) car.x = nx; else hit = true
-    if (!this.blocked(car.x, ny)) car.y = ny; else hit = true
+    if (!this.blocked(nx, car.y) && !this.carHitsTraffic(nx, car.y)) car.x = nx; else hit = true
+    if (!this.blocked(car.x, ny) && !this.carHitsTraffic(car.x, ny)) car.y = ny; else hit = true
     if (hit) car.speed *= 0.35 // bump
     car.rotation = car.heading
     car.setDepth(car.y)
@@ -1251,7 +1256,27 @@ export default class CentruScene extends Phaser.Scene {
       v.x += v.vx * (dt / 1000)
       if (v.x > WORLD_W + 130) v.x = -130
       else if (v.x < -130) v.x = WORLD_W + 130
+      // if a bus catches the player's car, shove it aside instead of clipping through
+      if (this.state.driving && this.car) {
+        const b = v.getBounds()
+        if (this.car.x + 14 > b.x && this.car.x - 14 < b.right && this.car.y + 14 > b.y && this.car.y - 14 < b.bottom) {
+          this.car.x += Math.sign(v.vx || 1) * 3
+          this.car.y += this.car.y < (b.y + b.bottom) / 2 ? -2.5 : 2.5
+          this.car.speed *= 0.8
+          if (this.time.now > (this._busShakeT || 0)) { this._busShakeT = this.time.now + 350; this.cameras.main.shake(60, 0.003) }
+        }
+      }
     }
+  }
+
+  // a car-sized box at (x,y) overlapping any moving bus/trolley → blocks the move (no pass-through)
+  carHitsTraffic(x, y) {
+    if (!this.traffic) return false
+    for (const v of this.traffic) {
+      const b = v.getBounds()
+      if (x + 14 > b.x + 6 && x - 14 < b.right - 6 && y + 14 > b.y + 4 && y - 14 < b.bottom - 4) return true
+    }
+    return false
   }
 
   updatePickups() {
@@ -1316,7 +1341,7 @@ export default class CentruScene extends Phaser.Scene {
       else if (near.type === 'npc') prompt = `E: vorbește cu ${near.ref.name}`
       else if (near.type === 'om-befriend') prompt = 'E: dă bani (15) să-l calmezi · SPACE/click: lovește'
       else if (near.type === 'om-talk') prompt = 'E: ascultă profeția'
-      else if (near.type === 'borea') prompt = 'E: fă afaceri cu negustorul'
+      else if (near.type === 'borea') prompt = 'E: fă afaceri cu Borea'
       else if (near.type === 'gopnik') prompt = 'E: vorbește cu gopnicii (vino cu mașina pt. cursă)'
       else if (near.type === 'drop') prompt = 'E: livrează babanul'
       else if (near.type === 'pothole') prompt = 'E: astupă gropa (+civic)'

@@ -6,8 +6,8 @@ const F = 'monospace'
 export const TYPES = [
   { key: 'taxist', name: 'Taxistul', role: 'taxist', blurb: 'Logan vechi, dar știe fiecare groapă din Centru pe nume.', perk: 'Pornești cu mai mulți lei + bani din curse.' },
   { key: 'conductor', name: 'Conductorul', role: 'conductor pe ruta 11', blurb: 'Rupe biletul pe troleibuzul 22 cu autoritate.', perk: 'Lei pasivi încet + ție gratis troleibuzul.' },
-  { key: 'agent', name: 'Agentul Imobiliar', role: 'agent imobiliar', blurb: '„Studio cu amplasare reușită, euroreparat" = un balcon în Râșcani.', perk: 'Vinzi amintiri mai scump la negustor.' },
-  { key: 'director', name: 'Directorul de Fabrică', role: 'director de fabrică', blurb: 'O fabrică mică pe care n-o numește, BMW X6 cu numere de MD.', perk: 'Portmoneu mare la start.' },
+  { key: 'agent', name: 'Agentul Imobiliar', role: 'agent imobiliar', blurb: '„Studio cu amplasare reușită, euroreparat" = un balcon în Râșcani.', perk: 'Vinzi amintiri mai scump la Borea.' },
+  { key: 'director', name: 'Directorul de Fabrică', role: 'director de fabrică', blurb: 'O fabrică de mobilă pe care n-o numește, BMW X6 cu numere din Lituania.', perk: 'Portmoneu mare la start.' },
   { key: 'ionel', name: 'Venit din Briceni', role: 'venit din Briceni', blurb: 'A venit cu un sac de plăcinte de la mama. Tot e scump aici.', perk: 'Mai mult HP + foame mai lentă.' },
 ]
 
@@ -21,22 +21,24 @@ export default class CreateScene extends Phaser.Scene {
     this.add.text(W / 2, 40, 'CHIȘINĂU RUSH', { fontFamily: F, fontSize: '34px', color: '#ebc372' }).setOrigin(0.5)
     this.add.text(W / 2, 76, 'Cum te cheamă și cine ești, frate?', { fontFamily: F, fontSize: '14px', color: '#aeb5c0' }).setOrigin(0.5)
 
-    // name field (type with the keyboard)
-    this.pname = 'Ion'
-    this.add.text(W / 2 - 150, 108, 'Nume:', { fontFamily: F, fontSize: '14px', color: '#cdd2dc' }).setOrigin(0, 0.5)
-    this.add.rectangle(W / 2 + 30, 108, 220, 28, 0x0a0b10).setOrigin(0.5).setStrokeStyle(1, 0x4a515c)
-    this.nameText = this.add.text(W / 2 - 70, 108, this.pname, { fontFamily: F, fontSize: '15px', color: '#ffffff' }).setOrigin(0, 0.5)
+    // name field (starts EMPTY — type your own)
+    this.pname = ''
+    this.add.text(W / 2 - 150, 110, 'Nume:', { fontFamily: F, fontSize: '14px', color: '#cdd2dc' }).setOrigin(0, 0.5)
+    this.add.rectangle(W / 2 + 30, 110, 220, 28, 0x0a0b10).setOrigin(0.5).setStrokeStyle(1, 0x4a515c)
+    this.namePh = this.add.text(W / 2 - 70, 110, 'scrie un nume...', { fontFamily: F, fontSize: '14px', color: '#565d68' }).setOrigin(0, 0.5)
+    this.nameText = this.add.text(W / 2 - 70, 110, '', { fontFamily: F, fontSize: '15px', color: '#ffffff' }).setOrigin(0, 0.5)
     this.input.keyboard.on('keydown', (e) => {
       if (e.key === 'Backspace') this.pname = this.pname.slice(0, -1)
       else if (e.key === 'Enter') return this.confirm()
       else if (e.key.length === 1 && this.pname.length < 14 && /[\p{L}0-9 .'-]/u.test(e.key)) this.pname += e.key
-      this.nameText.setText(this.pname || '_')
+      this.nameText.setText(this.pname)
+      this.namePh.setVisible(!this.pname)
     })
 
-    // 5 type cards
+    // 5 type cards (clear gap below the name field)
     this.sel = 0
     this.cards = TYPES.map((t, i) => {
-      const y = 158 + i * 86
+      const y = 178 + i * 86
       const bg = this.add.rectangle(W / 2, y, 560, 78, 0x181a24, 1).setStrokeStyle(2, 0x2c323b).setInteractive({ useHandCursor: true })
       this.add.text(W / 2 - 264, y - 26, t.name, { fontFamily: F, fontSize: '15px', color: '#ebc372' }).setOrigin(0, 0)
       this.add.text(W / 2 - 264, y - 4, t.blurb, { fontFamily: F, fontSize: '12px', color: '#d7dce4', wordWrap: { width: 540 } }).setOrigin(0, 0)

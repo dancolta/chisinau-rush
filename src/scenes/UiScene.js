@@ -64,8 +64,8 @@ export default class UiScene extends Phaser.Scene {
     this.cluePips = []
     for (let i = 0; i < 5; i++) this.cluePips.push(this.add.rectangle(W - 71 + i * 12, 139, 9, 9, 0x2a3242).setOrigin(0).setStrokeStyle(1, 0x000000, 0.5))
 
-    // mission banner
-    this.missionText = this.add.text(8, 116, '', { fontFamily: F, fontSize: '12px', color: '#ebc372', backgroundColor: '#10121aCC', padding: { x: 6, y: 4 } }).setOrigin(0, 0)
+    // mission banner (clear gap below the vitals plate which ends at y130)
+    this.missionText = this.add.text(8, 144, '', { fontFamily: F, fontSize: '12px', color: '#ebc372', backgroundColor: '#10121aEE', padding: { x: 7, y: 5 } }).setOrigin(0, 0)
 
     // weapon chip (bottom-left)
     this.weaponText = this.add.text(8, 0, '', { fontFamily: F, fontSize: '10px', color: '#d7dce4', backgroundColor: '#10121aBB', padding: { x: 5, y: 3 } }).setOrigin(0, 1)
@@ -278,13 +278,15 @@ export default class UiScene extends Phaser.Scene {
     if (mission !== this._mission) { this._mission = mission; this.missionText.setText(mission ? '★ ' + mission : '') }
 
     const prompt = this.registry.get('prompt')
+    // hide the interaction prompt while any overlay is up, so it never overlaps the dialogue box
+    const overlayUp = this.registry.get('dialog') || this.registry.get('cop') || this.registry.get('shop') || this.registry.get('finale') || this.registry.get('charmenu')
     this.promptText.setText(prompt || '')
-    this.promptText.setAlpha(prompt ? 1 : 0)
+    this.promptText.setAlpha(prompt && !overlayUp ? 1 : 0)
 
     // toast (fades over ~2.6s)
     const toast = this.registry.get('toast')
     if (toast && toast.id !== this.toastId) { this.toastId = toast.id; this.toastText.setText(toast.msg); this.toastText.setAlpha(1); this._toastT = this.time.now }
-    if (this.toastText.alpha > 0 && this.time.now - this._toastT > 1600) this.toastText.setAlpha(Math.max(0, this.toastText.alpha - 0.04))
+    if (this.toastText.alpha > 0 && this.time.now - this._toastT > 3600) this.toastText.setAlpha(Math.max(0, this.toastText.alpha - 0.02))
 
     // landmark nameplate
     const lm = this.registry.get('nearLm')
