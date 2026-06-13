@@ -68,6 +68,10 @@ export default class UiScene extends Phaser.Scene {
     // CRT
     this.crt = this.add.tileSprite(0, 0, W, H, 'scan').setOrigin(0).setAlpha(0.16)
 
+    // win overlay
+    this.winDim = this.add.rectangle(0, 0, W, H, 0x0a0b10, 0.93).setOrigin(0).setDepth(60).setVisible(false)
+    this.winText = this.add.text(W / 2, H / 2, '', { fontFamily: F, fontSize: '16px', color: '#ebc372', align: 'center', lineSpacing: 8, wordWrap: { width: 540 } }).setOrigin(0.5).setDepth(61).setVisible(false)
+
     // minimap
     this.mapG = this.add.graphics().setDepth(50)
     this.mapLabel = this.add.text(0, 0, 'HARTĂ', { fontFamily: F, fontSize: '9px', color: '#aeb5c0' }).setOrigin(0, 1).setDepth(51)
@@ -128,25 +132,35 @@ export default class UiScene extends Phaser.Scene {
     this.np.setAlpha(Phaser.Math.Linear(this.np.alpha, this.npTarget, 0.18))
 
     // cop modal
-    const cop = this.registry.get('cop')
-    const on = !!cop
+    const menu = this.registry.get('cop') || this.registry.get('shop') || this.registry.get('finale')
+    const on = !!menu
     this.copDim.setVisible(on); this.copBox.setVisible(on); this.copQ.setVisible(on); this.copOpts.setVisible(on)
     if (on) {
-      if (cop.q !== this._copQ) {
-        this._copQ = cop.q
-        this.copQ.setText(cop.q)
-        this.copOpts.setText(cop.opts.join('\n'))
+      const sig = menu.q + '|' + menu.opts.join('|')
+      if (sig !== this._menuSig) {
+        this._menuSig = sig
+        this.copQ.setText(menu.q); this.copOpts.setText(menu.opts.join('\n'))
         const w = Math.max(this.copQ.width, this.copOpts.width) + 52
         const h = this.copQ.height + this.copOpts.height + 40
         const cx = this.scale.width / 2, cy = this.scale.height / 2
         this.copBox.setSize(w, h).setPosition(cx, cy)
         this.copQ.setPosition(cx, cy - h / 2 + 14)
         this.copOpts.setPosition(cx - w / 2 + 26, cy - h / 2 + 14 + this.copQ.height + 14)
+        this.copBox.setStrokeStyle(2, this.registry.get('shop') ? 0xebc372 : 0x2f5bb0)
       }
-    } else { this._copQ = null }
+    } else { this._menuSig = null }
 
     this.crt.setVisible(this.registry.get('crt') !== false)
     this.drawMinimap()
+
+    const win = this.registry.get('win')
+    this.winDim.setVisible(!!win); this.winText.setVisible(!!win)
+    if (win && this._winSig !== win.score) {
+      this._winSig = win.score
+      this.winDim.setSize(this.scale.width, this.scale.height)
+      this.winText.setPosition(this.scale.width / 2, this.scale.height / 2)
+      this.winText.setText(`★ PRIMAR DE CHIȘINĂU ★\n\nL-ai demascat pe Primar. Orașul e al tău.\n\nScor final: ${win.score}    Lei: ${win.lei}\nRang: ${win.rank}\n\nCu ${win.lei} lei ai cumpărat\n${win.sqm} m² de apartament în Chișinău.\n\nFelicitări — ai ajuns nimeni-cineva.`)
+    }
   }
 
   drawMinimap() {

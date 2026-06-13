@@ -579,6 +579,7 @@ export default class CentruScene extends Phaser.Scene {
     this.buildEnterCars()
     this.buildNPCs()
     this.buildEnemies()
+    this.buildPotholes()
     this.weapons = [
       { key: 'fist', name: 'Pumni', dmg: 8, range: 28, knock: 90, heatCost: 0 },
       { key: 'covor', name: 'Covor', dmg: 14, range: 36, knock: 150, heatCost: 6 },
@@ -586,11 +587,10 @@ export default class CentruScene extends Phaser.Scene {
     ]
     this.weaponIdx = 0
     this.swingCD = 0
+    this.raceLimit = 30
     this.breadTarget = this.foodSpots.find((f) => /Linella/.test(f.name)) || this.foodSpots[0]
     this.input.keyboard.on('keydown-E', () => this.onAction())
-    this.input.keyboard.on('keydown-ONE', () => this.copChoice(1))
-    this.input.keyboard.on('keydown-TWO', () => this.copChoice(2))
-    this.input.keyboard.on('keydown-THREE', () => this.copChoice(3))
+    ;['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX'].forEach((k, i) => this.input.keyboard.on('keydown-' + k, () => this.menuKey(i + 1)))
     this.syncHud()
     this.registry.set('mission', 'Vorbește cu Baba Zina (E) ca să începi.')
     // minimap data
@@ -682,6 +682,25 @@ export default class CentruScene extends Phaser.Scene {
       this.landmarks.push({ x, y: y - 6, name, desc: `Polițist ${where}.` })
     })
 
+    // Gopnicii — race crew on the south verge (west)
+    this.gopnik = this.add.image(440, BD_BOT + 42, 'npc_gopnik').setOrigin(0.5, 1).setDepth(BD_BOT + 42)
+    this.add.image(478, BD_BOT + 46, 'npc_gopnik').setOrigin(0.5, 1).setDepth(BD_BOT + 46).setFlipX(true)
+    this.landmarks.push({ x: 440, y: BD_BOT + 36, name: 'Gopnicii', desc: 'Trening, semechki, „ce te uiți?"' })
+    this.raceRings = [[640, ROAD_Y], [1200, ROAD_Y], [1800, ROAD_Y], [2400, ROAD_Y]]
+      .map(([x, y]) => this.add.image(x, y, 'checkpoint').setOrigin(0.5, 0.5).setDepth(y).setVisible(false).setAlpha(0.85))
+    this.racing = false
+
+    // Borea Țigan — trader living half-in a gropă (Grădina Publică)
+    this.add.image(1860, 1450, 'gropa').setOrigin(0.5, 0.5).setDepth(1448)
+    this.borea = this.add.image(1860, 1452, 'npc_borea').setOrigin(0.5, 1).setDepth(1452)
+    this.landmarks.push({ x: 1860, y: 1446, name: 'Borea Țigan', desc: 'Negustor. Trăiește jumate în gropă.' })
+    this.boreaIcon = this.add.image(1860, 1416, 'questicon').setOrigin(0.5, 1).setDepth(99970).setVisible(false)
+
+    // Primarul — satirical mayor at a permanent ribbon-cutting by Casa Guvernului
+    this.add.image(1300, BD_TOP - 16, 'ribbon').setOrigin(0.5, 1).setDepth(BD_TOP - 16)
+    this.add.image(1338, BD_TOP - 16, 'npc_mayor').setOrigin(0.5, 1).setDepth(BD_TOP - 16)
+    this.landmarks.push({ x: 1325, y: BD_TOP - 22, name: 'Primarul', desc: '„Lucrăm la asta." Taie panglici. Cortegiul drift spre est.' })
+
     this.marker = this.add.image(0, 0, 'marker').setOrigin(0.5, 1).setDepth(99980).setVisible(false)
     this.copSprite = this.add.image(0, 0, 'npc_cop').setOrigin(0.5, 1).setDepth(99975).setVisible(false)
   }
@@ -733,10 +752,170 @@ export default class CentruScene extends Phaser.Scene {
 
   toast(msg) { this.registry.set('toast', { msg, id: this.time.now }) }
 
+  menuKey(n) {
+    if (this.cop) this.copChoice(n)
+    else if (this.shopOpen) this.shopChoice(n)
+    else if (this.exposeOpen) this.exposeConfirm(n)
+  }
+
+  // ---- Borea Țigan — black market ---------------------------------------
+  openBorea() {
+    this.shopOpen = true
+    this.toast('Borea: Frate! Am tot ce-ți trebuie, da\' și ce nu-ți trebuie.')
+    this.renderShop()
+  }
+
+  renderShop() {
+    const s = this.state
+    const opts = [
+      `1 · Vinde amintiri (${s.satchel}) — ~${s.satchel * 12} lei`,
+      '2 · Cumpără plăcintă (-15 lei, +35 HP)',
+      '3 · Cumpără Eugenia (-10 lei, +20 HP)',
+    ]
+    if (!s.acteFalse) opts.push('4 · Acte false (-120 lei) — sari peste un control')
+    if (!s.speedBoost) opts.push('5 · Tuning motor (-200 lei) — mașina zboară')
+    if (!s.smuggling) opts.push('6 · Misiune: cară un PET baban (+lei)')
+    opts.push('E · Pleacă')
+    this.registry.set('shop', { q: 'Borea: marfa-i curată, mai mult sau mai puțin. Ce iei?', opts })
+  }
+
+  closeShop() { this.shopOpen = false; this.registry.set('shop', null) }
+
+  shopChoice(n) {
+    const s = this.state
+    if (n === 1) {
+      if (s.satchel > 0) { const g = Math.round(s.satchel * (10 + Math.random() * 4)); s.lei += g; this.toast(`Vândut ${s.satchel} amintiri: +${g} lei`); s.satchel = 0; this.addXp(20) }
+      else this.toast('N-ai ce vinde, frate.')
+    } else if (n === 2) {
+      if (s.lei >= 15) { s.lei -= 15; s.hp = Math.min(s.maxHp, s.hp + 35); this.toast('Plăcintă caldă! +35 HP') } else this.toast('N-ai 15 lei.')
+    } else if (n === 3) {
+      if (s.lei >= 10) { s.lei -= 10; s.hp = Math.min(s.maxHp, s.hp + 20); this.toast('Eugenia! +20 HP') } else this.toast('N-ai 10 lei.')
+    } else if (n === 4) {
+      if (!s.acteFalse) { if (s.lei >= 120) { s.lei -= 120; s.acteFalse = true; this.toast('Acte false. Nu le arăta pe bulevard.') } else this.toast('N-ai 120 lei.') }
+    } else if (n === 5) {
+      if (!s.speedBoost) { if (s.lei >= 200) { s.lei -= 200; s.speedBoost = true; this.toast('Tuning făcut — acum zbori, nu mergi!') } else this.toast('N-ai 200 lei.') }
+    } else if (n === 6) {
+      if (!s.smuggling) { this.startSmuggle(); this.syncHud(); this.closeShop(); return }
+    }
+    this.syncHud()
+    this.renderShop()
+  }
+
+  startSmuggle() {
+    this.state.smuggling = true
+    this.dropPoint = this.add.image(2500, 1300, 'marker').setOrigin(0.5, 1).setDepth(99950).setTint(0xff8a4a)
+    this.toast('Borea: cară babanul la gară. Fugi de gabori, auzi?')
+  }
+
+  deliverSmuggle() {
+    if (!this.state.smuggling) return
+    this.state.smuggling = false
+    if (this.dropPoint) { this.dropPoint.destroy(); this.dropPoint = null }
+    this.state.lei += 90; this.addCred(15); this.addXp(60)
+    this.toast('Livrat! +90 lei. Borea: un client din est tot întreabă de marfă... ceva cu telefoane rusești.')
+    if (this.cluesEnabled) this.addClue('borea', 'Borea fence-uiește pentru un „client din est" — telefoane rusești')
+  }
+
+  // ---- Potholes (civic) -------------------------------------------------
+  buildPotholes() {
+    this.potholes = []
+    const spots = [[700, ROAD_Y - 30], [1000, ROAD_Y + 30], [1500, ROAD_Y - 30], [2000, ROAD_Y + 30], [820, ROAD_Y], [1700, ROAD_Y], [2300, ROAD_Y - 30], [1360, BD_BOT + 130], [600, 1120], [1900, 1120]]
+    spots.forEach(([x, y]) => { const spr = this.add.image(x, y, 'gropa').setOrigin(0.5, 0.5).setDepth(-850); this.potholes.push({ spr, x, y, filled: false }) })
+    this.filling = null
+    this.potholesFixed = 0
+    this.fillBar = this.add.graphics().setDepth(99958)
+  }
+
+  updatePothole(d) {
+    this.fillBar.clear()
+    if (!this.filling) return
+    if (this.state.driving) { this.filling = null; return }
+    const f = this.filling
+    if ((this.ion.x - f.ref.x) ** 2 + (this.ion.y - f.ref.y) ** 2 > 40 * 40) { this.filling = null; return }
+    f.t += d
+    const x = this.ion.x - 11, y = this.ion.y - this.ion.height - 6
+    this.fillBar.fillStyle(0x10121a, 0.8).fillRect(x - 1, y - 1, 24, 5)
+    this.fillBar.fillStyle(0x4caf50, 1).fillRect(x, y, 22 * Math.min(1, f.t / f.dur), 3)
+    if (f.t >= f.dur) {
+      f.ref.filled = true; f.ref.spr.setTexture('gropa_fixed'); this.potholesFixed++
+      this.addCivic(8); this.state.lei += 5; this.state.score += 15; this.addXp(15)
+      this.toast('Ai astupat o gropă. Cartierul respiră. +civic, +5 lei')
+      this.filling = null; this.syncHud()
+    }
+  }
+
+  // ---- Gopnici checkpoint race ------------------------------------------
+  startRace() {
+    if (this.racing) return
+    this.racing = true; this.raceCp = 0; this.raceT = 0
+    this.raceRings.forEach((r) => r.setVisible(true))
+    this._missionBak = this.registry.get('mission')
+    this.toast('GO! Treci prin inele, bratan!')
+  }
+
+  updateRace(d) {
+    if (!this.racing) return
+    if (!this.state.driving) { this.failRace('Ai ieșit din mașină — cursă pierdută.'); return }
+    this.raceT += d
+    const ring = this.raceRings[this.raceCp]
+    if (ring && (this.car.x - ring.x) ** 2 + (this.car.y - ring.y) ** 2 < 34 * 34) {
+      ring.setVisible(false); this.raceCp++
+      if (this.raceCp >= this.raceRings.length) { this.winRace(); return }
+      this.toast(`Punct! ${this.raceCp}/${this.raceRings.length}`)
+    }
+    this.registry.set('mission', `Cursă: ${this.raceCp}/${this.raceRings.length} inele · ${Math.max(0, Math.ceil(this.raceLimit - this.raceT))}s`)
+    if (this.raceT > this.raceLimit) this.failRace('Prea lent, bratan.')
+  }
+
+  winRace() {
+    this.racing = false; this.raceRings.forEach((r) => r.setVisible(false))
+    const stake = 120 + (this._raceWins || 0) * 20; this._raceWins = (this._raceWins || 0) + 1
+    this.state.lei += stake; this.state.score += 80; this.addCred(40); this.addXp(80)
+    this.toast(`Respect, bratan! +${stake} lei`)
+    this.registry.set('mission', this._missionBak || '')
+    if (this.cluesEnabled && this.state.cred >= 60) this.addClue('gopnik', 'cortegiul negru merge mereu spre ambasada rusă — gopnicii văd tot din curte')
+    this.syncHud()
+  }
+
+  failRace(msg) {
+    this.racing = false; this.raceRings.forEach((r) => r.setVisible(false))
+    this.state.lei = Math.max(0, this.state.lei - 15)
+    this.toast(msg + ' -15 lei')
+    this.registry.set('mission', this._missionBak || ''); this.syncHud()
+  }
+
+  // ---- finale: exposé + win ---------------------------------------------
+  openExpose() {
+    this.exposeOpen = true
+    this.registry.set('finale', {
+      q: 'Dovada e completă: matryoshka, telefoanele rusești, ruta cortegiului spre ambasadă, actele de la ofițer. Demaști Primarul?',
+      opts: ['1 · Demască-l public și ia-i locul'],
+    })
+  }
+
+  exposeConfirm(n) {
+    if (n !== 1) return
+    this.exposeOpen = false
+    this.registry.set('finale', null)
+    this.doWin()
+  }
+
+  doWin() {
+    this.won = true
+    this.rankIdx = this.ranks.length - 1
+    const lei = this.state.lei
+    this.registry.set('win', { score: this.state.score, lei, rank: this.ranks[this.rankIdx].name, sqm: (lei / 1400).toFixed(3) })
+    this.syncHud()
+  }
+
   // ---- interaction -------------------------------------------------------
   onAction() {
-    if (this.cop) return
-    if (this.state.driving) { this.exitCar(); return }
+    if (this.shopOpen) { this.closeShop(); return }
+    if (this.cop || this.exposeOpen || this.won) return
+    if (this.state.driving) {
+      if (this.gopnik && !this.racing && (this.car.x - this.gopnik.x) ** 2 + (this.car.y - this.gopnik.y) ** 2 < 80 * 80) { this.startRace(); return }
+      this.exitCar(); return
+    }
     const n = this.nearest
     if (!n) return
     if (n.type === 'car') this.enterCar(n.ref)
@@ -745,6 +924,11 @@ export default class CentruScene extends Phaser.Scene {
     else if (n.type === 'food') this.eat(n.ref)
     else if (n.type === 'om-befriend') this.befriendHomeless()
     else if (n.type === 'om-talk') this.toast(this.omLine())
+    else if (n.type === 'borea') this.openBorea()
+    else if (n.type === 'drop') this.deliverSmuggle()
+    else if (n.type === 'expose') this.openExpose()
+    else if (n.type === 'gopnik') { if (this.state.driving) this.startRace(); else this.toast('Gopnik: hai cu mașina, fraer, facem o cursă.') }
+    else if (n.type === 'pothole') { this.filling = { ref: n.ref, t: 0, dur: this.potholeTime }; this.toast('Astupi gropa... stai pe loc.') }
   }
 
   omLine() {
@@ -822,8 +1006,9 @@ export default class CentruScene extends Phaser.Scene {
   }
 
   startCopStop() {
+    if (this.state.acteFalse) { this.state.acteFalse = false; this.toast('Acte false! Polițistul te lasă în pace.'); this.syncHud(); return }
     this.cop = true
-    this.copBribe = 20 + Math.round(this.state.heat / 3)
+    this.copBribe = Math.round((20 + this.state.heat / 3) * (this.bribeDiscount ? 0.6 : 1))
     if (this.car) this.car.speed = 0
     const openers = [
       'Sergent Sîrbu: Bună ziua. Documentele... știți de ce v-am oprit?',
@@ -895,7 +1080,8 @@ export default class CentruScene extends Phaser.Scene {
     // car-like steering: W/S throttle, A/D steer, rotates 360°
     const throttle = ((k.W.isDown || c.up.isDown) ? 1 : 0) - ((k.S.isDown || c.down.isDown) ? 1 : 0)
     const steer = ((k.D.isDown || c.right.isDown) ? 1 : 0) - ((k.A.isDown || c.left.isDown) ? 1 : 0)
-    const accel = 460, maxF = (k.SHIFT.isDown ? 380 : 300), maxR = -130, turn = 3.0
+    const accel = 460, maxR = -130, turn = 3.0
+    const maxF = k.SHIFT.isDown ? (this.state.speedBoost ? 440 : 380) : (this.state.speedBoost ? 360 : 300)
     car.speed += throttle * accel * d
     if (throttle === 0) car.speed *= 0.93 // drag
     car.speed = Phaser.Math.Clamp(car.speed, maxR, maxF)
@@ -914,6 +1100,12 @@ export default class CentruScene extends Phaser.Scene {
     car.rotation = car.heading
     car.setDepth(car.y)
     this.moving = Math.abs(car.speed) > 210 ? 2 : (Math.abs(car.speed) > 12 ? 1 : 0)
+    if (this.potholes) for (const p of this.potholes) {
+      if (!p.filled && (car.x - p.x) ** 2 + (car.y - p.y) ** 2 < 16 * 16 && this.time.now > (this._bumpT || 0)) {
+        this._bumpT = this.time.now + 800; car.speed *= 0.5; this.state.hp = Math.max(0, this.state.hp - 3)
+        this.cameras.main.shake(60, 0.003); this.toast('Bum! Gropă neastupată. (-3 HP)'); this.syncHud()
+      }
+    }
     this.ion.setPosition(car.x, car.y)
   }
 
@@ -949,7 +1141,13 @@ export default class CentruScene extends Phaser.Scene {
   }
 
   updateInteraction() {
-    if (this.state.driving) { this.nearest = null; this.registry.set('prompt', 'E: coboară din mașină'); return }
+    if (this.state.driving) {
+      this.nearest = null
+      if (this.racing) { this.registry.set('prompt', ''); return }
+      const nearG = this.gopnik && (this.car.x - this.gopnik.x) ** 2 + (this.car.y - this.gopnik.y) ** 2 < 80 * 80
+      this.registry.set('prompt', nearG ? 'E: acceptă cursa cu gopnicii' : 'E: coboară din mașină')
+      return
+    }
     const ix = this.ion.x, iy = this.ion.y
     let best = 36 * 36, near = null
     const test = (x, y, r, obj) => { const d = (ix - x) ** 2 + (iy - y) ** 2; if (d < best && d < r * r) { best = d; near = obj } }
@@ -961,6 +1159,11 @@ export default class CentruScene extends Phaser.Scene {
       if (this.homeless.calm) test(this.homeless.spr.x, this.homeless.spr.y, 36, { type: 'om-talk' })
       else if (this.homeless.state !== 'ko') test(this.homeless.spr.x, this.homeless.spr.y, 36, { type: 'om-befriend' })
     }
+    if (this.borea) test(this.borea.x, this.borea.y, 38, { type: 'borea' })
+    if (this.gopnik) test(this.gopnik.x, this.gopnik.y, 38, { type: 'gopnik' })
+    if (this.potholes) for (const p of this.potholes) if (!p.filled) test(p.x, p.y, 30, { type: 'pothole', ref: p })
+    if (this.state.smuggling && this.dropPoint) test(this.dropPoint.x, this.dropPoint.y, 42, { type: 'drop' })
+    if (this.finaleReady && !this.won) test(1310, ROWS[1].y1, 60, { type: 'expose' }) // at Casa Guvernului
     this.nearest = near
     let prompt = ''
     if (near) {
@@ -970,6 +1173,11 @@ export default class CentruScene extends Phaser.Scene {
       else if (near.type === 'food') prompt = `E: mănâncă (-${near.ref.price} lei, +${near.ref.hp} HP)`
       else if (near.type === 'om-befriend') prompt = 'E: dă bani (15) să-l calmezi · SPACE/click: lovește'
       else if (near.type === 'om-talk') prompt = 'E: ascultă profeția'
+      else if (near.type === 'borea') prompt = 'E: fă afaceri cu Borea'
+      else if (near.type === 'gopnik') prompt = 'E: vorbește cu gopnicii (vino cu mașina pt. cursă)'
+      else if (near.type === 'drop') prompt = 'E: livrează babanul'
+      else if (near.type === 'pothole') prompt = 'E: astupă gropa (+civic)'
+      else if (near.type === 'expose') prompt = 'E: demască Primarul'
     }
     this.registry.set('prompt', prompt)
   }
@@ -977,8 +1185,8 @@ export default class CentruScene extends Phaser.Scene {
   updateHeat(d) {
     const s = this.state
     if (s.driving) {
-      // only flooring it (Shift) builds heat; cruising is safe
-      s.heat = Phaser.Math.Clamp(s.heat + (this.moving === 2 ? 7 : -2) * d, 0, 100)
+      // only flooring it (Shift) builds heat; cruising is safe; smuggling is risky
+      s.heat = Phaser.Math.Clamp(s.heat + ((this.moving === 2 ? 7 : -2) + (s.smuggling ? 4 : 0)) * d, 0, 100)
       this.copTimer += d
       if (!this.cop && this.copIntro && this.copTimer > 1.8) {
         this.copIntro = false; this.copTimer = 0; this.startCopStop() // guaranteed tutorial stop on first drive
@@ -1022,16 +1230,24 @@ export default class CentruScene extends Phaser.Scene {
       this.zinaIcon.setVisible(show)
       if (show) this.zinaIcon.setPosition(this.zina.x, this.zina.y - 38 + bob)
     }
+    // "!" over Borea when you have collectibles to sell
+    if (this.boreaIcon) {
+      const show = this.state.satchel > 0
+      this.boreaIcon.setVisible(show)
+      if (show) this.boreaIcon.setPosition(this.borea.x, this.borea.y - 36 + bob)
+    }
   }
 
   update(t, dt) {
     this.updateTraffic(dt)
-    if (this.cop) { this.updateNameplate(); return } // frozen during the stop
+    if (this.cop || this.shopOpen || this.exposeOpen || this.won) { this.updateNameplate(); return } // frozen during a modal
     const d = dt / 1000
     if (this.state.driving) this.driveCar(d); else this.walk(d)
     this.updatePickups()
     this.updateInteraction()
     this.updateCombat(d)
+    this.updateRace(d)
+    this.updatePothole(d)
     this.updateHeat(d)
     this.updateSurvival(d)
     this.updateMarker()
