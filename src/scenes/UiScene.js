@@ -350,7 +350,7 @@ export default class UiScene extends Phaser.Scene {
 
   makeNews() {
     const hud = this.registry.get('hud') || {}
-    const rank = hud.rank || 'șomer pe bancă'
+    const rank = hud.rank || 'mahalagiu'
     const lei = hud.lei != null ? hud.lei : 0
     const rnd = (a) => a[Math.floor(Math.random() * a.length)]
     // dry, local, self-deprecating Moldovan headlines (no try-hard randomness)

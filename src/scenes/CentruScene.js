@@ -593,15 +593,15 @@ export default class CentruScene extends Phaser.Scene {
     this.bribeDiscount = false
     this.weaponUnlocked = { covor: false, baban: false }
     this.ranks = [
-      { t: 0, name: 'Șomer pe bancă', joke: 'CV: „experiență vastă pe bancă, la scară".' },
-      { t: 120, name: 'Plecat la muncă', joke: 'Ai adus euro și o frază: „la noi nu-i ca afară".' },
-      { t: 300, name: 'Patan de cartier', joke: 'Trening Adidas cu 3 dungi (două adevărate).' },
-      { t: 600, name: 'Șofer de rutieră', joke: '„Mai în spate, ai loc!" — la 19 oameni pe scară.' },
-      { t: 1000, name: 'Om de afaceri', joke: 'Biroul oficial: groapa din parc. Primesc card? Nu.' },
-      { t: 1500, name: 'Activist civic', joke: 'Telegram cu 41 abonați. Primăria te-a blocat.' },
-      { t: 2200, name: 'Consilier municipal', joke: 'Dormi în ședință, dar ai parcare pe trotuar.' },
-      { t: 3000, name: 'Candidat', joke: 'Promiți „metrou în Chișinău". Toți votează.' },
-      { t: 4200, name: 'PRIMAR DE CHIȘINĂU', joke: 'Prima ședință: „lucrăm la asta".' },
+      { t: 0, name: 'Mahalagiu', joke: 'De la bloc, la mama. Liftul tot nu merge.' },
+      { t: 120, name: 'Plecat peste hotare', joke: 'Ai adus euro și un frigider în rate. Acasă-i mai bine, de la distanță.' },
+      { t: 300, name: 'Băiat de cartier', joke: 'Te știe toată curtea. Și ăia cu care ai datorii.' },
+      { t: 600, name: 'Șmecher de Chișinău', joke: 'Ai o schemă la orice. Vreo două chiar merg.' },
+      { t: 1000, name: 'Om cu relații', joke: 'Ai un cumătru la primărie. Acuma ai și tu pe cineva.' },
+      { t: 1500, name: 'Afacerist', joke: 'SRL pe numele soacrei. Birou euroreparat, vedere la groapă.' },
+      { t: 2200, name: 'Consilier', joke: 'Votezi ce zice partidul. Parcarea pe trotuar, inclusă.' },
+      { t: 3000, name: 'Candidat', joke: 'Promiți drumuri și apă caldă. Lumea a mai auzit, da\' votează.' },
+      { t: 4200, name: 'Primar de Chișinău', joke: 'Ai ajuns sus. Prima ședință: lucrăm la asta.' },
     ]
     this.rankIdx = 0
     this.buildFoodSpots()
