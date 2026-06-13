@@ -212,9 +212,13 @@ export default class CentruScene extends Phaser.Scene {
     ]
     let bi = 0
     const shop = (x, base) => { const b = brands[bi++ % brands.length]; this.place(x, base, b[0], b[1], b[2]) }
-    const food = (x, base, kind) => this.place(x, base, kind,
-      kind === 'kebab' ? 'Șaorma la colț' : 'Cvas la halbă',
-      kind === 'kebab' ? 'Șaorma, kebab, hot-dog.' : 'Cvas rece la halbă, 4 lei.')
+    // kebab joints — real Chișinău names. (Food spots → HP refill, see wiki.)
+    const kebabNames = ['Star Kebab', 'Kebabistan', 'Kebabun', 'Kebastian', 'Twister Kebab']
+    let ki = 0
+    const food = (x, base, kind) => {
+      if (kind === 'kebab') this.place(x, base, 'kebab', kebabNames[ki++ % kebabNames.length], 'Șaorma, kebab, hot-dog.')
+      else this.place(x, base, 'cvas', 'Cvas la halbă', 'Cvas rece la halbă, 4 lei.')
+    }
     const prop = (x, y, key) => this.add.image(x, y, key).setOrigin(0.5, 1).setDepth(y)
 
     // R1 courtyards (green between back-fill and landmark): cols 0,4,5
@@ -231,6 +235,9 @@ export default class CentruScene extends Phaser.Scene {
       prop(c.cx - 50, 1392, 'bench'); prop(c.cx + 54, 1388, 'playground')
       prop(c.cx - 96, 1388, 'tree'); prop(c.cx + 96, 1388, 'tree')
     })
+    // two more kebab joints (near University + Gara) so all five names appear
+    food(COLS[6].cx - 92, 778, 'kebab')
+    food(COLS[6].cx - 92, 1340, 'kebab')
   }
 
   // ---- bus / trolleybus stops + MOVING traffic --------------------------
@@ -260,9 +267,10 @@ export default class CentruScene extends Phaser.Scene {
     const top = r.y0 + 78, bot = r.y1 - 96, left = c.x0 + 26, right = c.x1 - 26
     for (let x = left; x <= right; x += 38) stall(x, top)
     for (let y = top + 42; y <= bot; y += 40) { stall(left, y); stall(right, y) }
-    // big entrance arch on the boulevard side, with its name
+    // big entrance arch on the boulevard side, with its name.
+    // NO collider — the player walks through the arch into the square.
     const ax = c.cx, ay = r.y0 + 40
-    this.place(ax, ay, 'piataarch', null, null)
+    this.add.image(ax, ay, 'piataarch').setOrigin(0.5, 1).setDepth(ay)
     this.add.text(ax, ay - 34, 'PIAȚA CENTRALĂ', {
       fontFamily: 'monospace', fontSize: '11px', color: '#f4ecd6',
       backgroundColor: '#8f2f1f', padding: { x: 4, y: 2 },
