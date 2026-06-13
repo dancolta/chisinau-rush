@@ -251,7 +251,7 @@ export default class CentruScene extends Phaser.Scene {
       this.add.image(x, y, 'busstop').setOrigin(0.5, 1).setDepth(y)
       this.landmarks.push({ x, y: y - 6, name: 'Stația ' + name, desc: 'Stație de troleibuz / autobuz.' })
     }
-    ;[[600, 'Sfatul Țării'], [1180, 'Piața Marii Adunări Naționale'], [1840, 'Parlament'], [2200, 'Piața Centrală']]
+    ;[[600, 'Sfatul Țării'], [1245, 'Piața Marii Adunări Naționale'], [1840, 'Parlament'], [2200, 'Piața Centrală']]
       .forEach(([x, n]) => stop(x, BD_TOP - SW - 4, n))
     ;[[670, 'Teatrul de Operă'], [1250, 'Catedrala'], [1910, 'Grădina Publică'], [2270, 'Gara Feroviară']]
       .forEach(([x, n]) => stop(x, BD_BOT + SW + 26, n))
