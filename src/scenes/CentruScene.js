@@ -245,14 +245,23 @@ export default class CentruScene extends Phaser.Scene {
   // ---- bus / trolleybus stops + MOVING traffic --------------------------
   buildTransit() {
     this.traffic = []
-    // horizontal shelters along the boulevard
-    const stop = (x, y) => this.add.image(x, y, 'busstop').setOrigin(0.5, 1).setDepth(y)
-    ;[600, 1180, 1840, 2200].forEach((x) => { stop(x, BD_TOP - SW - 4); stop(x + 70, BD_BOT + SW + 26) })
-    // ROTATED shelters on the vertical cross streets (face the street)
-    const vstop = (x, y, ang) => this.add.image(x, y, 'busstop').setOrigin(0.5, 1).setAngle(ang).setDepth(y)
-    vstop(VX[1] + VHALF + SW + 18, 700, 90)
-    vstop(VX[2] - VHALF - SW - 18, 1820, -90)
-    vstop(VX[4] + VHALF + SW + 18, 1300, 90)
+    // named horizontal shelters along the boulevard (real Chișinău stops)
+    const stop = (x, y, name) => {
+      this.add.image(x, y, 'busstop').setOrigin(0.5, 1).setDepth(y)
+      this.landmarks.push({ x, y: y - 6, name: 'Stația ' + name, desc: 'Stație de troleibuz / autobuz.' })
+    }
+    ;[[600, 'Sfatul Țării'], [1180, 'Piața Marii Adunări Naționale'], [1840, 'Parlament'], [2200, 'Piața Centrală']]
+      .forEach(([x, n]) => stop(x, BD_TOP - SW - 4, n))
+    ;[[670, 'Teatrul de Operă'], [1250, 'Catedrala'], [1910, 'Grădina Publică'], [2270, 'Gara Feroviară']]
+      .forEach(([x, n]) => stop(x, BD_BOT + SW + 26, n))
+    // ROTATED shelters on the vertical cross streets (proper vertical sprite)
+    const vstop = (x, y, flip, name) => {
+      this.add.image(x, y, 'busstop_v').setOrigin(0.5, 1).setFlipX(flip).setDepth(y)
+      this.landmarks.push({ x, y: y - 6, name: 'Stația ' + name, desc: 'Stație pe strada perpendiculară.' })
+    }
+    vstop(VX[1] - VHALF - SW - 12, 740, false, 'Hotel Național')
+    vstop(VX[2] + VHALF + SW + 12, 1320, true, 'ASEM')
+    vstop(VX[4] - VHALF - SW - 12, 760, false, 'Stadionul Republican')
 
     const veh = (key, x, vx) => {
       const lane = vx > 0 ? ROAD_Y - 20 : ROAD_Y + 36 // eastbound north lane / westbound south lane
@@ -269,16 +278,18 @@ export default class CentruScene extends Phaser.Scene {
     carVeh(1700, -115); carVeh(2400, -150)
   }
 
-  // ---- railway: a train that departs east off the map -------------------
+  // ---- railway: a STATIONARY train parked at the Gara -------------------
+  // rails stay east of the last cross street so they never cross a road
   buildRail() {
-    const y = 1410, x0 = 2330, x1 = WORLD_W
+    const y = 1410
+    const x0 = VX[VX.length - 1] + VHALF + SW + 4 // just east of the last vertical street
+    const x1 = WORLD_W
     for (let x = x0; x < x1; x += 32) this.add.image(x, y, 'rail').setOrigin(0, 0.5).setDepth(-855)
     this.region(x0, y - 30, x1 - x0, 20, 'beton', -858) // platform
-    this.train = [
-      { key: 'loco', off: 0 }, { key: 'wagon', off: 60 }, { key: 'wagon', off: 112 },
-    ].map((p) => { const s = this.add.image(2360 - p.off, y + 6, p.key).setOrigin(0.5, 1).setDepth(y + 8); s.off = p.off; return s })
-    this.trainHead = 2360
-    this.trainY = y + 6
+    // parked train (loco + 2 wagons), front toward the east edge — does NOT move
+    const head = x1 - 42
+    ;[['loco', 0], ['wagon', 60], ['wagon', 112]].forEach(([key, off]) =>
+      this.add.image(head - off, y + 6, key).setOrigin(0.5, 1).setDepth(y + 8))
   }
 
   // ---- Piața Centrală — ONE square, stalls on the perimeter + arch -------
@@ -409,12 +420,6 @@ export default class CentruScene extends Phaser.Scene {
       v.x += v.vx * (dt / 1000)
       if (v.x > WORLD_W + 130) v.x = -130
       else if (v.x < -130) v.x = WORLD_W + 130
-    }
-    // the train departs east, then returns to the station
-    if (this.train) {
-      this.trainHead += 90 * (dt / 1000)
-      if (this.trainHead > WORLD_W + 180) this.trainHead = 2360
-      for (const p of this.train) p.x = this.trainHead - p.off
     }
 
     const k = this.keys, c = this.cursors

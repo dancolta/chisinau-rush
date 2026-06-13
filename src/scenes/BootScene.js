@@ -557,6 +557,14 @@ export default class BootScene extends Phaser.Scene {
       g.fillStyle(0x444a52, 1); g.fillRect(40, -8, 2, 12); g.fillRect(48, -8, 2, 12) // trolley poles
       g.fillStyle(0xffd200, 1); g.fillRect(64, 6, 6, 4)        // route board
     })
+    // vertical shelter (for vertical streets) — open side faces right; flipX for left
+    this.tex('busstop_v', 24, 46, (g) => {
+      g.fillStyle(0x3f4651, 1); g.fillRect(0, 5, 8, 38)        // roof slab (back, away from road)
+      g.fillStyle(0x4a515c, 1); g.fillRect(0, 5, 8, 2)
+      g.fillStyle(0x2c323b, 1); g.fillRect(1, 7, 2, 34)        // back wall
+      g.fillStyle(0x7a5a36, 1); g.fillRect(9, 11, 3, 26)       // bench (vertical)
+      g.fillStyle(0x2f6fb0, 1); g.fillRect(2, 0, 5, 5)         // route sign on top
+    })
     // city bus / rutiera (white/blue)
     this.tex('bus', 60, 24, (g) => {
       g.fillStyle(0xeef0ee, 1); g.fillRect(3, 4, 54, 16)
