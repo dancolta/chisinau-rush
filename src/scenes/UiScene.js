@@ -79,6 +79,18 @@ export default class UiScene extends Phaser.Scene {
     // CRT
     this.crt = this.add.tileSprite(0, 0, W, H, 'scan').setOrigin(0).setAlpha(0.16)
 
+    // persistent dialogue panel (NPC plot lines — does NOT auto-close)
+    this.dlgBox = this.add.rectangle(W / 2, H - 70, 560, 86, 0x10121a, 0.96).setOrigin(0.5).setStrokeStyle(2, 0xebc372).setDepth(58).setVisible(false)
+    this.dlgName = this.add.text(W / 2 - 268, H - 104, '', { fontFamily: F, fontSize: '13px', color: '#ffd24a' }).setOrigin(0, 0).setDepth(59).setVisible(false)
+    this.dlgText = this.add.text(W / 2 - 268, H - 84, '', { fontFamily: F, fontSize: '13px', color: '#f0f2f6', wordWrap: { width: 524 }, lineSpacing: 4 }).setOrigin(0, 0).setDepth(59).setVisible(false)
+    this.dlgHint = this.add.text(W / 2 + 256, H - 36, 'E ▸', { fontFamily: F, fontSize: '12px', color: '#aeb5c0' }).setOrigin(1, 1).setDepth(59).setVisible(false)
+
+    // character / pause menu (Esc) — own depth band above everything
+    this.cmDim = this.add.rectangle(0, 0, W, H, 0x07080d, 0.9).setOrigin(0).setDepth(70).setVisible(false)
+    this.cmBox = this.add.rectangle(W / 2, H / 2, 460, 360, 0x12131c, 0.99).setOrigin(0.5).setStrokeStyle(2, 0xebc372).setDepth(71).setVisible(false)
+    this.cmTitle = this.add.text(W / 2, H / 2 - 162, '', { fontFamily: F, fontSize: '20px', color: '#ebc372' }).setOrigin(0.5, 0).setDepth(72).setVisible(false)
+    this.cmText = this.add.text(W / 2 - 200, H / 2 - 118, '', { fontFamily: F, fontSize: '14px', color: '#e7ebf2', lineSpacing: 8, wordWrap: { width: 400 } }).setOrigin(0, 0).setDepth(72).setVisible(false)
+
     // win overlay
     this.winDim = this.add.rectangle(0, 0, W, H, 0x0a0b10, 0.93).setOrigin(0).setDepth(60).setVisible(false)
     this.winText = this.add.text(W / 2, H / 2, '', { fontFamily: F, fontSize: '16px', color: '#ebc372', align: 'center', lineSpacing: 8, wordWrap: { width: 540 } }).setOrigin(0.5).setDepth(61).setVisible(false)
@@ -99,9 +111,12 @@ export default class UiScene extends Phaser.Scene {
     this.promptText.setPosition(W / 2, H - 116)
     this.toastText.setX(W / 2)
     this.np.setPosition(W / 2, H - 44)
+    this.dlgBox.setPosition(W / 2, H - 70); this.dlgName.setPosition(W / 2 - 268, H - 104); this.dlgText.setPosition(W / 2 - 268, H - 84); this.dlgHint.setPosition(W / 2 + 256, H - 36)
     this.crt.setSize(W, H)
     this.copDim.setSize(W, H)
     this.copBox.setPosition(W / 2, H / 2); this.copQ.setPosition(W / 2, H / 2 - 52); this.copOpts.setPosition(W / 2, H / 2 + 6)
+    this.cmDim.setSize(W, H); this.cmBox.setPosition(W / 2, H / 2)
+    this.cmTitle.setPosition(W / 2, H / 2 - 162); this.cmText.setPosition(W / 2 - 200, H / 2 - 118)
   }
 
   update(_t, dt) {
@@ -168,6 +183,43 @@ export default class UiScene extends Phaser.Scene {
       }
     } else { this._menuSig = null }
 
+    // dialogue panel
+    const dlg = this.registry.get('dialog')
+    const dOn = !!dlg
+    this.dlgBox.setVisible(dOn); this.dlgName.setVisible(dOn); this.dlgText.setVisible(dOn); this.dlgHint.setVisible(dOn)
+    if (dOn && dlg.line !== this._dlgLine) {
+      this._dlgLine = dlg.line
+      this.dlgName.setText(dlg.speaker || '')
+      this.dlgText.setText(dlg.line || '')
+    } else if (!dOn) { this._dlgLine = null }
+
+    // character / pause menu
+    const cm = this.registry.get('charmenu')
+    const cmOn = !!cm
+    this.cmDim.setVisible(cmOn); this.cmBox.setVisible(cmOn); this.cmTitle.setVisible(cmOn); this.cmText.setVisible(cmOn)
+    if (cmOn && cm !== this._cm) {
+      this._cm = cm
+      this.cmTitle.setText('☰  PERSONAJ')
+      this.cmText.setText([
+        `Nume:  ${cm.name}`,
+        `Tip:   ${cm.type}`,
+        '',
+        `${cm.level}`,
+        `XP:    ${cm.xp}`,
+        '',
+        `HP:    ${cm.hp}`,
+        `Lei:   ${cm.lei}        Scor: ${cm.score}`,
+        `Stradă (cred): ${cm.cred}    Civic: ${cm.civic}`,
+        `Heat:  ${cm.heat}`,
+        `Armă:  ${cm.weapon}`,
+        '',
+        `Dovezi (${cm.clueCount}/5):`,
+        `  ${cm.clues}`,
+        '',
+        'Esc — închide · joc salvat automat',
+      ].join('\n'))
+    } else if (!cmOn) { this._cm = null }
+
     this.crt.setVisible(this.registry.get('crt') !== false)
     this.drawMinimap()
 
@@ -183,38 +235,55 @@ export default class UiScene extends Phaser.Scene {
 
   makeNews() {
     const hud = this.registry.get('hud') || {}
-    const rank = hud.rank || 'cetățean'
+    const rank = hud.rank || 'șomer pe bancă'
     const lei = hud.lei != null ? hud.lei : 0
-    const score = hud.score || 0
     const rnd = (a) => a[Math.floor(Math.random() * a.length)]
-    const n = () => 2 + Math.floor(Math.random() * 97)
-    const lm = () => rnd(['Arcul de Triumf', 'Piața Centrală', 'Botanica', 'Gara', 'bd. Ștefan cel Mare', 'Grădina Publică', 'Hotel Național', 'Catedrală'])
-    const it = () => rnd(['cvas', 'plăcintă', 'Eugenia', 'baban', 'semechki', 'must', 'sarmale', 'mămăligă'])
-    const car = () => rnd(['Logan', 'G-Wagon', 'Cayenne', 'Land Cruiser', 'troleibuz'])
-    const T = [
-      () => `Primarul declară gropile din ${lm()} „opere de artă urbană".`,
-      () => `ULTIMA ORĂ: troleibuzul ${n()} a depășit limita de... 3 pasageri.`,
-      () => `Studiu: ${n()}% dintre chișinăuieni confundă ${it()} cu micul dejun.`,
-      () => `Un cetățean pe nume „${rank}" a astupat o groapă; Primăria cere explicații.`,
-      () => `Curs valutar: cu ${lei} lei mai iei ${n()} plăcinte și o iluzie.`,
-      () => `Cortegiul primarului, surprins iar pe drumul spre „o vizită de lucru" la est.`,
-      () => `Meteo: azi ${n()}% praf, ${n()}% promisiuni, 0% gropi astupate.`,
-      () => `Baba Zina: „pe vremea mea, cvasul era cvas, nu apă cu vise".`,
-      () => `Sondaj: ${n()} din 10 gopnici preferă semechki în locul dialogului.`,
-      () => `Linella scumpește punga; punga scumpește nervii.`,
-      () => `Bărbat traversează tot bulevardul fără să fie oprit de poliție. Caz unic.`,
-      () => `Reformă: gropile vor fi numerotate, ca să fie ignorate mai ușor.`,
-      () => `Hotel Național, în continuare deschis... pentru porumbei.`,
-      () => `„${rank}" văzut conducând o ${car()}. Vecinii au chemat televiziunea.`,
-      () => `Record: scor ${score} de puncte și tot nu ajunge de-un apartament în Botanica.`,
-      () => `Experți: ${n()} matryoshka găsite la primărie. „Pur decorative", spune primarul.`,
-      () => `Un „client din est" cumpără telefoane. Borea zice că-i absolut normal.`,
-      () => `Anunț: de mâine, semaforul de la ${lm()} funcționează... uneori.`,
-      () => `Festival de plăcinte amânat din lipsă de... plăcinte.`,
-      () => `Bursă: leul a crescut cu ${n()}% în inima fiecărui moldovean.`,
+    // dry, local, self-deprecating Moldovan headlines (no try-hard randomness)
+    const POOL = [
+      'Ceon Eban a tăiat panglica la o gropă nou-deschisă pe Dacia',
+      'Primarul: «Lucrăm la asta» — al 4-lea an consecutiv',
+      'Troleibuzul 22 a venit la timp. Poliția investighează',
+      'Curtea de Conturi: jumate din curte deja plecată în Italia',
+      'Salariul mediu a crescut. Tot nu ajunge până la 15',
+      'Gropile din Botanica au primit buletin de identitate',
+      'Ceon Eban a scăpat iar telefonul. Vorbea... în rusă',
+      'Apă caldă revine în august. Promitem, davai',
+      'Deputații au plecat în China «pe o zi». Întorc la pensie',
+      'Rutiera a băgat 9 oameni în plus. Șoferul: «mai încape unul»',
+      'Pensia a ajuns la card. Cardul a ajuns la Linella',
+      'Cortegiul primarului a luat-o iar spre ambasada rusă. Coincidență',
+      'Bd. Ștefan cel Mare reasfaltat. A treia oară anul ăsta',
+      'Gară: bilet spre Moscova mai ieftin decât chiria la Centru',
+      'Ceon Eban inaugurează un parc. Tot pe hârtie',
+      'Matrioșca de pe biroul primarului: ediție limitată',
+      'Termoelectrica anunță: căldura pornește când pornește',
+      'Un moldovean a rămas în țară. Vecinii suspectează ceva',
+      'Evacuatorul a luat mașina primarului. Apoi și-a cerut scuze',
+      'Prețul la benzină iar sus. Mergem cu troleibuzul... dacă vine',
+      'Gropa de pe Albișoara a fost botezată oficial «Marea Neagră»',
+      'Un deputat a citit o lege. Colegii sunt în șoc',
+      'Botanica conduce în Derby. Râșcani contestă la judecată',
+      'Linella a scumpit pâinea. Baba Tamara declară grevă pe bancă',
+      'Ceon Eban: «Eu nu am hotline cu Moscova». Sună telefonul',
+      'Festivalul Vinului: 3 zile. Refacerea: 5 zile',
+      'Primăria a numărat gropile. A rămas fără degete',
+      'Diaspora a trimis 2 miliarde. Statul le-a băgat în gropi',
+      'Rutiera acum are aer condiționat — fereastra spartă',
+      'Un troleibuz nou a apărut în Chișinău. Vine din 2009',
+      'Ceon Eban a promis metrou până-n Botanica. Pe la 2090',
+      'Salariu mic, dar internetul e cel mai rapid din regiune',
+      'Pensionarii primesc 50 lei în plus. Mulțumiri lui Apă Canal',
+      'Cricova a inundat o pivniță cu vin. Voluntari: coadă de 4 km',
+      'Primarul vorbește 5 limbi. Cu Moscova preferă una',
+      'Andy\'s a livrat pizza mai repede decât a venit ambulanța',
+      'Ceon Eban inaugurează troleibuzul electric. Tot fără curent',
+      `Un oarecare „${rank}" face ordine în Centru. Primăria nu comentează`,
+      `Curs: cu ${lei} lei iei o plăcintă și jumate de vis`,
+      'Gropile au făcut sezonul. Asfaltul, nu',
     ]
     const items = []
-    for (let i = 0; i < 7; i++) items.push(rnd(T)())
+    const used = new Set()
+    while (items.length < 8) { const h = rnd(POOL); if (!used.has(h)) { used.add(h); items.push(h) } }
     return '◆ ' + items.join('   ◆   ') + '   ◆   '
   }
 

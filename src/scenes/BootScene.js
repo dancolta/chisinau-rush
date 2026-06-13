@@ -52,7 +52,7 @@ export default class BootScene extends Phaser.Scene {
     // Residential
     this.makeKhrushchyovka()
     this.makeScanlines()
-    this.scene.start('Centru')
+    this.scene.start('Create')
   }
 
   // ---- helpers -----------------------------------------------------------
@@ -725,7 +725,7 @@ export default class BootScene extends Phaser.Scene {
       g.fillStyle(0xc08c34, 1); g.fillRect(2, 5, 10, 1)
       g.fillStyle(0xf0d99a, 1); g.fillEllipse(6, 4, 5, 3)
     })
-    this.tex('c_eugenia', 14, 10, (g) => {
+    this.tex('c_sweets', 14, 10, (g) => {
       g.fillStyle(0x6b4a2f, 1); g.fillRect(1, 1, 12, 3); g.fillRect(1, 6, 12, 3)
       g.fillStyle(0xf2ead2, 1); g.fillRect(1, 4, 12, 2)
     })
