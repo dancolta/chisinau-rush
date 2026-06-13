@@ -46,6 +46,8 @@ export default class BootScene extends Phaser.Scene {
     this.makeTopCars()
     this.makeCivilians()
     this.makeQuestIcon()
+    this.makeCastSprites()
+    this.makeWorldFx()
     // Residential
     this.makeKhrushchyovka()
     this.makeScanlines()
@@ -798,6 +800,59 @@ export default class BootScene extends Phaser.Scene {
       g.fillStyle(0xffd24a, 1); g.fillRect(2, 1, 8, 9)
       g.fillStyle(0x10121a, 1); g.fillRect(5, 2, 2, 4); g.fillRect(5, 7, 2, 2) // "!"
       g.fillStyle(0xffd24a, 1); g.fillTriangle(4, 10, 8, 10, 5, 15)            // tail
+    })
+  }
+
+  // front-facing civilian body with a custom palette
+  civ(key, pal) {
+    this.drawGrid(key, [
+      '....hhhh....', '...hhhhhh...', '...hssssh...', '...hssssh...',
+      '...kssssk...', '....ssss....', '...bbbbbb...', '..bbbbbbbb..',
+      '..sbbbbbbs..', '..sbbbbbbs..', '...bbbbbb...', '...pppppp...',
+      '...pp..pp...', '...pp..pp...', '...oo..oo...', '...oo..oo...',
+    ], { s: 0xe8b894, k: 0x2a2024, o: 0x1a1a1f, ...pal })
+  }
+
+  makeCastSprites() {
+    this.civ('npc_homeless', { h: 0x7a7a72, b: 0x5a5048, p: 0x3a352e }) // ragged grey
+    this.civ('npc_borea', { h: 0x1a1a1a, b: 0x7a3b1f, p: 0x2a2a33 })    // brown jacket
+    this.civ('npc_mayor', { h: 0x2a2a2a, b: 0x1c2440, p: 0x14141a })    // dark suit
+    this.civ('npc_gopnik', { h: 0x161616, b: 0x2a2f3a, p: 0x23262e })   // dark tracksuit
+  }
+
+  makeWorldFx() {
+    // pothole / Borea's gropă
+    this.tex('gropa', 28, 16, (g) => {
+      g.fillStyle(0x4a4f57, 1); g.fillEllipse(14, 9, 28, 15)
+      g.fillStyle(0x0c0d10, 1); g.fillEllipse(14, 9, 21, 11)
+      g.fillStyle(0x2a2e34, 1); g.fillEllipse(11, 7, 6, 3)
+    })
+    this.tex('gropa_fixed', 28, 16, (g) => {
+      g.fillStyle(0x33373e, 1); g.fillEllipse(14, 9, 28, 15)
+      g.fillStyle(0x2a2e34, 1); g.fillEllipse(14, 9, 18, 9)
+    })
+    // race checkpoint ring
+    this.tex('checkpoint', 30, 30, (g) => {
+      g.lineStyle(4, 0xffe04a, 1); g.strokeCircle(15, 15, 12)
+      g.lineStyle(2, 0xfff6c0, 0.8); g.strokeCircle(15, 15, 12)
+    })
+    // matryoshka — spy motif collectible
+    this.tex('c_matryoshka', 12, 16, (g) => {
+      g.fillStyle(0xcc092f, 1); g.fillEllipse(6, 10, 11, 13)
+      g.fillStyle(0xe8b894, 1); g.fillCircle(6, 5, 3)
+      g.fillStyle(0xffd24a, 1); g.fillRect(3, 9, 6, 3)
+      g.fillStyle(0x10121a, 1); g.fillRect(4, 4, 1, 1); g.fillRect(7, 4, 1, 1)
+    })
+    // ribbon-cutting prop
+    this.tex('ribbon', 26, 12, (g) => {
+      g.fillStyle(0xcc092f, 1); g.fillRect(0, 4, 26, 4)
+      g.fillStyle(0xe8b894, 1); g.fillRect(11, 4, 4, 4)
+      g.fillStyle(0x9a9488, 1); g.fillRect(12, 0, 2, 11)
+    })
+    // hit spark
+    this.tex('fx_hit', 12, 12, (g) => {
+      g.fillStyle(0xfff0b0, 1); g.fillRect(5, 0, 2, 12); g.fillRect(0, 5, 12, 2)
+      g.fillStyle(0xffffff, 1); g.fillRect(4, 4, 4, 4)
     })
   }
 

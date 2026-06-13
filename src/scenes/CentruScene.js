@@ -36,6 +36,16 @@ const ROWS = [
   { y0: 1678, y1: 2086 }, // R3 far south
 ]
 
+// 100 authentic Moldovan collectibles, grouped by which pickup sprite they use
+const COLLECT_GROUPS = {
+  c_placinta: ['Plăcintă cu brânză', 'Sarmale', 'Mămăligă', 'Zeamă de pui', 'Brânză de oi', 'Mititei', 'Plăcintă cu cartofi', 'Vărzare', 'Învârtită', 'Colțunași', 'Tochitură', 'Răcituri', 'Salată de vinete', 'Salată Olivier', 'Borș acru', 'Ciorbă de perișoare', 'Scrob', 'Ardei umpluți', 'Friptură de miel', 'Magiun de prune', 'Jumări', 'Slănină', 'Pelmeni', 'Gogoși', 'Urdă', 'Plăcintă cu dovleac', 'Brânză cu smântână', 'Pâine de la Franzeluța', 'Covrigi cu mac', 'Cașcaval afumat'],
+  c_eugenia: ['Ciocolată Bucuria', 'Biscuiți Eugenia', 'Halva', 'Napolitane', 'Baton cu arahide', 'Bomboane Moldova', 'Bomboane Meteorit', 'Do-Re-Mi', 'Zefir', 'Rahat', 'Cozonac', 'Pască', 'Bezele', 'Prăjitură Napoleon', 'Tort Pasărea cu lapte', 'Înghețată în pahar', 'Acadea pe băț', 'Floricele de porumb', 'Semințe de floarea-soarelui', 'Pelin gem de gutui'],
+  c_cvas: ['Cvas', 'Compot de fructe', 'Must', 'Vin de Purcari', 'Vin de Cricova', 'Divin KVINT', 'Rachiu de casă', 'Apă Gura Căinarului', 'Vin fiert', 'Tărie de prune', 'Bere Chișinău', 'Limonadă Tarhun', 'Limonadă Duchess', 'Sok de mere', 'Ceai cu mentă', 'Sirop de soc', 'Vin de casă', 'Lapte de la fermă', 'Cafea la nisip', 'Smântână în borcan'],
+  c_martisor: ['Mărțișor', 'Ie tradițională', 'Covor moldovenesc', 'Căciula lui Guguță', 'Monedă de 1 leu', 'Ban de 5 bani', 'Jeton de troleibuz', 'Brățară din mărgele', 'Insignă pionier', 'Magnet cu Arcul de Triumf', 'Timbru Poșta Moldovei', 'Cartelă Moldcell', 'Ștampilă din lemn', 'Iconiță de buzunar', 'Fluier de cioban', 'Cruciuliță la gât', 'Cocardă tricoloră', 'Vânzoală din lână', 'Mănunchi de busuioc', 'Floare de tei presată'],
+  c_covor: ['Sifon de apă gazoasă', 'Telefon cu disc', 'Primus', 'Bidon de lapte', 'Borcan de murături', 'Sacoșă din plasă', 'Galoshi', 'Pantofi Zorile', 'Pungă Linella', 'Radio Maiak'],
+}
+const COLLECT_FLAT = Object.entries(COLLECT_GROUPS).flatMap(([tex, names]) => names.map((n) => ({ n, tex })))
+
 export default class CentruScene extends Phaser.Scene {
   constructor() {
     super('Centru')
@@ -379,15 +389,20 @@ export default class CentruScene extends Phaser.Scene {
   }
 
   buildInput() {
-    this.keys = this.input.keyboard.addKeys('W,A,S,D,SHIFT,T,Z,X')
+    this.keys = this.input.keyboard.addKeys('W,A,S,D,SHIFT,T,Z,X,Q,SPACE')
     this.cursors = this.input.keyboard.createCursorKeys()
     this.input.keyboard.on('keydown-T', () => this.registry.set('crt', this.registry.get('crt') === false))
     this.input.keyboard.on('keydown-Z', () => this.zoomBy(0.4))
     this.input.keyboard.on('keydown-X', () => this.zoomBy(-0.4))
+    this.input.keyboard.on('keydown-Q', () => this.swapWeapon())
+    this.input.keyboard.on('keydown-SPACE', () => this.swing())
     this.input.on('wheel', (_p, _o, _dx, dy) => this.zoomBy(dy > 0 ? -0.25 : 0.25))
-    // click a building/location → reveal its name
     this.input.on('pointerdown', (p) => {
       const wp = this.cameras.main.getWorldPoint(p.x, p.y)
+      // click an aggro'd enemy to hit it
+      const h = this.homeless
+      if (h && h.aggro && !h.calm && h.state !== 'ko' && (wp.x - h.spr.x) ** 2 + (wp.y - h.spr.y) ** 2 < 52 * 52) { this.hitEnemy(h); return }
+      // otherwise click a building/location → reveal its name
       let near = null, best = 90 * 90
       for (const lm of this.landmarks) {
         const d = (wp.x - lm.x) ** 2 + (wp.y - lm.y) ** 2
@@ -398,6 +413,120 @@ export default class CentruScene extends Phaser.Scene {
   }
 
   zoomBy(d) { this.cameras.main.setZoom(Phaser.Math.Clamp(this.cameras.main.zoom + d, 1.6, 5)) }
+
+  // ---- combat (light, comedic, non-lethal) -------------------------------
+  weaponName() { return this.weapons ? this.weapons[this.weaponIdx].name : '' }
+
+  swapWeapon() {
+    for (let k = 1; k <= this.weapons.length; k++) {
+      const idx = (this.weaponIdx + k) % this.weapons.length
+      const w = this.weapons[idx]
+      if (w.key === 'fist' || this.weaponUnlocked[w.key]) { this.weaponIdx = idx; break }
+    }
+    this.toast('Ai scos: ' + this.weapons[this.weaponIdx].name)
+    this.syncHud()
+  }
+
+  buildEnemies() {
+    this.enemies = []
+    const spr = this.add.image(1500, 1300, 'npc_homeless').setOrigin(0.5, 1).setDepth(1300)
+    this.landmarks.push({ x: 1500, y: 1294, name: 'Omul fără adăpost', desc: '„Și aiurești wai, șii cu tine?!"' })
+    this.homeless = { spr, hp: 40, maxHp: 40, state: 'idle', aggro: false, calm: false, dmgT: 0, wp: [[1400, 1280], [1700, 1330], [1560, 1470], [1320, 1390]], wi: 0 }
+    this.enemies.push(this.homeless)
+    this.enemyBar = this.add.graphics().setDepth(99960)
+  }
+
+  hitEnemy(e) {
+    const w = this.weapons[this.weaponIdx]
+    if (w.heatCost) this.state.heat = Phaser.Math.Clamp(this.state.heat + w.heatCost, 0, 100)
+    e.hp -= w.dmg; e.aggro = true
+    const ang = Math.atan2(e.spr.y - this.ion.y, e.spr.x - this.ion.x)
+    const nx = e.spr.x + Math.cos(ang) * 14, ny = e.spr.y + Math.sin(ang) * 14
+    if (!this.blocked(nx, ny)) { e.spr.x = nx; e.spr.y = ny }
+    this.spawnHitFx(e.spr.x, e.spr.y - 16); this.cameras.main.shake(60, 0.003)
+    this.state.score += 5
+    if (e.hp <= 0) this.koEnemy(e)
+    this.syncHud()
+  }
+
+  swing() {
+    if (this.state.driving || this.cop || this.shopOpen || this.won) return
+    const now = this.time.now
+    if (now < this.swingCD) return
+    this.swingCD = now + 380
+    const w = this.weapons[this.weaponIdx]
+    let fx = 0, fy = 0
+    if (this.facing === 'side') fx = this.ion.flipX ? -1 : 1
+    else if (this.facing === 'up') fy = -1
+    else fy = 1
+    const tx = this.ion.x + fx * w.range, ty = this.ion.y + fy * w.range
+    for (const e of this.enemies) {
+      if (e.calm || e.state === 'ko') continue
+      if ((tx - e.spr.x) ** 2 + (ty - (e.spr.y - 10)) ** 2 < (w.range) ** 2) this.hitEnemy(e)
+    }
+  }
+
+  spawnHitFx(x, y) {
+    const f = this.add.image(x, y, 'fx_hit').setDepth(99962)
+    this.tweens.add({ targets: f, alpha: 0, scale: 1.7, duration: 200, onComplete: () => f.destroy() })
+  }
+
+  koEnemy(e) {
+    e.state = 'ko'; e.aggro = false; e.spr.setAlpha(0.55)
+    this.addCred(5); this.state.score += 30; this.addXp(30)
+    if (e === this.homeless) { e.calm = true; this.toast('L-ai potolit. Mormăie ceva despre... un telefon în rusă.'); this.onHomelessFlip() }
+  }
+
+  befriendHomeless() {
+    const e = this.homeless
+    if (this.state.lei < 15) { this.toast('N-ai 15 lei să-l calmezi.'); return }
+    this.state.lei -= 15; e.calm = true; e.aggro = false; e.spr.setAlpha(0.85)
+    this.addCivic(8); this.toast('I-ai dat de mâncare. Se calmează și bolborosește un secret.')
+    this.onHomelessFlip()
+  }
+
+  onHomelessFlip() {
+    if (this.cluesEnabled) this.addClue('homeless', 'matryoshka și un telefon rusesc în beciul primăriei')
+    if (!this._matryoshkaSpawned) {
+      this._matryoshkaSpawned = true
+      const s = this.add.image(1360, 1255, 'c_matryoshka').setOrigin(0.5, 1).setDepth(1255)
+      s.item = { n: 'Matryoshka suspectă', tex: 'c_matryoshka' }
+      this.pickups.push(s)
+    }
+  }
+
+  spawnFloatText(x, y, msg) {
+    const t = this.add.text(x, y, msg, { fontFamily: 'monospace', fontSize: '11px', color: '#ff6b6b', backgroundColor: '#10121aCC', padding: { x: 3, y: 2 } }).setOrigin(0.5, 1).setDepth(99963)
+    this.tweens.add({ targets: t, y: y - 16, alpha: 0, duration: 1500, onComplete: () => t.destroy() })
+  }
+
+  updateCombat(d) {
+    const e = this.homeless
+    if (!e) return
+    this.enemyBar.clear()
+    if (e.state !== 'ko' && !e.calm && (e.aggro || e.hp < e.maxHp)) {
+      const x = e.spr.x - 9, y = e.spr.y - e.spr.height - 6
+      this.enemyBar.fillStyle(0x10121a, 0.8).fillRect(x - 1, y - 1, 20, 5)
+      this.enemyBar.fillStyle(0xcc3b30, 1).fillRect(x, y, 18 * Math.max(0, e.hp / e.maxHp), 3)
+    }
+    if (this.state.driving || this.won || this.cop || this.shopOpen) return
+    if (e.state === 'ko' || e.calm) return
+    const dist2 = (this.ion.x - e.spr.x) ** 2 + (this.ion.y - e.spr.y) ** 2
+    if (!e.aggro && dist2 < 70 * 70) { e.aggro = true; this.spawnFloatText(e.spr.x, e.spr.y - 30, 'Și aiurești wai, șii cu tine?!') }
+    if (e.aggro) {
+      const ang = Math.atan2(this.ion.y - e.spr.y, this.ion.x - e.spr.x)
+      const nx = e.spr.x + Math.cos(ang) * 58 * d, ny = e.spr.y + Math.sin(ang) * 58 * d
+      if (!this.blocked(nx, e.spr.y)) e.spr.x = nx
+      if (!this.blocked(e.spr.x, ny)) e.spr.y = ny
+      if (dist2 < 24 * 24) { e.dmgT -= d; if (e.dmgT <= 0) { e.dmgT = 0.8; this.state.hp = Math.max(0, this.state.hp - 8); this.cameras.main.shake(80, 0.004); this.syncHud() } }
+    } else {
+      const wp = e.wp[e.wi]
+      const ang = Math.atan2(wp[1] - e.spr.y, wp[0] - e.spr.x)
+      e.spr.x += Math.cos(ang) * 22 * d; e.spr.y += Math.sin(ang) * 22 * d
+      if ((wp[0] - e.spr.x) ** 2 + (wp[1] - e.spr.y) ** 2 < 120) e.wi = (e.wi + 1) % e.wp.length
+    }
+    e.spr.setDepth(e.spr.y)
+  }
 
   updateNameplate() {
     let chosen = null
@@ -422,15 +551,41 @@ export default class CentruScene extends Phaser.Scene {
 
   // ======================= GAMEPLAY =======================================
   initGameplay() {
-    this.state = { hp: 100, maxHp: 100, lei: 60, heat: 0, score: 0, combo: 0, comboT: 0, driving: false, mission: 0 }
+    this.state = {
+      hp: 100, maxHp: 100, lei: 60, heat: 0, score: 0, combo: 0, comboT: 0, driving: false, mission: 0,
+      cred: 0, civic: 0, xp: 0, satchel: 0, acteFalse: false, speedBoost: false, smuggling: false,
+    }
+    this.clues = { zina: false, gopnik: false, borea: false, cop: false, homeless: false }
+    this.cluesEnabled = false
+    this.finaleReady = false
+    this.won = false
     this.car = null
     this.cop = false
+    this.shopOpen = false
     this.copTimer = 0
     this.hudT = 0
+    this.sprintSpeed = 175
+    this.potholeTime = 1.5
+    this.bribeDiscount = false
+    this.weaponUnlocked = { covor: false, baban: false }
+    this.ranks = [
+      { t: 0, name: 'Mahalagiu' }, { t: 120, name: 'Ciuvac simplu' }, { t: 300, name: 'Patan serios' },
+      { t: 600, name: 'Autoritet' }, { t: 1000, name: 'Om de afaceri' }, { t: 1500, name: 'Activist' },
+      { t: 2200, name: 'Candidat' }, { t: 3200, name: 'Primar de Chișinău' },
+    ]
+    this.rankIdx = 0
     this.buildFoodSpots()
     this.buildPickups()
     this.buildEnterCars()
     this.buildNPCs()
+    this.buildEnemies()
+    this.weapons = [
+      { key: 'fist', name: 'Pumni', dmg: 8, range: 28, knock: 90, heatCost: 0 },
+      { key: 'covor', name: 'Covor', dmg: 14, range: 36, knock: 150, heatCost: 6 },
+      { key: 'baban', name: 'Sticlă de baban', dmg: 11, range: 32, knock: 130, heatCost: 4 },
+    ]
+    this.weaponIdx = 0
+    this.swingCD = 0
     this.breadTarget = this.foodSpots.find((f) => /Linella/.test(f.name)) || this.foodSpots[0]
     this.input.keyboard.on('keydown-E', () => this.onAction())
     this.input.keyboard.on('keydown-ONE', () => this.copChoice(1))
@@ -463,16 +618,19 @@ export default class CentruScene extends Phaser.Scene {
     for (const lm of this.landmarks) { const i = info(lm.name); if (i) this.foodSpots.push({ x: lm.x, y: lm.y, name: lm.name, ...i }) }
   }
 
+  randomItem() { return COLLECT_FLAT[Math.floor(Math.random() * COLLECT_FLAT.length)] }
+
   buildPickups() {
     this.pickups = []
-    const keys = ['c_placinta', 'c_eugenia', 'c_cvas', 'c_martisor', 'c_covor']
     const spots = [
       [300, 960], [520, 960], [1000, 960], [1500, 960], [1700, 960], [2000, 960], [2250, 960],
       [420, 1120], [900, 1120], [1500, 1120], [1900, 1120], [2100, 1120],
       [1700, 1340], [1820, 1260], [560, 790], [960, 790],
     ]
-    spots.forEach((p, i) => {
-      const s = this.add.image(p[0], p[1], keys[i % keys.length]).setOrigin(0.5, 1).setDepth(p[1])
+    spots.forEach((p) => {
+      const it = this.randomItem()
+      const s = this.add.image(p[0], p[1], it.tex).setOrigin(0.5, 1).setDepth(p[1])
+      s.item = it
       this.pickups.push(s)
     })
   }
@@ -530,7 +688,47 @@ export default class CentruScene extends Phaser.Scene {
 
   syncHud() {
     const s = this.state
-    this.registry.set('hud', { hp: Math.round(s.hp), maxHp: s.maxHp, lei: s.lei, heat: Math.round(s.heat), score: s.score, combo: s.combo, driving: s.driving })
+    const r = this.ranks[this.rankIdx], next = this.ranks[this.rankIdx + 1]
+    this.registry.set('hud', {
+      hp: Math.round(s.hp), maxHp: s.maxHp, lei: s.lei, heat: Math.round(s.heat), score: s.score, combo: s.combo, driving: s.driving,
+      cred: s.cred, civic: s.civic, xp: s.xp, rank: r.name, xpCur: r.t, xpNext: next ? next.t : r.t,
+      clues: this.clueCount(), satchel: s.satchel, weapon: this.weaponName ? this.weaponName() : '',
+    })
+  }
+
+  clueCount() { return Object.values(this.clues).filter(Boolean).length }
+  addCred(n) { this.state.cred = Phaser.Math.Clamp(this.state.cred + n, 0, 100); if (n > 0) this.toast('Respect pe stradă! +cred'); this.syncHud() }
+  addCivic(n) { this.state.civic = Phaser.Math.Clamp(this.state.civic + n, 0, 100); if (n > 0) this.toast('Cartierul îți mulțumește. +civic'); this.syncHud() }
+
+  addXp(n) {
+    this.state.xp += n
+    let i = 0
+    for (let k = 0; k < this.ranks.length; k++) if (this.state.xp >= this.ranks[k].t) i = k
+    if (i > this.rankIdx) { this.rankIdx = i; this.onRankUp(i) }
+    this.syncHud()
+  }
+
+  onRankUp(i) {
+    this.toast('Ai avansat: ' + this.ranks[i].name + '!')
+    if (i >= 2) { this.weaponUnlocked.covor = true; this.bribeDiscount = true }
+    if (i >= 4) { this.weaponUnlocked.baban = true; this.potholeTime = 0.9; this.sprintSpeed = 210 }
+  }
+
+  addClue(key, text) {
+    if (this.clues[key]) return
+    this.clues[key] = true
+    this.state.civic = Phaser.Math.Clamp(this.state.civic + 5, 0, 100)
+    this.state.score += 80; this.addXp(80)
+    this.toast('Indiciu: ' + text)
+    this.syncHud()
+    if (this.clueCount() >= 5) this.unlockFinale()
+  }
+
+  unlockFinale() {
+    if (this.finaleReady) return
+    this.finaleReady = true
+    this.registry.set('mission', 'Finală: demască Primarul la Casa Guvernului (E).')
+    this.toast('Ai toate dovezile! Mergi la Casa Guvernului.')
   }
 
   toast(msg) { this.registry.set('toast', { msg, id: this.time.now }) }
@@ -545,6 +743,17 @@ export default class CentruScene extends Phaser.Scene {
     else if (n.type === 'zina') this.talkZina()
     else if (n.type === 'bread') this.getBread()
     else if (n.type === 'food') this.eat(n.ref)
+    else if (n.type === 'om-befriend') this.befriendHomeless()
+    else if (n.type === 'om-talk') this.toast(this.omLine())
+  }
+
+  omLine() {
+    const lines = [
+      'Omul: Matryoshka... telefonul... în beciul de la primărie... eu am văzut.',
+      'Omul: Primarul vorbește cu Moscova noaptea. Nimeni nu crede pe nebunul din parc.',
+      'Omul: Caută sub Arc, băiete. Acolo-i o păpușă care știe tot.',
+    ]
+    return lines[Math.floor(Math.random() * lines.length)]
   }
 
   enterCar(carSprite) {
@@ -593,8 +802,9 @@ export default class CentruScene extends Phaser.Scene {
       this.registry.set('mission', 'Misiune: adu pâine de la Linella.')
       this.toast('Baba Zina: adu-mi pâine de la Linella, maică.')
     } else if (s.mission === 2) {
-      s.mission = 3; s.lei += 30; s.score += 150
-      this.registry.set('mission', 'Explorează Centrul: adună amintiri, condu, mănâncă.')
+      s.mission = 3; s.lei += 30; s.score += 150; this.addXp(150)
+      this.cluesEnabled = true; this.clues.zina = true; this.addCivic(12)
+      this.registry.set('mission', 'Investighează: adună dovezi despre primar (indicii de la localnici).')
       this.toast('Baba Zina: mulțumesc! (+30 lei) Și... primarul vorbește prea des la telefon, în rusă...')
       this.syncHud()
     } else if (s.mission === 1) {
@@ -639,13 +849,16 @@ export default class CentruScene extends Phaser.Scene {
     if (!this.cop) return
     const s = this.state
     if (n === 1) {
-      if (s.lei >= this.copBribe) { s.lei -= this.copBribe; s.heat = 0; this.toast('Mită dată. Drum bun, șefu.') }
+      if (s.lei >= this.copBribe) { s.lei -= this.copBribe; s.heat = 0; s.cred = Math.max(0, s.cred - 3); this.toast('Mită dată. Drum bun, șefu.') }
       else { s.heat = 30; s.hp = Math.max(0, s.hp - 8); this.toast('N-ai bani de mită — amendă și nervi! (-8 HP)') }
     } else if (n === 2) {
       if (Math.random() < 0.6) { s.heat = 0; s.score += 20; this.toast('Te-ai descurcat cu vorba.') }
       else { s.lei = Math.max(0, s.lei - 15); s.heat = 35; s.hp = Math.max(0, s.hp - 10); this.toast('N-a mers — amendă -15 lei, -10 HP.') }
     } else {
-      s.heat = 20; s.score += 40; this.toast('Ai fugit de poliție! +cred.')
+      // flee — gopnik respect makes it cleaner
+      s.heat = (s.cred >= 60) ? 8 : 20; s.score += 40; s.cred = Phaser.Math.Clamp(s.cred + 6, 0, 100)
+      this.toast(s.cred >= 60 ? 'Ai fugit — gopnicii te-au acoperit! +cred' : 'Ai fugit de poliție! +cred.')
+      if (this.cluesEnabled) this.addClue('cop', 'fuga de poliție arată că ceva e putred la primărie')
     }
     this.cop = false
     this.copGrace = this.time.now + 6000 // no back-to-back stops
@@ -657,7 +870,7 @@ export default class CentruScene extends Phaser.Scene {
   // ---- per-frame systems -------------------------------------------------
   walk(d) {
     const k = this.keys, c = this.cursors
-    const speed = k.SHIFT.isDown ? 175 : 100
+    const speed = k.SHIFT.isDown ? this.sprintSpeed : 100
     let vx = 0, vy = 0
     if (k.A.isDown || c.left.isDown) vx -= 1
     if (k.D.isDown || c.right.isDown) vx += 1
@@ -717,13 +930,18 @@ export default class CentruScene extends Phaser.Scene {
     const px = this.state.driving ? this.car.x : this.ion.x
     const py = this.state.driving ? this.car.y : this.ion.y
     for (const s of this.pickups) {
-      if (!s.visible) { if (this.time.now - s.cAt > 25000) s.setVisible(true); continue } // renewable: respawn after 25s
+      if (!s.visible) { // renewable: respawn after 25s as a fresh random item
+        if (this.time.now - s.cAt > 25000) { s.item = this.randomItem(); s.setTexture(s.item.tex); s.setVisible(true) }
+        continue
+      }
       if ((px - s.x) ** 2 + (py - s.y) ** 2 < 18 * 18) {
         s.setVisible(false); s.cAt = this.time.now
+        this.state.satchel = (this.state.satchel || 0) + 1
         this.state.combo += 1; this.state.comboT = 2.5
         const gain = 10 * Math.max(1, this.state.combo)
         this.state.lei += gain; this.state.score += 20 * this.state.combo
-        this.toast(`Amintire! +${gain} lei` + (this.state.combo > 1 ? ` (combo x${this.state.combo})` : ''))
+        if (this.addXp) this.addXp(15 * this.state.combo)
+        this.toast(`${s.item.n}! +${gain} lei` + (this.state.combo > 1 ? ` (combo x${this.state.combo})` : ''))
         this.syncHud()
       }
     }
@@ -739,6 +957,10 @@ export default class CentruScene extends Phaser.Scene {
     test(this.zina.x, this.zina.y, 34, { type: 'zina' })
     if (this.state.mission === 1 && this.breadTarget) test(this.breadTarget.x, this.breadTarget.y, 36, { type: 'bread' })
     for (const f of this.foodSpots) test(f.x, f.y, 30, { type: 'food', ref: f })
+    if (this.homeless) {
+      if (this.homeless.calm) test(this.homeless.spr.x, this.homeless.spr.y, 36, { type: 'om-talk' })
+      else if (this.homeless.state !== 'ko') test(this.homeless.spr.x, this.homeless.spr.y, 36, { type: 'om-befriend' })
+    }
     this.nearest = near
     let prompt = ''
     if (near) {
@@ -746,6 +968,8 @@ export default class CentruScene extends Phaser.Scene {
       else if (near.type === 'zina') prompt = this.state.mission === 2 ? 'E: dă pâinea Babei Zina' : 'E: vorbește cu Baba Zina'
       else if (near.type === 'bread') prompt = 'E: ia pâinea (Linella)'
       else if (near.type === 'food') prompt = `E: mănâncă (-${near.ref.price} lei, +${near.ref.hp} HP)`
+      else if (near.type === 'om-befriend') prompt = 'E: dă bani (15) să-l calmezi · SPACE/click: lovește'
+      else if (near.type === 'om-talk') prompt = 'E: ascultă profeția'
     }
     this.registry.set('prompt', prompt)
   }
@@ -807,6 +1031,7 @@ export default class CentruScene extends Phaser.Scene {
     if (this.state.driving) this.driveCar(d); else this.walk(d)
     this.updatePickups()
     this.updateInteraction()
+    this.updateCombat(d)
     this.updateHeat(d)
     this.updateSurvival(d)
     this.updateMarker()
