@@ -26,7 +26,7 @@ export default class UiScene extends Phaser.Scene {
     const bar = (y, label, color) => {
       this.add.rectangle(8, y, 124, 10, 0x10121a, 0.7).setOrigin(0)
       const fill = this.add.rectangle(10, y + 2, 0, 6, color).setOrigin(0)
-      this.add.text(136, y, label, { fontFamily: F, fontSize: '8px', color: '#' + color.toString(16).padStart(6, '0') })
+      this.add.text(136, y - 1, label, { fontFamily: F, fontSize: '9px', color: '#' + color.toString(16).padStart(6, '0') })
       return fill
     }
     this.heatFill = bar(48, 'HEAT', 0xf9a200)
@@ -159,7 +159,7 @@ export default class UiScene extends Phaser.Scene {
       this._winSig = win.score
       this.winDim.setSize(this.scale.width, this.scale.height)
       this.winText.setPosition(this.scale.width / 2, this.scale.height / 2)
-      this.winText.setText(`★ PRIMAR DE CHIȘINĂU ★\n\nL-ai demascat pe Primar. Orașul e al tău.\n\nScor final: ${win.score}    Lei: ${win.lei}\nRang: ${win.rank}\n\nCu ${win.lei} lei ai cumpărat\n${win.sqm} m² de apartament în Chișinău.\n\nFelicitări — ai ajuns nimeni-cineva.`)
+      this.winText.setText(`★ PRIMAR DE CHIȘINĂU ★\n\nL-ai demascat pe Primar. Orașul e al tău.\n\nScor final: ${win.score}    Lei: ${win.lei}\nRang: ${win.rank}\n\nCu ${win.lei} lei ai cumpărat\n${win.sqm} m² de apartament în Chișinău.\n\nFelicitări — ai ajuns nimeni-cineva.\n\nApasă R pentru a reîncepe.`)
     }
   }
 

@@ -398,6 +398,7 @@ export default class CentruScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-SPACE', () => this.swing())
     this.input.on('wheel', (_p, _o, _dx, dy) => this.zoomBy(dy > 0 ? -0.25 : 0.25))
     this.input.on('pointerdown', (p) => {
+      if (this.frozen()) return
       const wp = this.cameras.main.getWorldPoint(p.x, p.y)
       // click an aggro'd enemy to hit it
       const h = this.homeless
@@ -418,6 +419,8 @@ export default class CentruScene extends Phaser.Scene {
   weaponName() { return this.weapons ? this.weapons[this.weaponIdx].name : '' }
 
   swapWeapon() {
+    if (this.frozen()) return
+    if (!this.weaponUnlocked.covor && !this.weaponUnlocked.baban) { this.toast('N-ai altă armă încă — avansează în rang pentru covor/baban.'); return }
     for (let k = 1; k <= this.weapons.length; k++) {
       const idx = (this.weaponIdx + k) % this.weapons.length
       const w = this.weapons[idx]
@@ -450,7 +453,7 @@ export default class CentruScene extends Phaser.Scene {
   }
 
   swing() {
-    if (this.state.driving || this.cop || this.shopOpen || this.won) return
+    if (this.state.driving || this.frozen()) return
     const now = this.time.now
     if (now < this.swingCD) return
     this.swingCD = now + 380
@@ -486,6 +489,7 @@ export default class CentruScene extends Phaser.Scene {
   }
 
   onHomelessFlip() {
+    this._homelessFlipped = true // remember even before the investigation opens, so the clue is never lost
     if (this.cluesEnabled) this.addClue('homeless', 'matryoshka și un telefon rusesc în beciul primăriei')
     if (!this._matryoshkaSpawned) {
       this._matryoshkaSpawned = true
@@ -512,8 +516,9 @@ export default class CentruScene extends Phaser.Scene {
     if (this.state.driving || this.won || this.cop || this.shopOpen) return
     if (e.state === 'ko' || e.calm) return
     const dist2 = (this.ion.x - e.spr.x) ** 2 + (this.ion.y - e.spr.y) ** 2
-    if (!e.aggro && dist2 < 70 * 70) { e.aggro = true; this.spawnFloatText(e.spr.x, e.spr.y - 30, 'Și aiurești wai, șii cu tine?!') }
+    if (!e.aggro && dist2 < 70 * 70) { e.aggro = true; e.dmgT = 1.0; this.spawnFloatText(e.spr.x, e.spr.y - 30, 'Și aiurești wai, șii cu tine?!') }
     if (e.aggro) {
+      if (dist2 > 260 * 260) { e.aggro = false; return } // leash: he gives up the chase
       const ang = Math.atan2(this.ion.y - e.spr.y, this.ion.x - e.spr.x)
       const nx = e.spr.x + Math.cos(ang) * 58 * d, ny = e.spr.y + Math.sin(ang) * 58 * d
       if (!this.blocked(nx, e.spr.y)) e.spr.x = nx
@@ -562,6 +567,8 @@ export default class CentruScene extends Phaser.Scene {
     this.car = null
     this.cop = false
     this.shopOpen = false
+    this.exposeOpen = false
+    this._homelessFlipped = false
     this.copTimer = 0
     this.hudT = 0
     this.sprintSpeed = 175
@@ -591,6 +598,7 @@ export default class CentruScene extends Phaser.Scene {
     this.breadTarget = this.foodSpots.find((f) => /Linella/.test(f.name)) || this.foodSpots[0]
     this.input.keyboard.on('keydown-E', () => this.onAction())
     ;['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX'].forEach((k, i) => this.input.keyboard.on('keydown-' + k, () => this.menuKey(i + 1)))
+    this.input.keyboard.on('keydown-R', () => { if (this.won) { this.registry.set('win', null); this.scene.stop('Ui'); this.scene.restart() } })
     this.syncHud()
     this.registry.set('mission', 'Vorbește cu Baba Zina (E) ca să începi.')
     // minimap data
@@ -716,8 +724,8 @@ export default class CentruScene extends Phaser.Scene {
   }
 
   clueCount() { return Object.values(this.clues).filter(Boolean).length }
-  addCred(n) { this.state.cred = Phaser.Math.Clamp(this.state.cred + n, 0, 100); if (n > 0) this.toast('Respect pe stradă! +cred'); this.syncHud() }
-  addCivic(n) { this.state.civic = Phaser.Math.Clamp(this.state.civic + n, 0, 100); if (n > 0) this.toast('Cartierul îți mulțumește. +civic'); this.syncHud() }
+  addCred(n) { this.state.cred = Phaser.Math.Clamp(this.state.cred + n, 0, 100); this.syncHud() } // silent: caller toasts
+  addCivic(n) { this.state.civic = Phaser.Math.Clamp(this.state.civic + n, 0, 100); this.syncHud() }
 
   addXp(n) {
     this.state.xp += n
@@ -751,6 +759,7 @@ export default class CentruScene extends Phaser.Scene {
   }
 
   toast(msg) { this.registry.set('toast', { msg, id: this.time.now }) }
+  frozen() { return this.cop || this.shopOpen || this.exposeOpen || this.won }
 
   menuKey(n) {
     if (this.cop) this.copChoice(n)
@@ -831,7 +840,7 @@ export default class CentruScene extends Phaser.Scene {
     if (!this.filling) return
     if (this.state.driving) { this.filling = null; return }
     const f = this.filling
-    if ((this.ion.x - f.ref.x) ** 2 + (this.ion.y - f.ref.y) ** 2 > 40 * 40) { this.filling = null; return }
+    if ((this.ion.x - f.ref.x) ** 2 + (this.ion.y - f.ref.y) ** 2 > 40 * 40) { this.filling = null; this.toast('Te-ai mișcat — gropa nu-i gata. Apasă E din nou.'); return }
     f.t += d
     const x = this.ion.x - 11, y = this.ion.y - this.ion.height - 6
     this.fillBar.fillStyle(0x10121a, 0.8).fillRect(x - 1, y - 1, 24, 5)
@@ -873,7 +882,7 @@ export default class CentruScene extends Phaser.Scene {
     this.state.lei += stake; this.state.score += 80; this.addCred(40); this.addXp(80)
     this.toast(`Respect, bratan! +${stake} lei`)
     this.registry.set('mission', this._missionBak || '')
-    if (this.cluesEnabled && this.state.cred >= 60) this.addClue('gopnik', 'cortegiul negru merge mereu spre ambasada rusă — gopnicii văd tot din curte')
+    if (this.cluesEnabled) this.addClue('gopnik', 'cortegiul negru merge mereu spre ambasada rusă — gopnicii văd tot din curte')
     this.syncHud()
   }
 
@@ -923,11 +932,11 @@ export default class CentruScene extends Phaser.Scene {
     else if (n.type === 'bread') this.getBread()
     else if (n.type === 'food') this.eat(n.ref)
     else if (n.type === 'om-befriend') this.befriendHomeless()
-    else if (n.type === 'om-talk') this.toast(this.omLine())
+    else if (n.type === 'om-talk') { if (this.cluesEnabled && !this.clues.homeless) this.addClue('homeless', 'matryoshka și un telefon rusesc în beciul primăriei'); else this.toast(this.omLine()) }
     else if (n.type === 'borea') this.openBorea()
     else if (n.type === 'drop') this.deliverSmuggle()
     else if (n.type === 'expose') this.openExpose()
-    else if (n.type === 'gopnik') { if (this.state.driving) this.startRace(); else this.toast('Gopnik: hai cu mașina, fraer, facem o cursă.') }
+    else if (n.type === 'gopnik') this.toast('Gopnik: ia o mașină de pe bulevard și vino, facem o cursă, fraer.')
     else if (n.type === 'pothole') { this.filling = { ref: n.ref, t: 0, dur: this.potholeTime }; this.toast('Astupi gropa... stai pe loc.') }
   }
 
@@ -988,8 +997,9 @@ export default class CentruScene extends Phaser.Scene {
     } else if (s.mission === 2) {
       s.mission = 3; s.lei += 30; s.score += 150; this.addXp(150)
       this.cluesEnabled = true; this.clues.zina = true; this.addCivic(12)
-      this.registry.set('mission', 'Investighează: adună dovezi despre primar (indicii de la localnici).')
-      this.toast('Baba Zina: mulțumesc! (+30 lei) Și... primarul vorbește prea des la telefon, în rusă...')
+      if (this._homelessFlipped) this.addClue('homeless', 'matryoshka și un telefon rusesc în beciul primăriei') // recover an early flip
+      this.registry.set('mission', 'Dovezi: cursă cu gopnicii · afaceri cu Borea · omul din parc · scapă de poliție.')
+      this.toast('Baba Zina: mulțumesc! (+30 lei) Caută dovezi: gopnicii, Borea, nebunul din parc, poliția...')
       this.syncHud()
     } else if (s.mission === 1) {
       this.toast('Baba Zina: pâinea, maică, de la Linella!')
@@ -1164,6 +1174,11 @@ export default class CentruScene extends Phaser.Scene {
     if (this.potholes) for (const p of this.potholes) if (!p.filled) test(p.x, p.y, 30, { type: 'pothole', ref: p })
     if (this.state.smuggling && this.dropPoint) test(this.dropPoint.x, this.dropPoint.y, 42, { type: 'drop' })
     if (this.finaleReady && !this.won) test(1310, ROWS[1].y1, 60, { type: 'expose' }) // at Casa Guvernului
+    // befriending an aggro'd homeless must be reachable BEFORE forced melee range
+    if (this.homeless && this.homeless.aggro && !this.homeless.calm && this.homeless.state !== 'ko') {
+      const d2 = (ix - this.homeless.spr.x) ** 2 + (iy - this.homeless.spr.y) ** 2
+      if (d2 < 72 * 72 && (!near || near.type === 'food' || near.type === 'om-befriend')) near = { type: 'om-befriend' }
+    }
     this.nearest = near
     let prompt = ''
     if (near) {
@@ -1188,7 +1203,7 @@ export default class CentruScene extends Phaser.Scene {
       // only flooring it (Shift) builds heat; cruising is safe; smuggling is risky
       s.heat = Phaser.Math.Clamp(s.heat + ((this.moving === 2 ? 7 : -2) + (s.smuggling ? 4 : 0)) * d, 0, 100)
       this.copTimer += d
-      if (!this.cop && this.copIntro && this.copTimer > 1.8) {
+      if (!this.cop && this.copIntro && !this.racing && this.copTimer > 1.8) {
         this.copIntro = false; this.copTimer = 0; this.startCopStop() // guaranteed tutorial stop on first drive
       } else if (!this.cop && s.heat > 68 && this.copTimer > 2 && this.time.now > (this.copGrace || 0)) {
         this.copTimer = 0
@@ -1221,6 +1236,7 @@ export default class CentruScene extends Phaser.Scene {
     let target = null
     if (m === 1) target = this.breadTarget
     else if (m === 2) target = this.zina
+    if (this.finaleReady && !this.won) target = { x: 1310, y: ROWS[1].y1 } // point to Casa Guvernului for the exposé
     this.curTarget = target
     if (target) this.marker.setVisible(true).setPosition(target.x, target.y - 44 + bob).setDepth(99980)
     else this.marker.setVisible(false)
@@ -1240,7 +1256,7 @@ export default class CentruScene extends Phaser.Scene {
 
   update(t, dt) {
     this.updateTraffic(dt)
-    if (this.cop || this.shopOpen || this.exposeOpen || this.won) { this.updateNameplate(); return } // frozen during a modal
+    if (this.frozen()) { this.updateNameplate(); return } // frozen during a modal
     const d = dt / 1000
     if (this.state.driving) this.driveCar(d); else this.walk(d)
     this.updatePickups()
