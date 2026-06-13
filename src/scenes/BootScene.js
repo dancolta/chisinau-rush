@@ -23,8 +23,10 @@ export default class BootScene extends Phaser.Scene {
     this.makeOpera()
     this.makeParliament()
     this.makePresidency()
+    this.makeChurch()
     this.makeStatue()
     this.makeFountain()
+    this.makeShops()
     // Residential
     this.makeKhrushchyovka()
     this.makeScanlines()
@@ -55,23 +57,48 @@ export default class BootScene extends Phaser.Scene {
     g.destroy()
   }
 
-  // ---- character ---------------------------------------------------------
+  // ---- character (4-direction: down / up / side) -------------------------
   makeIon() {
     const pal = { h: 0x4a3220, s: 0xe8b894, k: 0x3a2616, b: 0x2f6fb0, p: 0x33343d, o: 0x191a1f }
-    const f0 = [
+    // facing DOWN (front)
+    this.drawGrid('ion_down0', [
       '....hhhh....', '...hhhhhh...', '...hssssh...', '...hssssh...',
       '...kssssk...', '....ssss....', '...bbbbbb...', '..bbbbbbbb..',
       '..sbbbbbbs..', '..sbbbbbbs..', '...bbbbbb...', '...pppppp...',
       '...pp..pp...', '...pp..pp...', '...oo..oo...', '...oo..oo...',
-    ]
-    const f1 = [
+    ], pal)
+    this.drawGrid('ion_down1', [
       '....hhhh....', '...hhhhhh...', '...hssssh...', '...hssssh...',
       '...kssssk...', '....ssss....', '...bbbbbb...', '..bbbbbbbb..',
       '..sbbbbbbs..', '..sbbbbbbs..', '...bbbbbb...', '...pppppp...',
       '...pp..pp...', '...pp..pp...', '..oo....oo..', '..oo....oo..',
-    ]
-    this.drawGrid('ion0', f0, pal)
-    this.drawGrid('ion1', f1, pal)
+    ], pal)
+    // facing UP (back) — no face
+    this.drawGrid('ion_up0', [
+      '....hhhh....', '...hhhhhh...', '...hhhhhh...', '...hhhhhh...',
+      '...hhhhhh...', '....hhhh....', '...bbbbbb...', '..bbbbbbbb..',
+      '..sbbbbbbs..', '..sbbbbbbs..', '...bbbbbb...', '...pppppp...',
+      '...pp..pp...', '...pp..pp...', '...oo..oo...', '...oo..oo...',
+    ], pal)
+    this.drawGrid('ion_up1', [
+      '....hhhh....', '...hhhhhh...', '...hhhhhh...', '...hhhhhh...',
+      '...hhhhhh...', '....hhhh....', '...bbbbbb...', '..bbbbbbbb..',
+      '..sbbbbbbs..', '..sbbbbbbs..', '...bbbbbb...', '...pppppp...',
+      '...pp..pp...', '...pp..pp...', '..oo....oo..', '..oo....oo..',
+    ], pal)
+    // facing SIDE (profile, facing right) — flipX for left
+    this.drawGrid('ion_side0', [
+      '....hhhh....', '...hhhhhh...', '...hhssss...', '...hsksss...',
+      '...hsssss...', '....ssss....', '...bbbbb....', '..bbbbbb....',
+      '..bbbbbs....', '..bbbbb.....', '...bbbb.....', '...pppp.....',
+      '..pp.pp.....', '..pp.pp.....', '..oo.oo.....', '..oo.oo.....',
+    ], pal)
+    this.drawGrid('ion_side1', [
+      '....hhhh....', '...hhhhhh...', '...hhssss...', '...hsksss...',
+      '...hsssss...', '....ssss....', '...bbbbb....', '..bbbbbb....',
+      '.sbbbbb.....', '..bbbbb.....', '...bbbb.....', '...pppp.....',
+      '...pp.......', '...pp.......', '...oo.......', '...oo.......',
+    ], pal)
   }
 
   // ---- ground tiles ------------------------------------------------------
@@ -337,6 +364,49 @@ export default class BootScene extends Phaser.Scene {
       // ground entrances
       g.fillStyle(0x4a3f33, 1); g.fillRect(10, H - 9, 7, 9); g.fillRect(W - 20, H - 9, 7, 9)
     })
+  }
+
+  makeChurch() {
+    // Biserica Schimbarea la Față (small)
+    const W = 40, H = 52
+    this.tex('church', W, H, (g) => {
+      g.fillStyle(0xeceae2, 1); g.fillRect(8, 24, W - 16, H - 24)
+      g.fillStyle(0xd8d5ca, 1); g.fillRect(8, 24, 2, H - 24)
+      g.fillStyle(0x2f7d5c, 1); g.fillCircle(W / 2, 18, 9)
+      g.fillStyle(0x3a9a70, 1); g.fillCircle(W / 2 - 2, 15, 4)
+      g.fillStyle(0xcdaa3a, 1); g.fillRect(W / 2 - 1, 2, 2, 7); g.fillRect(W / 2 - 3, 4, 6, 1)
+      g.fillStyle(0x9a978c, 1); g.fillRect(14, 30, 4, 7); g.fillRect(W - 18, 30, 4, 7)
+      g.fillStyle(0x5a4a36, 1); g.fillRect(W / 2 - 4, H - 12, 8, 12)
+    })
+  }
+
+  // Generic branded storefront. Real Chișinău brands → parody fan-art.
+  makeShop(key, wall, wallShade, sign) {
+    const W = 48, H = 50
+    this.tex(key, W, H, (g) => {
+      g.fillStyle(wall, 1); g.fillRect(2, 6, W - 4, H - 6)
+      g.fillStyle(wallShade, 1); g.fillRect(2, 6, 3, H - 6)
+      g.fillStyle(wallShade, 1); g.fillRect(2, 6, W - 4, 2)            // roofline
+      // upper windows
+      g.fillStyle(0x3a4654, 1)
+      for (let x = 8; x < W - 8; x += 11) g.fillRect(x, 12, 6, 6)
+      // signboard
+      g.fillStyle(sign, 1); g.fillRect(4, 24, W - 8, 8)
+      g.fillStyle(0xffffff, 0.18); g.fillRect(4, 24, W - 8, 2)
+      // ground-floor glass + door + awning
+      g.fillStyle(0x6a8aa0, 1); g.fillRect(6, 36, W - 12, H - 38)
+      g.fillStyle(0x82a4ba, 1); g.fillRect(6, 36, W - 12, 2)
+      g.fillStyle(sign, 1); g.fillRect(4, 33, W - 8, 3)               // awning lip
+      g.fillStyle(0x4a3f33, 1); g.fillRect(W / 2 - 5, H - 11, 10, 11) // door
+    })
+  }
+
+  makeShops() {
+    this.makeShop('shop_linella', 0xeef0ee, 0xd5d8d4, 0x009640)  // Linella — green
+    this.makeShop('shop_davidan', 0xf3e7cf, 0xddcba6, 0xc3812d)  // DaviDan — kürtos brown
+    this.makeShop('shop_andys', 0x16181c, 0x0d0e11, 0xffe400)    // ANDY'S — black/yellow
+    this.makeShop('shop_placinte', 0x21336a, 0x18264f, 0xebc372) // La Plăcinte — navy/gold
+    this.makeShop('shop_tucano', 0xf3e7cf, 0xddcba6, 0xf9b200)   // Tucano Coffee — orange
   }
 
   makeScanlines() {
