@@ -20,7 +20,7 @@ export default class UiScene extends Phaser.Scene {
     // HP bar
     this.add.rectangle(8, 30, 124, 14, 0x10121a, 0.7).setOrigin(0)
     this.hpFill = this.add.rectangle(10, 32, 120, 10, 0xcc3b30).setOrigin(0)
-    this.hpText = this.add.text(70, 31, '', { fontFamily: F, fontSize: '9px', color: '#ffffff' }).setOrigin(0.5, 0)
+    this.hpText = this.add.text(70, 31, '', { fontFamily: F, fontSize: '9px', color: '#ffffff' }).setOrigin(0.5, 0).setStroke('#10121a', 3)
 
     // Heat bar
     this.add.rectangle(8, 48, 124, 12, 0x10121a, 0.7).setOrigin(0)
@@ -35,10 +35,10 @@ export default class UiScene extends Phaser.Scene {
     this.missionText = this.add.text(8, 66, '', { fontFamily: F, fontSize: '11px', color: '#ebc372', backgroundColor: '#10121aBB', padding: { x: 5, y: 3 } }).setOrigin(0, 0)
 
     // interaction prompt (bottom centre, above nameplate)
-    this.promptText = this.add.text(W / 2, H - 92, '', { fontFamily: F, fontSize: '12px', color: '#ffffff', backgroundColor: '#1b2f1bDD', padding: { x: 8, y: 4 } }).setOrigin(0.5).setAlpha(0)
+    this.promptText = this.add.text(W / 2, H - 116, '', { fontFamily: F, fontSize: '12px', color: '#ffffff', backgroundColor: '#1b2f1bEE', padding: { x: 8, y: 4 } }).setOrigin(0.5).setAlpha(0)
 
     // toast
-    this.toastText = this.add.text(W / 2, 110, '', { fontFamily: F, fontSize: '12px', color: '#fff6d6', backgroundColor: '#10121aDD', padding: { x: 8, y: 4 } }).setOrigin(0.5).setAlpha(0)
+    this.toastText = this.add.text(W / 2, 128, '', { fontFamily: F, fontSize: '12px', color: '#fff6d6', backgroundColor: '#10121aDD', padding: { x: 8, y: 4 } }).setOrigin(0.5).setAlpha(0)
     this.toastId = null
 
     // landmark nameplate
@@ -64,7 +64,7 @@ export default class UiScene extends Phaser.Scene {
     this.topbar.width = W
     this.help.setX(W - 8)
     this.leiText.setX(W - 8); this.scoreText.setX(W - 8)
-    this.promptText.setPosition(W / 2, H - 92)
+    this.promptText.setPosition(W / 2, H - 116)
     this.toastText.setX(W / 2)
     this.np.setPosition(W / 2, H - 44)
     this.crt.setSize(W, H)

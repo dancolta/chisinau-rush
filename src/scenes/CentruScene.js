@@ -386,7 +386,7 @@ export default class CentruScene extends Phaser.Scene {
     // click a building/location → reveal its name
     this.input.on('pointerdown', (p) => {
       const wp = this.cameras.main.getWorldPoint(p.x, p.y)
-      let near = null, best = 170 * 170
+      let near = null, best = 90 * 90
       for (const lm of this.landmarks) {
         const d = (wp.x - lm.x) ** 2 + (wp.y - lm.y) ** 2
         if (d < best) { best = d; near = lm }
@@ -401,10 +401,13 @@ export default class CentruScene extends Phaser.Scene {
     let chosen = null
     if (this.pin && this.time.now < this.pinUntil) {
       chosen = this.pin // a clicked building takes priority for a few seconds
-    } else {
-      let near = null, best = 150 * 150
+    } else if (!this.registry.get('prompt')) {
+      // ambient nameplate only when there's no actionable prompt, and only up-close
+      const ex = this.state.driving ? this.car.x : this.ion.x
+      const ey = this.state.driving ? this.car.y : this.ion.y
+      let near = null, best = 80 * 80
       for (const lm of this.landmarks) {
-        const dx = this.ion.x - lm.x, dy = this.ion.y - lm.y
+        const dx = ex - lm.x, dy = ey - lm.y
         const d2 = dx * dx + dy * dy
         if (d2 < best) { best = d2; near = lm }
       }
@@ -437,8 +440,9 @@ export default class CentruScene extends Phaser.Scene {
 
   buildFoodSpots() {
     const info = (n) => {
+      if (n.startsWith('Stația')) return null // bus stops are not eateries
       if (/Kebab|Șaorma/.test(n)) return { price: 15, hp: 25 }
-      if (/Cvas/.test(n)) return { price: 8, hp: 12 }
+      if (/Cvas/.test(n)) return { price: 0, hp: 12 } // free refill so HP is never gated by lei
       if (/Plăcinte/.test(n)) return { price: 20, hp: 40 }
       if (/ANDY/.test(n)) return { price: 25, hp: 45 }
       if (/DaviDan|Franzeluța|Fornetti/.test(n)) return { price: 14, hp: 22 }
@@ -502,12 +506,25 @@ export default class CentruScene extends Phaser.Scene {
     this.ion.setVisible(false); this.ion.body.enable = false
     this.cameras.main.startFollow(this.car, true, 0.12, 0.12)
     this.toast('Ai urcat în mașină. WASD conduce, E coboară.')
+    if (!this.copIntroDone) { this.copIntroDone = true; this.copIntro = true; this.copTimer = 0 } // guaranteed first stop
     this.syncHud()
+  }
+
+  blocked(x, y) {
+    for (const z of this.solids.getChildren()) {
+      const b = z.body
+      if (b && x > b.x - 6 && x < b.x + b.width + 6 && y > b.y - 6 && y < b.y + b.height + 6) return true
+    }
+    return false
   }
 
   exitCar() {
     const c = this.car
-    this.ion.setPosition(c.x + 22, c.y); this.ion.setVisible(true); this.ion.body.enable = true
+    let px = c.x, py = c.y
+    for (const [ox, oy] of [[26, 0], [-26, 0], [0, 26], [0, -26], [0, 0]]) {
+      if (!this.blocked(c.x + ox, c.y + oy)) { px = c.x + ox; py = c.y + oy; break }
+    }
+    this.ion.setPosition(px, py); this.ion.setVisible(true); this.ion.body.enable = true
     this.state.driving = false; this.car = null
     this.cameras.main.startFollow(this.ion, true, 0.12, 0.12)
     this.syncHud()
@@ -530,8 +547,8 @@ export default class CentruScene extends Phaser.Scene {
       this.toast('Baba Zina: adu-mi pâine de la Linella, maică.')
     } else if (s.mission === 2) {
       s.mission = 3; s.lei += 30; s.score += 150
-      this.registry.set('mission', 'Misiune completă! +30 lei')
-      this.toast('Baba Zina: mulțumesc! Și... primarul vorbește prea des la telefon, în rusă...')
+      this.registry.set('mission', 'Explorează Centrul: adună amintiri, condu, mănâncă.')
+      this.toast('Baba Zina: mulțumesc! (+30 lei) Și... primarul vorbește prea des la telefon, în rusă...')
       this.syncHud()
     } else if (s.mission === 1) {
       this.toast('Baba Zina: pâinea, maică, de la Linella!')
@@ -562,14 +579,15 @@ export default class CentruScene extends Phaser.Scene {
     const s = this.state
     if (n === 1) {
       if (s.lei >= this.copBribe) { s.lei -= this.copBribe; s.heat = 0; this.toast('Mită dată. Drum bun, șefu.') }
-      else { s.heat = 40; this.toast('N-ai bani de mită — amendă!') }
+      else { s.heat = 30; s.hp = Math.max(0, s.hp - 8); this.toast('N-ai bani de mită — amendă și nervi! (-8 HP)') }
     } else if (n === 2) {
       if (Math.random() < 0.6) { s.heat = 0; s.score += 20; this.toast('Te-ai descurcat cu vorba.') }
-      else { s.lei = Math.max(0, s.lei - 15); s.heat = 45; this.toast('N-a mers — amendă -15 lei.') }
+      else { s.lei = Math.max(0, s.lei - 15); s.heat = 35; s.hp = Math.max(0, s.hp - 10); this.toast('N-a mers — amendă -15 lei, -10 HP.') }
     } else {
-      s.heat = 25; s.score += 40; this.toast('Ai fugit de poliție! +cred.')
+      s.heat = 20; s.score += 40; this.toast('Ai fugit de poliție! +cred.')
     }
     this.cop = false
+    this.copGrace = this.time.now + 6000 // no back-to-back stops
     this.registry.set('cop', null)
     this.syncHud()
   }
@@ -609,8 +627,10 @@ export default class CentruScene extends Phaser.Scene {
     const v = new Phaser.Math.Vector2(vx, vy)
     if (v.length() > 0) {
       v.normalize().scale(speed * d)
-      this.car.x = Phaser.Math.Clamp(this.car.x + v.x, 20, WORLD_W - 20)
-      this.car.y = Phaser.Math.Clamp(this.car.y + v.y, 20, WORLD_H - 20)
+      const nx = Phaser.Math.Clamp(this.car.x + v.x, 20, WORLD_W - 20)
+      const ny = Phaser.Math.Clamp(this.car.y + v.y, 20, WORLD_H - 20)
+      if (!this.blocked(nx, this.car.y)) this.car.x = nx // slide on X
+      if (!this.blocked(this.car.x, ny)) this.car.y = ny // slide on Y (buildings block)
       if (vx < 0) this.car.setFlipX(true); else if (vx > 0) this.car.setFlipX(false)
       this.moving = fast ? 2 : 1
     } else { this.moving = 0 }
@@ -630,10 +650,10 @@ export default class CentruScene extends Phaser.Scene {
   updatePickups() {
     const px = this.state.driving ? this.car.x : this.ion.x
     const py = this.state.driving ? this.car.y : this.ion.y
-    for (let i = this.pickups.length - 1; i >= 0; i--) {
-      const s = this.pickups[i]
+    for (const s of this.pickups) {
+      if (!s.visible) { if (this.time.now - s.cAt > 25000) s.setVisible(true); continue } // renewable: respawn after 25s
       if ((px - s.x) ** 2 + (py - s.y) ** 2 < 18 * 18) {
-        s.destroy(); this.pickups.splice(i, 1)
+        s.setVisible(false); s.cAt = this.time.now
         this.state.combo += 1; this.state.comboT = 2.5
         const gain = 10 * Math.max(1, this.state.combo)
         this.state.lei += gain; this.state.score += 20 * this.state.combo
@@ -667,17 +687,34 @@ export default class CentruScene extends Phaser.Scene {
   updateHeat(d) {
     const s = this.state
     if (s.driving) {
-      s.heat = Phaser.Math.Clamp(s.heat + (this.moving === 2 ? 11 : this.moving === 1 ? 4 : -3) * d, 0, 100)
+      // only flooring it (Shift) builds heat; cruising is safe
+      s.heat = Phaser.Math.Clamp(s.heat + (this.moving === 2 ? 7 : -2) * d, 0, 100)
       this.copTimer += d
-      if (!this.cop && s.heat > 55 && this.copTimer > 2) {
+      if (!this.cop && this.copIntro && this.copTimer > 1.8) {
+        this.copIntro = false; this.copTimer = 0; this.startCopStop() // guaranteed tutorial stop on first drive
+      } else if (!this.cop && s.heat > 68 && this.copTimer > 2 && this.time.now > (this.copGrace || 0)) {
         this.copTimer = 0
-        if (Math.random() < (s.heat - 55) / 60) this.startCopStop()
+        if (Math.random() < (s.heat - 68) / 60) this.startCopStop()
       }
     } else {
-      s.heat = Math.max(0, s.heat - 7 * d)
+      s.heat = Math.max(0, s.heat - 9 * d)
     }
     this.hudT += d
     if (this.hudT > 0.2) { this.hudT = 0; this.syncHud() }
+  }
+
+  // hunger drain + soft fail (gives food/lei real stakes, no hard softlock)
+  updateSurvival(d) {
+    const s = this.state
+    s.hp = Math.max(0, s.hp - 0.7 * d)
+    if (s.hp <= 0) {
+      if (s.driving) this.exitCar()
+      s.hp = 60; s.lei = Math.max(0, s.lei - 10); s.score = Math.max(0, s.score - 50)
+      this.ion.setPosition(1360, BD_BOT + 26)
+      this.cameras.main.startFollow(this.ion, true, 0.12, 0.12)
+      this.toast('Ai leșinat de foame! Mănâncă ceva. (-10 lei)')
+      this.syncHud()
+    }
   }
 
   updateMarker() {
@@ -699,6 +736,7 @@ export default class CentruScene extends Phaser.Scene {
     this.updatePickups()
     this.updateInteraction()
     this.updateHeat(d)
+    this.updateSurvival(d)
     this.updateMarker()
     this.updateNameplate()
   }
