@@ -58,6 +58,7 @@ export default class CentruScene extends Phaser.Scene {
     this.buildIon()
     this.buildCamera()
     this.buildInput()
+    this.initGameplay()
     this.registry.set('crt', true)
     this.registry.set('nearLm', null)
     this.scene.launch('Ui')
@@ -414,14 +415,167 @@ export default class CentruScene extends Phaser.Scene {
     if ((cur && cur.name) !== name) this.registry.set('nearLm', chosen)
   }
 
-  update(_t, dt) {
-    // moving traffic on the boulevard (wraps around)
-    if (this.traffic) for (const v of this.traffic) {
-      v.x += v.vx * (dt / 1000)
-      if (v.x > WORLD_W + 130) v.x = -130
-      else if (v.x < -130) v.x = WORLD_W + 130
-    }
+  // ======================= GAMEPLAY =======================================
+  initGameplay() {
+    this.state = { hp: 100, maxHp: 100, lei: 60, heat: 0, score: 0, combo: 0, comboT: 0, driving: false, mission: 0 }
+    this.car = null
+    this.cop = false
+    this.copTimer = 0
+    this.hudT = 0
+    this.buildFoodSpots()
+    this.buildPickups()
+    this.buildEnterCars()
+    this.buildNPCs()
+    this.breadTarget = this.foodSpots.find((f) => /Linella/.test(f.name)) || this.foodSpots[0]
+    this.input.keyboard.on('keydown-E', () => this.onAction())
+    this.input.keyboard.on('keydown-ONE', () => this.copChoice(1))
+    this.input.keyboard.on('keydown-TWO', () => this.copChoice(2))
+    this.input.keyboard.on('keydown-THREE', () => this.copChoice(3))
+    this.syncHud()
+    this.registry.set('mission', 'Vorbește cu Baba Zina (E) ca să începi.')
+  }
 
+  buildFoodSpots() {
+    const info = (n) => {
+      if (/Kebab|Șaorma/.test(n)) return { price: 15, hp: 25 }
+      if (/Cvas/.test(n)) return { price: 8, hp: 12 }
+      if (/Plăcinte/.test(n)) return { price: 20, hp: 40 }
+      if (/ANDY/.test(n)) return { price: 25, hp: 45 }
+      if (/DaviDan|Franzeluța|Fornetti/.test(n)) return { price: 14, hp: 22 }
+      if (/Tucano|Gustok|Cafe/.test(n)) return { price: 12, hp: 10 }
+      if (/Linella|Nr\.1|Fidesco|Velmart|Piața Centrală/.test(n)) return { price: 18, hp: 30 }
+      return null
+    }
+    this.foodSpots = []
+    for (const lm of this.landmarks) { const i = info(lm.name); if (i) this.foodSpots.push({ x: lm.x, y: lm.y, name: lm.name, ...i }) }
+  }
+
+  buildPickups() {
+    this.pickups = []
+    const keys = ['c_placinta', 'c_eugenia', 'c_cvas', 'c_martisor', 'c_covor']
+    const spots = [
+      [300, 960], [520, 960], [1000, 960], [1500, 960], [1700, 960], [2000, 960], [2250, 960],
+      [420, 1120], [900, 1120], [1500, 1120], [1900, 1120], [2100, 1120],
+      [1700, 1340], [1820, 1260], [560, 790], [960, 790],
+    ]
+    spots.forEach((p, i) => {
+      const s = this.add.image(p[0], p[1], keys[i % keys.length]).setOrigin(0.5, 1).setDepth(p[1])
+      this.pickups.push(s)
+    })
+  }
+
+  buildEnterCars() {
+    this.enterCars = []
+    ;[[760, 'car_sedan'], [1120, 'car_cayenne'], [1620, 'car_gwagon'], [2000, 'car_cruiser']].forEach(([x, key]) => {
+      const s = this.add.image(x, BD_TOP + 18, key).setOrigin(0.5, 1).setDepth(BD_TOP + 18)
+      this.enterCars.push(s)
+    })
+  }
+
+  buildNPCs() {
+    this.zina = this.add.image(1250, BD_BOT + 74, 'npc_zina').setOrigin(0.5, 1).setDepth(BD_BOT + 74)
+    this.add.image(640, BD_TOP - 14, 'npc_cop').setOrigin(0.5, 1).setDepth(BD_TOP - 14) // ambient cop
+    this.marker = this.add.image(0, 0, 'marker').setOrigin(0.5, 1).setDepth(99980).setVisible(false)
+  }
+
+  syncHud() {
+    const s = this.state
+    this.registry.set('hud', { hp: Math.round(s.hp), maxHp: s.maxHp, lei: s.lei, heat: Math.round(s.heat), score: s.score, combo: s.combo, driving: s.driving })
+  }
+
+  toast(msg) { this.registry.set('toast', { msg, id: this.time.now }) }
+
+  // ---- interaction -------------------------------------------------------
+  onAction() {
+    if (this.cop) return
+    if (this.state.driving) { this.exitCar(); return }
+    const n = this.nearest
+    if (!n) return
+    if (n.type === 'car') this.enterCar(n.ref)
+    else if (n.type === 'zina') this.talkZina()
+    else if (n.type === 'bread') this.getBread()
+    else if (n.type === 'food') this.eat(n.ref)
+  }
+
+  enterCar(carSprite) {
+    this.state.driving = true; this.car = carSprite
+    this.ion.setVisible(false); this.ion.body.enable = false
+    this.cameras.main.startFollow(this.car, true, 0.12, 0.12)
+    this.toast('Ai urcat în mașină. WASD conduce, E coboară.')
+    this.syncHud()
+  }
+
+  exitCar() {
+    const c = this.car
+    this.ion.setPosition(c.x + 22, c.y); this.ion.setVisible(true); this.ion.body.enable = true
+    this.state.driving = false; this.car = null
+    this.cameras.main.startFollow(this.ion, true, 0.12, 0.12)
+    this.syncHud()
+  }
+
+  eat(spot) {
+    const s = this.state
+    if (s.hp >= s.maxHp) { this.toast('Ești sătul — HP plin.'); return }
+    if (s.lei < spot.price) { this.toast('N-ai destui lei.'); return }
+    s.lei -= spot.price; s.hp = Math.min(s.maxHp, s.hp + spot.hp); s.score += 5
+    this.toast(`Ai mâncat la ${spot.name.replace(/^Stația /, '')} (+${spot.hp} HP)`)
+    this.syncHud()
+  }
+
+  talkZina() {
+    const s = this.state
+    if (s.mission === 0) {
+      s.mission = 1
+      this.registry.set('mission', 'Misiune: adu pâine de la Linella.')
+      this.toast('Baba Zina: adu-mi pâine de la Linella, maică.')
+    } else if (s.mission === 2) {
+      s.mission = 3; s.lei += 30; s.score += 150
+      this.registry.set('mission', 'Misiune completă! +30 lei')
+      this.toast('Baba Zina: mulțumesc! Și... primarul vorbește prea des la telefon, în rusă...')
+      this.syncHud()
+    } else if (s.mission === 1) {
+      this.toast('Baba Zina: pâinea, maică, de la Linella!')
+    } else {
+      this.toast('Baba Zina: Domnul cu tine.')
+    }
+  }
+
+  getBread() {
+    if (this.state.mission !== 1) return
+    this.state.mission = 2
+    this.registry.set('mission', 'Du pâinea înapoi la Baba Zina.')
+    this.toast('Ai luat pâinea.')
+  }
+
+  startCopStop() {
+    this.cop = true
+    this.copBribe = 20 + Math.round(this.state.heat / 3)
+    if (this.car) this.car.vx = 0
+    this.registry.set('cop', {
+      q: 'Polițistul: De ce încălcăm?',
+      opts: [`1 · Mită  (-${this.copBribe} lei)`, '2 · Vorbește', '3 · Fugi'],
+    })
+  }
+
+  copChoice(n) {
+    if (!this.cop) return
+    const s = this.state
+    if (n === 1) {
+      if (s.lei >= this.copBribe) { s.lei -= this.copBribe; s.heat = 0; this.toast('Mită dată. Drum bun, șefu.') }
+      else { s.heat = 40; this.toast('N-ai bani de mită — amendă!') }
+    } else if (n === 2) {
+      if (Math.random() < 0.6) { s.heat = 0; s.score += 20; this.toast('Te-ai descurcat cu vorba.') }
+      else { s.lei = Math.max(0, s.lei - 15); s.heat = 45; this.toast('N-a mers — amendă -15 lei.') }
+    } else {
+      s.heat = 25; s.score += 40; this.toast('Ai fugit de poliție! +cred.')
+    }
+    this.cop = false
+    this.registry.set('cop', null)
+    this.syncHud()
+  }
+
+  // ---- per-frame systems -------------------------------------------------
+  walk(d) {
     const k = this.keys, c = this.cursors
     const speed = k.SHIFT.isDown ? 175 : 100
     let vx = 0, vy = 0
@@ -429,24 +583,123 @@ export default class CentruScene extends Phaser.Scene {
     if (k.D.isDown || c.right.isDown) vx += 1
     if (k.W.isDown || c.up.isDown) vy -= 1
     if (k.S.isDown || c.down.isDown) vy += 1
-
     const v = new Phaser.Math.Vector2(vx, vy)
     if (v.length() > 0) {
       v.normalize().scale(speed)
       this.ion.setVelocity(v.x, v.y)
-      if (Math.abs(vx) >= Math.abs(vy)) {
-        this.facing = 'side'; this.ion.setFlipX(vx < 0); this.ion.anims.play('walk-side', true)
-      } else if (vy < 0) {
-        this.facing = 'up'; this.ion.setFlipX(false); this.ion.anims.play('walk-up', true)
-      } else {
-        this.facing = 'down'; this.ion.setFlipX(false); this.ion.anims.play('walk-down', true)
-      }
+      if (Math.abs(vx) >= Math.abs(vy)) { this.facing = 'side'; this.ion.setFlipX(vx < 0); this.ion.anims.play('walk-side', true) }
+      else if (vy < 0) { this.facing = 'up'; this.ion.setFlipX(false); this.ion.anims.play('walk-up', true) }
+      else { this.facing = 'down'; this.ion.setFlipX(false); this.ion.anims.play('walk-down', true) }
     } else {
-      this.ion.setVelocity(0, 0)
-      this.ion.anims.stop()
+      this.ion.setVelocity(0, 0); this.ion.anims.stop()
       this.ion.setTexture(this.facing === 'side' ? 'ion_side0' : this.facing === 'up' ? 'ion_up0' : 'ion_down0')
     }
     this.ion.setDepth(this.ion.y)
+  }
+
+  driveCar(d) {
+    const k = this.keys, c = this.cursors
+    const fast = k.SHIFT.isDown
+    const speed = fast ? 360 : 230
+    let vx = 0, vy = 0
+    if (k.A.isDown || c.left.isDown) vx -= 1
+    if (k.D.isDown || c.right.isDown) vx += 1
+    if (k.W.isDown || c.up.isDown) vy -= 1
+    if (k.S.isDown || c.down.isDown) vy += 1
+    const v = new Phaser.Math.Vector2(vx, vy)
+    if (v.length() > 0) {
+      v.normalize().scale(speed * d)
+      this.car.x = Phaser.Math.Clamp(this.car.x + v.x, 20, WORLD_W - 20)
+      this.car.y = Phaser.Math.Clamp(this.car.y + v.y, 20, WORLD_H - 20)
+      if (vx < 0) this.car.setFlipX(true); else if (vx > 0) this.car.setFlipX(false)
+      this.moving = fast ? 2 : 1
+    } else { this.moving = 0 }
+    this.car.setDepth(this.car.y)
+    this.ion.setPosition(this.car.x, this.car.y)
+  }
+
+  updateTraffic(dt) {
+    if (!this.traffic) return
+    for (const v of this.traffic) {
+      v.x += v.vx * (dt / 1000)
+      if (v.x > WORLD_W + 130) v.x = -130
+      else if (v.x < -130) v.x = WORLD_W + 130
+    }
+  }
+
+  updatePickups() {
+    const px = this.state.driving ? this.car.x : this.ion.x
+    const py = this.state.driving ? this.car.y : this.ion.y
+    for (let i = this.pickups.length - 1; i >= 0; i--) {
+      const s = this.pickups[i]
+      if ((px - s.x) ** 2 + (py - s.y) ** 2 < 18 * 18) {
+        s.destroy(); this.pickups.splice(i, 1)
+        this.state.combo += 1; this.state.comboT = 2.5
+        const gain = 10 * Math.max(1, this.state.combo)
+        this.state.lei += gain; this.state.score += 20 * this.state.combo
+        this.toast(`Amintire! +${gain} lei` + (this.state.combo > 1 ? ` (combo x${this.state.combo})` : ''))
+        this.syncHud()
+      }
+    }
+    if (this.state.comboT > 0) { this.state.comboT -= 1 / 60; if (this.state.comboT <= 0) this.state.combo = 0 }
+  }
+
+  updateInteraction() {
+    if (this.state.driving) { this.nearest = null; this.registry.set('prompt', 'E: coboară din mașină'); return }
+    const ix = this.ion.x, iy = this.ion.y
+    let best = 36 * 36, near = null
+    const test = (x, y, r, obj) => { const d = (ix - x) ** 2 + (iy - y) ** 2; if (d < best && d < r * r) { best = d; near = obj } }
+    for (const car of this.enterCars) test(car.x, car.y, 34, { type: 'car', ref: car })
+    test(this.zina.x, this.zina.y, 34, { type: 'zina' })
+    if (this.state.mission === 1 && this.breadTarget) test(this.breadTarget.x, this.breadTarget.y, 36, { type: 'bread' })
+    for (const f of this.foodSpots) test(f.x, f.y, 30, { type: 'food', ref: f })
+    this.nearest = near
+    let prompt = ''
+    if (near) {
+      if (near.type === 'car') prompt = 'E: urcă în mașină'
+      else if (near.type === 'zina') prompt = this.state.mission === 2 ? 'E: dă pâinea Babei Zina' : 'E: vorbește cu Baba Zina'
+      else if (near.type === 'bread') prompt = 'E: ia pâinea (Linella)'
+      else if (near.type === 'food') prompt = `E: mănâncă (-${near.ref.price} lei, +${near.ref.hp} HP)`
+    }
+    this.registry.set('prompt', prompt)
+  }
+
+  updateHeat(d) {
+    const s = this.state
+    if (s.driving) {
+      s.heat = Phaser.Math.Clamp(s.heat + (this.moving === 2 ? 11 : this.moving === 1 ? 4 : -3) * d, 0, 100)
+      this.copTimer += d
+      if (!this.cop && s.heat > 55 && this.copTimer > 2) {
+        this.copTimer = 0
+        if (Math.random() < (s.heat - 55) / 60) this.startCopStop()
+      }
+    } else {
+      s.heat = Math.max(0, s.heat - 7 * d)
+    }
+    this.hudT += d
+    if (this.hudT > 0.2) { this.hudT = 0; this.syncHud() }
+  }
+
+  updateMarker() {
+    const m = this.state.mission
+    let target = null
+    if (m === 1) target = this.breadTarget
+    else if (m === 2) target = this.zina
+    if (target) {
+      const bob = Math.sin(this.time.now / 250) * 4
+      this.marker.setVisible(true).setPosition(target.x, target.y - 44 + bob).setDepth(99980)
+    } else this.marker.setVisible(false)
+  }
+
+  update(t, dt) {
+    this.updateTraffic(dt)
+    if (this.cop) { this.updateNameplate(); return } // frozen during the stop
+    const d = dt / 1000
+    if (this.state.driving) this.driveCar(d); else this.walk(d)
+    this.updatePickups()
+    this.updateInteraction()
+    this.updateHeat(d)
+    this.updateMarker()
     this.updateNameplate()
   }
 }

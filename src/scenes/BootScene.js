@@ -40,6 +40,9 @@ export default class BootScene extends Phaser.Scene {
     this.makeCars()
     this.makeTrain()
     this.makeFlag()
+    this.makeNPCs()
+    this.makeCollectibles()
+    this.makeMarker()
     // Residential
     this.makeKhrushchyovka()
     this.makeScanlines()
@@ -690,6 +693,58 @@ export default class BootScene extends Phaser.Scene {
       g.fillStyle(0xffd200, 1); g.fillRect(7, 2, 3, 8)         // yellow
       g.fillStyle(0xcc092f, 1); g.fillRect(10, 2, 3, 8)        // red
       g.fillStyle(0x000000, 0.12); g.fillRect(4, 8, 9, 2)
+    })
+  }
+
+  makeNPCs() {
+    // Baba Zina — babushka (front)
+    this.drawGrid('npc_zina', [
+      '....rrrr....', '...rrrrrr...', '...rssssr...', '...rssssr...',
+      '...rssssr...', '....ssss....', '...dddddd...', '..dddddddd..',
+      '..ddaaaadd..', '..ddaaaadd..', '...dddddd...', '...dddddd...',
+      '...dd..dd...', '...dd..dd...', '...oo..oo...', '...oo..oo...',
+    ], { r: 0x9a2f2f, s: 0xe8b894, d: 0x4a3f4f, a: 0xb0a6ac, o: 0x2a2024 })
+    // Polițistul — cop (front)
+    this.drawGrid('npc_cop', [
+      '....kkkk....', '...kkkkkk...', '...kssssk...', '...kssssk...',
+      '...bssssb...', '....ssss....', '...uuuuuu...', '..uuuuuuuu..',
+      '..suuuuuus..', '..suuuuuus..', '...uuuuuu...', '...pppppp...',
+      '...pp..pp...', '...pp..pp...', '...oo..oo...', '...oo..oo...',
+    ], { k: 0x1b2a55, b: 0x13204a, s: 0xe8b894, u: 0x2f5bb0, p: 0x232a44, o: 0x14161c })
+  }
+
+  makeCollectibles() {
+    this.tex('c_placinta', 14, 11, (g) => {
+      g.fillStyle(0xd9a64a, 1); g.fillEllipse(7, 6, 12, 8)
+      g.fillStyle(0xc08c34, 1); g.fillRect(2, 5, 10, 1)
+      g.fillStyle(0xf0d99a, 1); g.fillEllipse(6, 4, 5, 3)
+    })
+    this.tex('c_eugenia', 14, 10, (g) => {
+      g.fillStyle(0x6b4a2f, 1); g.fillRect(1, 1, 12, 3); g.fillRect(1, 6, 12, 3)
+      g.fillStyle(0xf2ead2, 1); g.fillRect(1, 4, 12, 2)
+    })
+    this.tex('c_cvas', 12, 13, (g) => {
+      g.fillStyle(0xcfd6dd, 1); g.fillRect(2, 3, 8, 10)
+      g.fillStyle(0x8a5a2a, 1); g.fillRect(3, 5, 6, 7)
+      g.fillStyle(0xe8eef4, 1); g.fillRect(2, 2, 8, 2)
+    })
+    this.tex('c_martisor', 12, 12, (g) => {
+      g.fillStyle(0xcc092f, 1); g.fillCircle(5, 6, 3); g.fillStyle(0xeeeeee, 1); g.fillCircle(8, 6, 3)
+      g.fillStyle(0xcc092f, 1); g.fillRect(5, 8, 1, 4); g.fillStyle(0xeeeeee, 1); g.fillRect(7, 8, 1, 4)
+    })
+    this.tex('c_covor', 14, 10, (g) => {
+      g.fillStyle(0x8a2f2f, 1); g.fillRect(1, 1, 12, 8)
+      g.fillStyle(0xc9a23a, 1); g.fillRect(3, 3, 2, 2); g.fillRect(9, 3, 2, 2); g.fillRect(6, 5, 2, 2)
+      g.fillStyle(0x2a2024, 1); g.fillRect(1, 1, 12, 1); g.fillRect(1, 8, 12, 1)
+    })
+  }
+
+  makeMarker() {
+    // floating quest beacon (downward pin)
+    this.tex('marker', 14, 18, (g) => {
+      g.fillStyle(0xffd24a, 1); g.fillTriangle(2, 2, 12, 2, 7, 16)
+      g.fillStyle(0xfff0b0, 1); g.fillTriangle(4, 3, 8, 3, 6, 9)
+      g.fillStyle(0x8f2f1f, 1); g.fillRect(6, 2, 2, 2)
     })
   }
 
