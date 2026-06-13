@@ -2,13 +2,13 @@ import Phaser from 'phaser'
 
 const F = 'monospace'
 
-// the 5 playable types the owner asked for
+// the 5 playable types the owner asked for — professions only, no personal names
 export const TYPES = [
-  { key: 'taxist', name: 'Vova Taxistul', role: 'taxist', blurb: 'Logan cu numere de Centru, știe fiecare groapă pe nume.', perk: 'Pornești cu mai mulți lei + bani din curse.' },
-  { key: 'conductor', name: 'Sergiu Conductorul', role: 'conductor pe ruta 11', blurb: 'Rupe biletul pe troleibuzul 22 cu autoritate.', perk: 'Lei pasivi încet + e tibe gratis troleibuzul.' },
-  { key: 'agent', name: 'Radu Agentul', role: 'agent imobiliar', blurb: '„Studio cochet, euroreparat" = un balcon în Râșcani.', perk: 'Vinzi amintiri mai scump la Borea.' },
-  { key: 'director', name: 'Director Anatol', role: 'director de fabrică', blurb: 'O fabrică mică pe care n-o numește, BMW X6 cu numere de MD.', perk: 'Portmoneu mare la start.' },
-  { key: 'ionel', name: 'Ionel din Briceni', role: 'venit din Briceni', blurb: 'A venit cu un sac de plăcinte de la mama. Tot e scump, na.', perk: 'Mai mult HP + foame mai lentă.' },
+  { key: 'taxist', name: 'Taxistul', role: 'taxist', blurb: 'Logan vechi, dar știe fiecare groapă din Centru pe nume.', perk: 'Pornești cu mai mulți lei + bani din curse.' },
+  { key: 'conductor', name: 'Conductorul', role: 'conductor pe ruta 11', blurb: 'Rupe biletul pe troleibuzul 22 cu autoritate.', perk: 'Lei pasivi încet + ție gratis troleibuzul.' },
+  { key: 'agent', name: 'Agentul Imobiliar', role: 'agent imobiliar', blurb: '„Studio cu amplasare reușită, euroreparat" = un balcon în Râșcani.', perk: 'Vinzi amintiri mai scump la negustor.' },
+  { key: 'director', name: 'Directorul de Fabrică', role: 'director de fabrică', blurb: 'O fabrică mică pe care n-o numește, BMW X6 cu numere de MD.', perk: 'Portmoneu mare la start.' },
+  { key: 'ionel', name: 'Venit din Briceni', role: 'venit din Briceni', blurb: 'A venit cu un sac de plăcinte de la mama. Tot e scump aici.', perk: 'Mai mult HP + foame mai lentă.' },
 ]
 
 export default class CreateScene extends Phaser.Scene {
@@ -19,7 +19,7 @@ export default class CreateScene extends Phaser.Scene {
     this.add.rectangle(0, 0, W, H, 0x12131c).setOrigin(0)
     this.add.tileSprite(0, 0, W, H, 'scan').setOrigin(0).setAlpha(0.14)
     this.add.text(W / 2, 40, 'CHIȘINĂU RUSH', { fontFamily: F, fontSize: '34px', color: '#ebc372' }).setOrigin(0.5)
-    this.add.text(W / 2, 76, 'Cum te cheamă și cine ești, bratan?', { fontFamily: F, fontSize: '14px', color: '#aeb5c0' }).setOrigin(0.5)
+    this.add.text(W / 2, 76, 'Cum te cheamă și cine ești, frate?', { fontFamily: F, fontSize: '14px', color: '#aeb5c0' }).setOrigin(0.5)
 
     // name field (type with the keyboard)
     this.pname = 'Ion'
@@ -38,7 +38,7 @@ export default class CreateScene extends Phaser.Scene {
     this.cards = TYPES.map((t, i) => {
       const y = 158 + i * 86
       const bg = this.add.rectangle(W / 2, y, 560, 78, 0x181a24, 1).setStrokeStyle(2, 0x2c323b).setInteractive({ useHandCursor: true })
-      this.add.text(W / 2 - 264, y - 26, `${t.name}  ·  ${t.role}`, { fontFamily: F, fontSize: '15px', color: '#ebc372' }).setOrigin(0, 0)
+      this.add.text(W / 2 - 264, y - 26, t.name, { fontFamily: F, fontSize: '15px', color: '#ebc372' }).setOrigin(0, 0)
       this.add.text(W / 2 - 264, y - 4, t.blurb, { fontFamily: F, fontSize: '12px', color: '#d7dce4', wordWrap: { width: 540 } }).setOrigin(0, 0)
       this.add.text(W / 2 - 264, y + 20, '⚡ ' + t.perk, { fontFamily: F, fontSize: '12px', color: '#4caf50' }).setOrigin(0, 0)
       bg.on('pointerdown', () => this.select(i))

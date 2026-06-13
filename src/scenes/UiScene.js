@@ -26,29 +26,43 @@ export default class UiScene extends Phaser.Scene {
     this.add.text(8, 21, 'CHIȘINĂU RUSH · Centru', { fontFamily: F, fontSize: '13px', color: '#ebc372' })
     this.help = this.add.text(W - 8, 22, 'WASD · Shift · E acțiune · click: nume · T CRT', { fontFamily: F, fontSize: '10px', color: '#aeb5c0' }).setOrigin(1, 0)
 
-    // HP bar (big + clear)
-    this.add.rectangle(6, 46, 184, 20, 0x10121a, 0.82).setOrigin(0).setStrokeStyle(1, 0x000000, 0.6)
-    this.hpFill = this.add.rectangle(9, 49, 178, 14, 0xcc3b30).setOrigin(0)
-    this.add.text(11, 49, 'HP', { fontFamily: F, fontSize: '11px', color: '#ffffff' }).setOrigin(0, 0).setStroke('#10121a', 3).setDepth(2)
-    this.hpText = this.add.text(98, 49, '', { fontFamily: F, fontSize: '12px', color: '#ffffff' }).setOrigin(0.5, 0).setStroke('#10121a', 4).setDepth(2)
+    // ===== LEFT cluster — VITALS plate (HP / HEAT / CRED+CIVIC) =====
+    this.add.rectangle(4, 44, 232, 86, 0x0b0c14, 0.86).setOrigin(0).setStrokeStyle(1, 0x000000, 0.55)
+    this.add.rectangle(4, 44, 232, 86, 0x000000, 0).setOrigin(0).setStrokeStyle(1, 0xebc372, 0.22) // inner accent hairline
+    // HP — primary, tall
+    this.add.rectangle(10, 50, 220, 22, 0x07080d, 0.9).setOrigin(0)
+    this.hpFill = this.add.rectangle(12, 52, 216, 18, 0x4caf50).setOrigin(0)
+    this.add.text(16, 52, 'HP', { fontFamily: F, fontSize: '13px', color: '#ffffff' }).setOrigin(0, 0).setStroke('#07080d', 4).setDepth(2)
+    this.hpText = this.add.text(226, 52, '', { fontFamily: F, fontSize: '15px', color: '#ffffff' }).setOrigin(1, 0).setStroke('#07080d', 4).setDepth(2)
+    // HEAT — danger meter, full width
+    this.add.rectangle(10, 78, 220, 15, 0x07080d, 0.9).setOrigin(0)
+    this.heatFill = this.add.rectangle(12, 80, 216, 11, 0xf9a200).setOrigin(0)
+    this.add.text(16, 79, 'HEAT', { fontFamily: F, fontSize: '11px', color: '#ffd9a0' }).setOrigin(0, 0).setStroke('#07080d', 3).setDepth(2)
+    this.heatText = this.add.text(226, 79, '', { fontFamily: F, fontSize: '12px', color: '#ffffff' }).setOrigin(1, 0).setStroke('#07080d', 3).setDepth(2)
+    // CRED + CIVIC — paired half-width
+    this.add.rectangle(10, 95, 107, 15, 0x07080d, 0.9).setOrigin(0)
+    this.credFill = this.add.rectangle(12, 97, 103, 11, 0x4caf50).setOrigin(0)
+    this.add.text(16, 96, 'CRED', { fontFamily: F, fontSize: '10px', color: '#bfe6c2' }).setOrigin(0, 0).setStroke('#07080d', 3).setDepth(2)
+    this.credText = this.add.text(113, 96, '', { fontFamily: F, fontSize: '11px', color: '#ffffff' }).setOrigin(1, 0).setStroke('#07080d', 3).setDepth(2)
+    this.add.rectangle(123, 95, 107, 15, 0x07080d, 0.9).setOrigin(0)
+    this.civicFill = this.add.rectangle(125, 97, 103, 11, 0x2f6fb0).setOrigin(0)
+    this.add.text(129, 96, 'CIVIC', { fontFamily: F, fontSize: '10px', color: '#9ec0ff' }).setOrigin(0, 0).setStroke('#07080d', 3).setDepth(2)
+    this.civicText = this.add.text(226, 96, '', { fontFamily: F, fontSize: '11px', color: '#ffffff' }).setOrigin(1, 0).setStroke('#07080d', 3).setDepth(2)
 
-    // HEAT / CRED / CIVIC bars (reputation triangle)
-    const bar = (y, label, color) => {
-      this.add.rectangle(6, y, 184, 12, 0x10121a, 0.82).setOrigin(0)
-      const fill = this.add.rectangle(9, y + 2, 0, 8, color).setOrigin(0)
-      this.add.text(11, y, label, { fontFamily: F, fontSize: '9px', color: '#ffffff' }).setOrigin(0, 0).setStroke('#10121a', 3).setDepth(2)
-      return fill
-    }
-    this.heatFill = bar(68, 'HEAT', 0xf9a200)
-    this.credFill = bar(82, 'CRED', 0x4caf50)
-    this.civicFill = bar(96, 'CIVIC', 0x2f6fb0)
-
-    // top-right stat panel: lei, score, rank, clues
-    this.add.rectangle(W - 168, 40, 162, 80, 0x10121a, 0.78).setOrigin(0).setStrokeStyle(1, 0x000000, 0.6).setName('statpanel')
-    this.leiText = this.add.text(W - 12, 44, '', { fontFamily: F, fontSize: '17px', color: '#ffd24a' }).setOrigin(1, 0).setStroke('#10121a', 3)
-    this.scoreText = this.add.text(W - 12, 64, '', { fontFamily: F, fontSize: '13px', color: '#ffffff' }).setOrigin(1, 0).setStroke('#10121a', 3)
-    this.rankText = this.add.text(W - 12, 82, '', { fontFamily: F, fontSize: '12px', color: '#ebc372' }).setOrigin(1, 0).setStroke('#10121a', 3)
-    this.clueText = this.add.text(W - 12, 100, '', { fontFamily: F, fontSize: '12px', color: '#9ec0ff' }).setOrigin(1, 0).setStroke('#10121a', 3)
+    // ===== RIGHT cluster — ECONOMY plate (LEI / SCOR / RANK / XP / DOVEZI) =====
+    this.econPlate = this.add.rectangle(W - 218, 44, 212, 108, 0x0b0c14, 0.86).setOrigin(0).setStrokeStyle(1, 0x000000, 0.55).setName('statpanel')
+    this.econInner = this.add.rectangle(W - 218, 44, 212, 108, 0x000000, 0).setOrigin(0).setStrokeStyle(1, 0xebc372, 0.22)
+    this.leiKick = this.add.text(W - 210, 50, 'LEI', { fontFamily: F, fontSize: '10px', color: '#aeb5c0' }).setOrigin(0, 0).setStroke('#07080d', 3)
+    this.leiText = this.add.text(W - 12, 48, '', { fontFamily: F, fontSize: '24px', color: '#ffd24a' }).setOrigin(1, 0).setStroke('#07080d', 4)
+    this.scoreKick = this.add.text(W - 210, 84, 'SCOR', { fontFamily: F, fontSize: '10px', color: '#aeb5c0' }).setOrigin(0, 0).setStroke('#07080d', 3)
+    this.scoreText = this.add.text(W - 12, 80, '', { fontFamily: F, fontSize: '18px', color: '#ffffff' }).setOrigin(1, 0).setStroke('#07080d', 4)
+    this.rankText = this.add.text(W - 12, 106, '', { fontFamily: F, fontSize: '13px', color: '#ebc372' }).setOrigin(1, 0).setStroke('#07080d', 3)
+    this.xpTrack = this.add.rectangle(W - 210, 126, 196, 8, 0x07080d, 0.9).setOrigin(0)
+    this.xpFill = this.add.rectangle(W - 208, 127, 192, 6, 0xebc372).setOrigin(0)
+    this.xpText = this.add.text(W - 12, 121, '', { fontFamily: F, fontSize: '9px', color: '#d7dce4' }).setOrigin(1, 0).setStroke('#07080d', 3)
+    this.clueKick = this.add.text(W - 210, 138, 'DOVEZI', { fontFamily: F, fontSize: '10px', color: '#9ec0ff' }).setOrigin(0, 0).setStroke('#07080d', 3)
+    this.cluePips = []
+    for (let i = 0; i < 5; i++) this.cluePips.push(this.add.rectangle(W - 71 + i * 12, 139, 9, 9, 0x2a3242).setOrigin(0).setStrokeStyle(1, 0x000000, 0.5))
 
     // mission banner
     this.missionText = this.add.text(8, 116, '', { fontFamily: F, fontSize: '12px', color: '#ebc372', backgroundColor: '#10121aCC', padding: { x: 6, y: 4 } }).setOrigin(0, 0)
@@ -85,11 +99,8 @@ export default class UiScene extends Phaser.Scene {
     this.dlgText = this.add.text(W / 2 - 268, H - 84, '', { fontFamily: F, fontSize: '13px', color: '#f0f2f6', wordWrap: { width: 524 }, lineSpacing: 4 }).setOrigin(0, 0).setDepth(59).setVisible(false)
     this.dlgHint = this.add.text(W / 2 + 256, H - 36, 'E ▸', { fontFamily: F, fontSize: '12px', color: '#aeb5c0' }).setOrigin(1, 1).setDepth(59).setVisible(false)
 
-    // character / pause menu (Esc) — own depth band above everything
-    this.cmDim = this.add.rectangle(0, 0, W, H, 0x07080d, 0.9).setOrigin(0).setDepth(70).setVisible(false)
-    this.cmBox = this.add.rectangle(W / 2, H / 2, 460, 360, 0x12131c, 0.99).setOrigin(0.5).setStrokeStyle(2, 0xebc372).setDepth(71).setVisible(false)
-    this.cmTitle = this.add.text(W / 2, H / 2 - 162, '', { fontFamily: F, fontSize: '20px', color: '#ebc372' }).setOrigin(0.5, 0).setDepth(72).setVisible(false)
-    this.cmText = this.add.text(W / 2 - 200, H / 2 - 118, '', { fontFamily: F, fontSize: '14px', color: '#e7ebf2', lineSpacing: 8, wordWrap: { width: 400 } }).setOrigin(0, 0).setDepth(72).setVisible(false)
+    // character / pause menu (Esc) — zoned character-sheet, own depth band above everything
+    this.buildCharMenu(W, H)
 
     // win overlay
     this.winDim = this.add.rectangle(0, 0, W, H, 0x0a0b10, 0.93).setOrigin(0).setDepth(60).setVisible(false)
@@ -106,8 +117,14 @@ export default class UiScene extends Phaser.Scene {
     this.topbar.width = W
     this.newsBand.width = W; this.newsLine.width = W
     this.help.setX(W - 8)
-    this.leiText.setX(W - 12); this.scoreText.setX(W - 12); this.rankText.setX(W - 12); this.clueText.setX(W - 12)
-    const sp = this.children.getByName('statpanel'); if (sp) sp.setX(W - 168)
+    // right ECONOMY cluster re-anchors to the right edge
+    this.econPlate.setX(W - 218); this.econInner.setX(W - 218)
+    this.leiKick.setX(W - 210); this.leiText.setX(W - 12)
+    this.scoreKick.setX(W - 210); this.scoreText.setX(W - 12)
+    this.rankText.setX(W - 12)
+    this.xpTrack.setX(W - 210); this.xpFill.setX(W - 208); this.xpText.setX(W - 12)
+    this.clueKick.setX(W - 210)
+    for (let i = 0; i < 5; i++) this.cluePips[i].setX(W - 71 + i * 12)
     this.promptText.setPosition(W / 2, H - 116)
     this.toastText.setX(W / 2)
     this.np.setPosition(W / 2, H - 44)
@@ -115,8 +132,114 @@ export default class UiScene extends Phaser.Scene {
     this.crt.setSize(W, H)
     this.copDim.setSize(W, H)
     this.copBox.setPosition(W / 2, H / 2); this.copQ.setPosition(W / 2, H / 2 - 52); this.copOpts.setPosition(W / 2, H / 2 + 6)
-    this.cmDim.setSize(W, H); this.cmBox.setPosition(W / 2, H / 2)
-    this.cmTitle.setPosition(W / 2, H / 2 - 162); this.cmText.setPosition(W / 2 - 200, H / 2 - 118)
+    this.cmDim.setSize(W, H); this.layoutCharMenu(W / 2, H / 2)
+  }
+
+  fmt(n) { return String(Math.round(n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') }
+
+  // ---- character / pause menu (zoned character-sheet) --------------------
+  buildCharMenu(W, H) {
+    const cx = W / 2, cy = H / 2
+    this.cmObjs = []; this._cmOn = false
+    this.cmDim = this.add.rectangle(0, 0, W, H, 0x07080d, 0.9).setOrigin(0).setDepth(70).setVisible(false)
+    const reg = (e, lx, ly) => { e._lx = lx; e._ly = ly; e.setDepth(72).setVisible(false); this.cmObjs.push(e); return e }
+    const rect = (lx, ly, w, h, fill, alpha, ox, oy, stroke, sw) => {
+      const e = this.add.rectangle(cx + lx, cy + ly, w, h, fill, alpha == null ? 1 : alpha).setOrigin(ox, oy)
+      if (stroke != null) e.setStrokeStyle(sw || 1, stroke)
+      return reg(e, lx, ly)
+    }
+    const txt = (lx, ly, s, color, ox, oy, str) => {
+      const e = this.add.text(cx + lx, cy + ly, str || '', { fontFamily: F, fontSize: s + 'px', color }).setOrigin(ox, oy)
+      return reg(e, lx, ly)
+    }
+    // panel base + inner hairline
+    rect(0, 0, 520, 468, 0x12131c, 0.99, 0.5, 0.5, 0xebc372, 2)
+    rect(0, 0, 508, 456, 0x000000, 0, 0.5, 0.5, 0x2a2c3a, 1)
+    // dividers
+    ;[-150, -68, 14, 74, 200].forEach((dy) => rect(0, dy, 464, 1, 0x2a2c3a, 1, 0.5, 0.5))
+    // header
+    txt(-232, -222, 11, '#aeb5c0', 0, 0, 'P E R S O N A J')
+    this.cmName = txt(-232, -206, 22, '#ffffff', 0, 0)
+    this.cmType = txt(-232, -178, 12, '#aeb5c0', 0, 0)
+    // rank badge (top-right)
+    rect(232, -210, 150, 44, 0x1b1d2b, 1, 1, 0, 0xebc372, 1)
+    this.cmLvl = txt(218, -201, 13, '#ebc372', 1, 0)
+    this.cmRank = txt(218, -183, 11, '#e7ebf2', 1, 0)
+    rect(82, -160, 150, 6, 0x0c0d14, 1, 0, 0.5, 0x2a2c3a, 1)
+    this.cmXp = rect(83, -160, 150, 4, 0xebc372, 1, 0, 0.5)
+    // labelled bars
+    this.cmBars = {}
+    const makeBar = (key, barY, label, valColor) => {
+      txt(-232, barY - 16, 12, '#aeb5c0', 0, 1, label)
+      const val = txt(88, barY - 16, 12, valColor, 1, 1)
+      rect(-232, barY, 320, 14, 0x0c0d14, 1, 0, 0.5, 0x2a2c3a, 1)
+      const fill = rect(-231, barY, 318, 12, 0x4caf50, 1, 0, 0.5)
+      this.cmBars[key] = { val, fill }
+    }
+    makeBar('hp', -120, 'HP', '#ffffff')
+    makeBar('heat', -86, 'HEAT', '#ffffff')
+    makeBar('cred', -38, 'STRADĂ', '#e7ebf2')
+    makeBar('civic', -4, 'CIVIC', '#e7ebf2')
+    this.cmBars.civic.fill.fillColor = 0x2f6fb0 // civic = blue identity
+    // wallet
+    txt(-232, 22, 11, '#aeb5c0', 0, 0, 'LEI')
+    this.cmLei = txt(-232, 36, 28, '#ffd24a', 0, 0)
+    txt(232, 22, 11, '#aeb5c0', 1, 0, 'SCOR')
+    this.cmScore = txt(232, 38, 18, '#e7ebf2', 1, 0)
+    // inventory
+    txt(-232, 86, 11, '#aeb5c0', 0, 0, 'ARMĂ')
+    this.cmWeapon = txt(-150, 84, 14, '#ebc372', 0, 0)
+    // evidence (5-cell grid)
+    txt(-232, 112, 11, '#aeb5c0', 0, 0, 'DOVEZI')
+    this.cmClueCount = txt(-150, 110, 14, '#ebc372', 0, 0)
+    this.cmCells = []
+    for (let i = 0; i < 5; i++) {
+      const lx = -192 + i * 80
+      const box = rect(lx, 160, 64, 52, 0x0c0d14, 1, 0, 0.5, 0x2a2c3a, 1)
+      const mark = txt(lx + 32, 160, 24, '#3a3d4c', 0.5, 0.5)
+      this.cmCells.push({ box, mark })
+    }
+    // footer
+    txt(0, 212, 11, '#aeb5c0', 0.5, 0, 'ESC — închide  ·  joc salvat automat')
+  }
+
+  layoutCharMenu(cx, cy) {
+    if (!this.cmObjs) return
+    this.cmObjs.forEach((e) => e.setPosition(cx + e._lx, cy + e._ly))
+  }
+
+  renderCharMenu(cm) {
+    this.cmName.setText(cm.name || 'Ion')
+    this.cmType.setText(cm.type || '')
+    const lvlNum = (String(cm.level).match(/\d+/) || ['1'])[0]
+    const rankName = String(cm.level).split(': ')[1] || String(cm.level)
+    this.cmLvl.setText('Niv. ' + lvlNum)
+    this.cmRank.setText(rankName.length > 16 ? rankName.slice(0, 15) + '…' : rankName)
+    const xp = String(cm.xp).split('/'); const xc = +xp[0] || 0, xn = +xp[1] || 0
+    this.cmXp.displayWidth = xn > xc ? Math.max(0, Math.min(150, 150 * (xc / xn))) : 150
+    const hcol = (c) => '#' + c.toString(16).padStart(6, '0')
+    // HP
+    const hp = String(cm.hp).split('/'); const hc = +hp[0] || 0, hm = +hp[1] || 1; const hr = hc / hm
+    const hpCol = hr > 0.5 ? 0x4caf50 : hr > 0.25 ? 0xf9a200 : 0xcc3b30
+    this.cmBars.hp.fill.displayWidth = Math.max(0, 318 *hr); this.cmBars.hp.fill.fillColor = hpCol
+    this.cmBars.hp.val.setText(cm.hp).setColor(hcol(hpCol))
+    // Heat (inverted danger colour)
+    const heat = cm.heat || 0; const heatCol = heat < 40 ? 0x4caf50 : heat < 70 ? 0xf9a200 : 0xcc3b30
+    this.cmBars.heat.fill.displayWidth = 318 *(heat / 100); this.cmBars.heat.fill.fillColor = heatCol
+    this.cmBars.heat.val.setText(heat + '%').setColor(hcol(heatCol))
+    // Cred / Civic (identity colours)
+    this.cmBars.cred.fill.displayWidth = 318 *((cm.cred || 0) / 100); this.cmBars.cred.val.setText(String(cm.cred || 0))
+    this.cmBars.civic.fill.displayWidth = 318 *((cm.civic || 0) / 100); this.cmBars.civic.val.setText(String(cm.civic || 0))
+    // wallet + inventory
+    this.cmLei.setText(this.fmt(cm.lei)); this.cmScore.setText(this.fmt(cm.score))
+    this.cmWeapon.setText(cm.weapon || '—')
+    // evidence grid
+    this.cmClueCount.setText(`${cm.clueCount || 0} / 5`)
+    for (let i = 0; i < 5; i++) {
+      const got = i < (cm.clueCount || 0)
+      this.cmCells[i].mark.setText(got ? '✓' : '✕').setColor(got ? '#4caf50' : '#3a3d4c')
+      this.cmCells[i].box.setFillStyle(got ? 0x14241a : 0x0c0d14).setStrokeStyle(1, got ? 0x4caf50 : 0x2a2c3a)
+    }
   }
 
   update(_t, dt) {
@@ -127,16 +250,26 @@ export default class UiScene extends Phaser.Scene {
 
     const hud = this.registry.get('hud')
     if (hud) {
-      this.hpFill.displayWidth = Math.max(0, 178 * (hud.hp / hud.maxHp))
-      this.hpFill.fillColor = hud.hp > 50 ? 0x4caf50 : hud.hp > 25 ? 0xf9a200 : 0xcc3b30
-      this.hpText.setText(`${hud.hp} / ${hud.maxHp}`)
-      this.heatFill.displayWidth = 178 * (hud.heat / 100)
-      this.credFill.displayWidth = 178 * ((hud.cred || 0) / 100)
-      this.civicFill.displayWidth = 178 * ((hud.civic || 0) / 100)
-      this.leiText.setText(`${hud.lei} lei`)
-      this.scoreText.setText(`Scor ${hud.score}`)
-      this.rankText.setText(hud.rank ? `${hud.rank}${hud.xpNext > hud.xpCur ? `  ${hud.xp}/${hud.xpNext}` : ''}` : '')
-      this.clueText.setText(hud.clues > 0 ? `Dovezi ${hud.clues}/5` : '')
+      const hpR = hud.maxHp ? hud.hp / hud.maxHp : 0
+      this.hpFill.displayWidth = Math.max(0, 216 * hpR)
+      this.hpFill.fillColor = hpR > 0.5 ? 0x4caf50 : hpR > 0.25 ? 0xf9a200 : 0xcc3b30
+      this.hpText.setText(`${hud.hp}/${hud.maxHp}`)
+      this.hpText.setColor(hpR > 0.5 ? '#ffffff' : hpR > 0.25 ? '#ffd9a0' : '#ff8a80')
+      const heatR = (hud.heat || 0) / 100
+      this.heatFill.displayWidth = 216 * heatR
+      this.heatFill.fillColor = heatR < 0.4 ? 0x4caf50 : heatR < 0.7 ? 0xf9a200 : 0xcc3b30
+      this.heatText.setText(`${Math.round(hud.heat || 0)}%`)
+      this.credFill.displayWidth = 103 * ((hud.cred || 0) / 100)
+      this.credText.setText(String(hud.cred | 0))
+      this.civicFill.displayWidth = 103 * ((hud.civic || 0) / 100)
+      this.civicText.setText(String(hud.civic | 0))
+      this.leiText.setText(this.fmt(hud.lei))
+      this.scoreText.setText(this.fmt(hud.score))
+      this.rankText.setText(hud.rank || '')
+      const xpR = hud.xpNext > hud.xpCur ? (hud.xp - hud.xpCur) / (hud.xpNext - hud.xpCur) : 1
+      this.xpFill.displayWidth = Math.max(0, Math.min(192, 192 * xpR))
+      this.xpText.setText(hud.xpNext > hud.xpCur ? `${hud.xp}/${hud.xpNext} XP` : 'MAX')
+      for (let i = 0; i < 5; i++) this.cluePips[i].fillColor = i < (hud.clues || 0) ? 0x9ec0ff : 0x2a3242
       this.weaponText.setText(hud.weapon ? `Armă: ${hud.weapon}  (Q schimbă · SPACE lovește)` : '')
       this.weaponText.setPosition(8, this.scale.height - 10)
     }
@@ -193,32 +326,12 @@ export default class UiScene extends Phaser.Scene {
       this.dlgText.setText(dlg.line || '')
     } else if (!dOn) { this._dlgLine = null }
 
-    // character / pause menu
+    // character / pause menu (zoned character-sheet)
     const cm = this.registry.get('charmenu')
     const cmOn = !!cm
-    this.cmDim.setVisible(cmOn); this.cmBox.setVisible(cmOn); this.cmTitle.setVisible(cmOn); this.cmText.setVisible(cmOn)
-    if (cmOn && cm !== this._cm) {
-      this._cm = cm
-      this.cmTitle.setText('☰  PERSONAJ')
-      this.cmText.setText([
-        `Nume:  ${cm.name}`,
-        `Tip:   ${cm.type}`,
-        '',
-        `${cm.level}`,
-        `XP:    ${cm.xp}`,
-        '',
-        `HP:    ${cm.hp}`,
-        `Lei:   ${cm.lei}        Scor: ${cm.score}`,
-        `Stradă (cred): ${cm.cred}    Civic: ${cm.civic}`,
-        `Heat:  ${cm.heat}`,
-        `Armă:  ${cm.weapon}`,
-        '',
-        `Dovezi (${cm.clueCount}/5):`,
-        `  ${cm.clues}`,
-        '',
-        'Esc — închide · joc salvat automat',
-      ].join('\n'))
-    } else if (!cmOn) { this._cm = null }
+    if (cmOn !== this._cmOn) { this._cmOn = cmOn; this.cmDim.setVisible(cmOn); this.cmObjs.forEach((e) => e.setVisible(cmOn)) }
+    if (cmOn && cm !== this._cm) { this._cm = cm; this.renderCharMenu(cm) }
+    else if (!cmOn) { this._cm = null }
 
     this.crt.setVisible(this.registry.get('crt') !== false)
     this.drawMinimap()
@@ -247,7 +360,7 @@ export default class UiScene extends Phaser.Scene {
       'Salariul mediu a crescut. Tot nu ajunge până la 15',
       'Gropile din Botanica au primit buletin de identitate',
       'Ceon Eban a scăpat iar telefonul. Vorbea... în rusă',
-      'Apă caldă revine în august. Promitem, davai',
+      'Apă caldă revine în august. Sau în septembrie',
       'Deputații au plecat în China «pe o zi». Întorc la pensie',
       'Rutiera a băgat 9 oameni în plus. Șoferul: «mai încape unul»',
       'Pensia a ajuns la card. Cardul a ajuns la Linella',
@@ -263,7 +376,7 @@ export default class UiScene extends Phaser.Scene {
       'Gropa de pe Albișoara a fost botezată oficial «Marea Neagră»',
       'Un deputat a citit o lege. Colegii sunt în șoc',
       'Botanica conduce în Derby. Râșcani contestă la judecată',
-      'Linella a scumpit pâinea. Baba Tamara declară grevă pe bancă',
+      'Linella a scumpit pâinea. Pensionarii declară grevă pe bancă',
       'Ceon Eban: «Eu nu am hotline cu Moscova». Sună telefonul',
       'Festivalul Vinului: 3 zile. Refacerea: 5 zile',
       'Primăria a numărat gropile. A rămas fără degete',
