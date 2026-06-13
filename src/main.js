@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import BootScene from './scenes/BootScene.js'
 import CentruScene from './scenes/CentruScene.js'
+import UiScene from './scenes/UiScene.js'
 
 const config = {
   type: Phaser.AUTO,
@@ -18,11 +19,10 @@ const config = {
     default: 'arcade',
     arcade: { gravity: { x: 0, y: 0 }, debug: false },
   },
-  scene: [BootScene, CentruScene],
+  scene: [BootScene, CentruScene, UiScene],
 }
 
-// eslint-disable-next-line no-new
-new Phaser.Game(config)
+window.__game = new Phaser.Game(config)
 
 // Hide the HTML loading splash once Phaser is up.
 window.addEventListener('load', () => {
