@@ -593,14 +593,12 @@ export default class CentruScene extends Phaser.Scene {
     this.bribeDiscount = false
     this.weaponUnlocked = { covor: false, baban: false }
     this.ranks = [
-      { t: 0, name: 'Mahalagiu', joke: 'De la bloc, la mama. Liftul tot nu merge.' },
-      { t: 120, name: 'Plecat peste hotare', joke: 'Ai adus euro și un frigider în rate. Acasă-i mai bine, de la distanță.' },
-      { t: 300, name: 'Băiat de cartier', joke: 'Te știe toată curtea. Și ăia cu care ai datorii.' },
-      { t: 600, name: 'Șmecher de Chișinău', joke: 'Ai o schemă la orice. Vreo două chiar merg.' },
-      { t: 1000, name: 'Om cu relații', joke: 'Ai un cumătru la primărie. Acuma ai și tu pe cineva.' },
-      { t: 1500, name: 'Afacerist', joke: 'SRL pe numele soacrei. Birou euroreparat, vedere la groapă.' },
-      { t: 2200, name: 'Consilier', joke: 'Votezi ce zice partidul. Parcarea pe trotuar, inclusă.' },
-      { t: 3000, name: 'Candidat', joke: 'Promiți drumuri și apă caldă. Lumea a mai auzit, da\' votează.' },
+      { t: 0, name: 'Plecat peste hotare', joke: 'Ai adus euro și un frigider în rate. Acasă-i mai bine, de la distanță.' },
+      { t: 200, name: 'Băiat de cartier', joke: 'Te știe toată curtea. Și ăia cu care ai datorii.' },
+      { t: 500, name: 'Om cu relații', joke: 'Ai un cumătru la primărie. Acuma ai și tu pe cineva.' },
+      { t: 1000, name: 'Om de afaceri', joke: 'SRL pe numele soacrei. Birou euroreparat, vedere la groapă.' },
+      { t: 1800, name: 'Consilier', joke: 'Votezi ce zice partidul. Parcarea pe trotuar, inclusă.' },
+      { t: 2900, name: 'Candidat', joke: 'Promiți drumuri și apă caldă. Lumea a mai auzit, da\' votează.' },
       { t: 4200, name: 'Primar de Chișinău', joke: 'Ai ajuns sus. Prima ședință: lucrăm la asta.' },
     ]
     this.rankIdx = 0
