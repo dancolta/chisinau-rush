@@ -26,30 +26,32 @@ export default class UiScene extends Phaser.Scene {
     this.add.text(8, 21, 'CHIȘINĂU RUSH · Centru', { fontFamily: F, fontSize: '13px', color: '#ebc372' })
     this.help = this.add.text(W - 8, 22, 'WASD · Shift · E acțiune · click: nume · T CRT', { fontFamily: F, fontSize: '10px', color: '#aeb5c0' }).setOrigin(1, 0)
 
-    // HP bar
-    this.add.rectangle(8, 47, 124, 14, 0x10121a, 0.7).setOrigin(0)
-    this.hpFill = this.add.rectangle(10, 49, 120, 10, 0xcc3b30).setOrigin(0)
-    this.hpText = this.add.text(70, 48, '', { fontFamily: F, fontSize: '9px', color: '#ffffff' }).setOrigin(0.5, 0).setStroke('#10121a', 3)
+    // HP bar (big + clear)
+    this.add.rectangle(6, 46, 184, 20, 0x10121a, 0.82).setOrigin(0).setStrokeStyle(1, 0x000000, 0.6)
+    this.hpFill = this.add.rectangle(9, 49, 178, 14, 0xcc3b30).setOrigin(0)
+    this.add.text(11, 49, 'HP', { fontFamily: F, fontSize: '11px', color: '#ffffff' }).setOrigin(0, 0).setStroke('#10121a', 3).setDepth(2)
+    this.hpText = this.add.text(98, 49, '', { fontFamily: F, fontSize: '12px', color: '#ffffff' }).setOrigin(0.5, 0).setStroke('#10121a', 4).setDepth(2)
 
     // HEAT / CRED / CIVIC bars (reputation triangle)
     const bar = (y, label, color) => {
-      this.add.rectangle(8, y, 124, 10, 0x10121a, 0.7).setOrigin(0)
-      const fill = this.add.rectangle(10, y + 2, 0, 6, color).setOrigin(0)
-      this.add.text(136, y - 1, label, { fontFamily: F, fontSize: '9px', color: '#' + color.toString(16).padStart(6, '0') })
+      this.add.rectangle(6, y, 184, 12, 0x10121a, 0.82).setOrigin(0)
+      const fill = this.add.rectangle(9, y + 2, 0, 8, color).setOrigin(0)
+      this.add.text(11, y, label, { fontFamily: F, fontSize: '9px', color: '#ffffff' }).setOrigin(0, 0).setStroke('#10121a', 3).setDepth(2)
       return fill
     }
-    this.heatFill = bar(64, 'HEAT', 0xf9a200)
-    this.credFill = bar(76, 'CRED', 0x4caf50)
-    this.civicFill = bar(88, 'CIVIC', 0x2f6fb0)
+    this.heatFill = bar(68, 'HEAT', 0xf9a200)
+    this.credFill = bar(82, 'CRED', 0x4caf50)
+    this.civicFill = bar(96, 'CIVIC', 0x2f6fb0)
 
-    // top-right: lei, score, rank, clues
-    this.leiText = this.add.text(W - 8, 42, '', { fontFamily: F, fontSize: '13px', color: '#ffd24a' }).setOrigin(1, 0)
-    this.scoreText = this.add.text(W - 8, 58, '', { fontFamily: F, fontSize: '11px', color: '#cdd2dc' }).setOrigin(1, 0)
-    this.rankText = this.add.text(W - 8, 72, '', { fontFamily: F, fontSize: '11px', color: '#ebc372' }).setOrigin(1, 0)
-    this.clueText = this.add.text(W - 8, 86, '', { fontFamily: F, fontSize: '11px', color: '#9ec0ff' }).setOrigin(1, 0)
+    // top-right stat panel: lei, score, rank, clues
+    this.add.rectangle(W - 168, 40, 162, 80, 0x10121a, 0.78).setOrigin(0).setStrokeStyle(1, 0x000000, 0.6).setName('statpanel')
+    this.leiText = this.add.text(W - 12, 44, '', { fontFamily: F, fontSize: '17px', color: '#ffd24a' }).setOrigin(1, 0).setStroke('#10121a', 3)
+    this.scoreText = this.add.text(W - 12, 64, '', { fontFamily: F, fontSize: '13px', color: '#ffffff' }).setOrigin(1, 0).setStroke('#10121a', 3)
+    this.rankText = this.add.text(W - 12, 82, '', { fontFamily: F, fontSize: '12px', color: '#ebc372' }).setOrigin(1, 0).setStroke('#10121a', 3)
+    this.clueText = this.add.text(W - 12, 100, '', { fontFamily: F, fontSize: '12px', color: '#9ec0ff' }).setOrigin(1, 0).setStroke('#10121a', 3)
 
     // mission banner
-    this.missionText = this.add.text(8, 106, '', { fontFamily: F, fontSize: '11px', color: '#ebc372', backgroundColor: '#10121aBB', padding: { x: 5, y: 3 } }).setOrigin(0, 0)
+    this.missionText = this.add.text(8, 116, '', { fontFamily: F, fontSize: '12px', color: '#ebc372', backgroundColor: '#10121aCC', padding: { x: 6, y: 4 } }).setOrigin(0, 0)
 
     // weapon chip (bottom-left)
     this.weaponText = this.add.text(8, 0, '', { fontFamily: F, fontSize: '10px', color: '#d7dce4', backgroundColor: '#10121aBB', padding: { x: 5, y: 3 } }).setOrigin(0, 1)
@@ -92,7 +94,8 @@ export default class UiScene extends Phaser.Scene {
     this.topbar.width = W
     this.newsBand.width = W; this.newsLine.width = W
     this.help.setX(W - 8)
-    this.leiText.setX(W - 8); this.scoreText.setX(W - 8); this.rankText.setX(W - 8); this.clueText.setX(W - 8)
+    this.leiText.setX(W - 12); this.scoreText.setX(W - 12); this.rankText.setX(W - 12); this.clueText.setX(W - 12)
+    const sp = this.children.getByName('statpanel'); if (sp) sp.setX(W - 168)
     this.promptText.setPosition(W / 2, H - 116)
     this.toastText.setX(W / 2)
     this.np.setPosition(W / 2, H - 44)
@@ -109,12 +112,12 @@ export default class UiScene extends Phaser.Scene {
 
     const hud = this.registry.get('hud')
     if (hud) {
-      this.hpFill.displayWidth = Math.max(0, 120 * (hud.hp / hud.maxHp))
+      this.hpFill.displayWidth = Math.max(0, 178 * (hud.hp / hud.maxHp))
       this.hpFill.fillColor = hud.hp > 50 ? 0x4caf50 : hud.hp > 25 ? 0xf9a200 : 0xcc3b30
-      this.hpText.setText(`${hud.hp}/${hud.maxHp}`)
-      this.heatFill.displayWidth = 120 * (hud.heat / 100)
-      this.credFill.displayWidth = 120 * ((hud.cred || 0) / 100)
-      this.civicFill.displayWidth = 120 * ((hud.civic || 0) / 100)
+      this.hpText.setText(`${hud.hp} / ${hud.maxHp}`)
+      this.heatFill.displayWidth = 178 * (hud.heat / 100)
+      this.credFill.displayWidth = 178 * ((hud.cred || 0) / 100)
+      this.civicFill.displayWidth = 178 * ((hud.civic || 0) / 100)
       this.leiText.setText(`${hud.lei} lei`)
       this.scoreText.setText(`Scor ${hud.score}`)
       this.rankText.setText(hud.rank ? `${hud.rank}${hud.xpNext > hud.xpCur ? `  ${hud.xp}/${hud.xpNext}` : ''}` : '')

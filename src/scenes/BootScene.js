@@ -48,6 +48,7 @@ export default class BootScene extends Phaser.Scene {
     this.makeQuestIcon()
     this.makeCastSprites()
     this.makeWorldFx()
+    this.makeCoffeeKiosks()
     // Residential
     this.makeKhrushchyovka()
     this.makeScanlines()
@@ -854,6 +855,26 @@ export default class BootScene extends Phaser.Scene {
       g.fillStyle(0xfff0b0, 1); g.fillRect(5, 0, 2, 12); g.fillRect(0, 5, 12, 2)
       g.fillStyle(0xffffff, 1); g.fillRect(4, 4, 4, 4)
     })
+  }
+
+  // coffee-to-go booth ("butcă")
+  makeCoffeeKiosk(key, wall, sign) {
+    const W = 24, H = 30
+    this.tex(key, W, H, (g) => {
+      g.fillStyle(0x000000, 0.16); g.fillEllipse(W / 2, H - 2, W - 4, 5)
+      g.fillStyle(wall, 1); g.fillRect(2, 6, W - 4, H - 8)
+      g.fillStyle(0x000000, 0.12); g.fillRect(W - 5, 6, 3, H - 8)
+      g.fillStyle(sign, 1); g.fillRect(2, 6, W - 4, 5)              // sign band
+      g.fillStyle(sign, 1); g.fillRect(0, 11, W, 3)                 // awning
+      g.fillStyle(0xeeeeee, 0.85); for (let x = 2; x < W; x += 6) g.fillRect(x, 11, 3, 3)
+      g.fillStyle(0x6a8aa0, 1); g.fillRect(5, 16, W - 10, 8)        // window
+      g.fillStyle(0x3a2616, 1); g.fillRect(6, 24, W - 12, H - 26)   // counter / coffee
+    })
+  }
+
+  makeCoffeeKiosks() {
+    this.makeCoffeeKiosk('kiosk_lavazza', 0x14224a, 0xcc1a2b) // Lavazza — navy + red
+    this.makeCoffeeKiosk('kiosk_bonjour', 0xe7d6b0, 0xc3812d) // Bonjour — cream + orange
   }
 
   makeScanlines() {

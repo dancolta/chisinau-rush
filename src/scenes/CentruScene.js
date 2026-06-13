@@ -39,12 +39,13 @@ const ROWS = [
 // 100 authentic Moldovan collectibles, grouped by which pickup sprite they use
 const COLLECT_GROUPS = {
   c_placinta: ['Plăcintă cu brânză', 'Sarmale', 'Mămăligă', 'Zeamă de pui', 'Brânză de oi', 'Mititei', 'Plăcintă cu cartofi', 'Vărzare', 'Învârtită', 'Colțunași', 'Tochitură', 'Răcituri', 'Salată de vinete', 'Salată Olivier', 'Borș acru', 'Ciorbă de perișoare', 'Scrob', 'Ardei umpluți', 'Friptură de miel', 'Magiun de prune', 'Jumări', 'Slănină', 'Pelmeni', 'Gogoși', 'Urdă', 'Plăcintă cu dovleac', 'Brânză cu smântână', 'Pâine de la Franzeluța', 'Covrigi cu mac', 'Cașcaval afumat'],
-  c_eugenia: ['Ciocolată Bucuria', 'Biscuiți Eugenia', 'Halva', 'Napolitane', 'Baton cu arahide', 'Bomboane Moldova', 'Bomboane Meteorit', 'Do-Re-Mi', 'Zefir', 'Rahat', 'Cozonac', 'Pască', 'Bezele', 'Prăjitură Napoleon', 'Tort Pasărea cu lapte', 'Înghețată în pahar', 'Acadea pe băț', 'Floricele de porumb', 'Semințe de floarea-soarelui', 'Pelin gem de gutui'],
+  c_eugenia: ['Ciocolată Bucuria', 'Batoane cu cremă', 'Halva', 'Napolitane', 'Baton cu arahide', 'Bomboane Moldova', 'Bomboane Meteorit', 'Do-Re-Mi', 'Zefir', 'Rahat', 'Cozonac', 'Pască', 'Bezele', 'Prăjitură Napoleon', 'Tort Pasărea cu lapte', 'Înghețată în pahar', 'Acadea pe băț', 'Floricele de porumb', 'Semințe de floarea-soarelui', 'Pelin gem de gutui'],
   c_cvas: ['Cvas', 'Compot de fructe', 'Must', 'Vin de Purcari', 'Vin de Cricova', 'Divin KVINT', 'Rachiu de casă', 'Apă Gura Căinarului', 'Vin fiert', 'Tărie de prune', 'Bere Chișinău', 'Limonadă Tarhun', 'Limonadă Duchess', 'Sok de mere', 'Ceai cu mentă', 'Sirop de soc', 'Vin de casă', 'Lapte de la fermă', 'Cafea la nisip', 'Smântână în borcan'],
   c_martisor: ['Mărțișor', 'Ie tradițională', 'Covor moldovenesc', 'Căciula lui Guguță', 'Monedă de 1 leu', 'Ban de 5 bani', 'Jeton de troleibuz', 'Brățară din mărgele', 'Insignă pionier', 'Magnet cu Arcul de Triumf', 'Timbru Poșta Moldovei', 'Cartelă Moldcell', 'Ștampilă din lemn', 'Iconiță de buzunar', 'Fluier de cioban', 'Cruciuliță la gât', 'Cocardă tricoloră', 'Vânzoală din lână', 'Mănunchi de busuioc', 'Floare de tei presată'],
   c_covor: ['Sifon de apă gazoasă', 'Telefon cu disc', 'Primus', 'Bidon de lapte', 'Borcan de murături', 'Sacoșă din plasă', 'Galoshi', 'Pantofi Zorile', 'Pungă Linella', 'Radio Maiak'],
 }
 const COLLECT_FLAT = Object.entries(COLLECT_GROUPS).flatMap(([tex, names]) => names.map((n) => ({ n, tex })))
+const MAYOR = 'Ceon Eban' // satirical mayor (anagram parody)
 
 export default class CentruScene extends Phaser.Scene {
   constructor() {
@@ -60,6 +61,7 @@ export default class CentruScene extends Phaser.Scene {
     this.buildResidential()
     this.buildGreenery()
     this.buildStreetLife()
+    this.buildCoffee()
     this.buildTransit()
     this.buildMarket()
     this.buildMonuments()
@@ -251,6 +253,19 @@ export default class CentruScene extends Phaser.Scene {
     // two more kebab joints (near University + Gara) so all five names appear
     food(COLS[6].cx - 92, 778, 'kebab')
     food(COLS[6].cx - 92, 1340, 'kebab')
+  }
+
+  // ---- Lavazza / Bonjour coffee booths in the open squares --------------
+  buildCoffee() {
+    const booths = [
+      ['kiosk_lavazza', 1245, 925, 'Lavazza'], ['kiosk_bonjour', 1475, 925, 'Bonjour'], // PMAN plaza
+      ['kiosk_bonjour', 1245, 1300, 'Bonjour'], ['kiosk_lavazza', 1475, 1300, 'Lavazza'], // Cathedral Park
+      ['kiosk_lavazza', 1640, 1240, 'Lavazza'], ['kiosk_bonjour', 1880, 1240, 'Bonjour'], // Grădina Publică
+    ]
+    booths.forEach(([tex, x, y, name]) => {
+      this.add.image(x, y, tex).setOrigin(0.5, 1).setDepth(y)
+      this.landmarks.push({ x, y: y - 6, name, desc: 'Cafea la pahar, de mers.' })
+    })
   }
 
   // ---- bus / trolleybus stops + MOVING traffic --------------------------
@@ -456,17 +471,17 @@ export default class CentruScene extends Phaser.Scene {
     if (this.state.driving || this.frozen()) return
     const now = this.time.now
     if (now < this.swingCD) return
-    this.swingCD = now + 380
+    this.swingCD = now + 360
     const w = this.weapons[this.weaponIdx]
-    let fx = 0, fy = 0
-    if (this.facing === 'side') fx = this.ion.flipX ? -1 : 1
-    else if (this.facing === 'up') fy = -1
-    else fy = 1
-    const tx = this.ion.x + fx * w.range, ty = this.ion.y + fy * w.range
+    // forgiving hit: any enemy within (range+12) of the player connects, regardless of facing
+    const reach = w.range + 12
+    let hit = false
     for (const e of this.enemies) {
       if (e.calm || e.state === 'ko') continue
-      if ((tx - e.spr.x) ** 2 + (ty - (e.spr.y - 10)) ** 2 < (w.range) ** 2) this.hitEnemy(e)
+      if ((this.ion.x - e.spr.x) ** 2 + (this.ion.y - (e.spr.y - 10)) ** 2 < reach * reach) { this.hitEnemy(e); hit = true }
     }
+    // always give a swing whoosh so the player sees the attack register
+    if (!hit) { this.spawnHitFx(this.ion.x + (this.ion.flipX ? -16 : 16), this.ion.y - 12); this.cameras.main.shake(40, 0.002) }
   }
 
   spawnHitFx(x, y) {
@@ -523,7 +538,7 @@ export default class CentruScene extends Phaser.Scene {
       const nx = e.spr.x + Math.cos(ang) * 58 * d, ny = e.spr.y + Math.sin(ang) * 58 * d
       if (!this.blocked(nx, e.spr.y)) e.spr.x = nx
       if (!this.blocked(e.spr.x, ny)) e.spr.y = ny
-      if (dist2 < 24 * 24) { e.dmgT -= d; if (e.dmgT <= 0) { e.dmgT = 0.8; this.state.hp = Math.max(0, this.state.hp - 8); this.cameras.main.shake(80, 0.004); this.syncHud() } }
+      if (dist2 < 24 * 24) { e.dmgT -= d; if (e.dmgT <= 0) { e.dmgT = 1.1; this.state.hp = Math.max(0, this.state.hp - 4); this.cameras.main.shake(80, 0.004); this.syncHud() } }
     } else {
       const wp = e.wp[e.wi]
       const ang = Math.atan2(wp[1] - e.spr.y, wp[0] - e.spr.x)
@@ -598,7 +613,9 @@ export default class CentruScene extends Phaser.Scene {
     this.breadTarget = this.foodSpots.find((f) => /Linella/.test(f.name)) || this.foodSpots[0]
     this.input.keyboard.on('keydown-E', () => this.onAction())
     ;['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX'].forEach((k, i) => this.input.keyboard.on('keydown-' + k, () => this.menuKey(i + 1)))
-    this.input.keyboard.on('keydown-R', () => { if (this.won) { this.registry.set('win', null); this.scene.stop('Ui'); this.scene.restart() } })
+    this.input.keyboard.on('keydown-R', () => { if (this.won) { localStorage.removeItem('cr-save'); this.registry.set('win', null); this.scene.stop('Ui'); this.scene.restart() } })
+    this.load()
+    this.time.addEvent({ delay: 5000, loop: true, callback: () => this.save() })
     this.syncHud()
     this.registry.set('mission', 'Vorbește cu Baba Zina (E) ca să începi.')
     // minimap data
@@ -618,7 +635,7 @@ export default class CentruScene extends Phaser.Scene {
       if (/Plăcinte/.test(n)) return { price: 20, hp: 40 }
       if (/ANDY/.test(n)) return { price: 25, hp: 45 }
       if (/DaviDan|Franzeluța|Fornetti/.test(n)) return { price: 14, hp: 22 }
-      if (/Tucano|Gustok|Cafe/.test(n)) return { price: 12, hp: 10 }
+      if (/Tucano|Gustok|Cafe|Lavazza|Bonjour/.test(n)) return { price: 12, hp: 10 }
       if (/Linella|Nr\.1|Fidesco|Velmart|Piața Centrală/.test(n)) return { price: 18, hp: 30 }
       return null
     }
@@ -707,7 +724,7 @@ export default class CentruScene extends Phaser.Scene {
     // Primarul — satirical mayor at a permanent ribbon-cutting by Casa Guvernului
     this.add.image(1300, BD_TOP - 16, 'ribbon').setOrigin(0.5, 1).setDepth(BD_TOP - 16)
     this.add.image(1338, BD_TOP - 16, 'npc_mayor').setOrigin(0.5, 1).setDepth(BD_TOP - 16)
-    this.landmarks.push({ x: 1325, y: BD_TOP - 22, name: 'Primarul', desc: '„Lucrăm la asta." Taie panglici. Cortegiul drift spre est.' })
+    this.landmarks.push({ x: 1325, y: BD_TOP - 22, name: MAYOR, desc: '„Lucrăm la asta." Taie panglici. Cortegiul drift spre est.' })
 
     this.marker = this.add.image(0, 0, 'marker').setOrigin(0.5, 1).setDepth(99980).setVisible(false)
     this.copSprite = this.add.image(0, 0, 'npc_cop').setOrigin(0.5, 1).setDepth(99975).setVisible(false)
@@ -754,12 +771,40 @@ export default class CentruScene extends Phaser.Scene {
   unlockFinale() {
     if (this.finaleReady) return
     this.finaleReady = true
-    this.registry.set('mission', 'Finală: demască Primarul la Casa Guvernului (E).')
+    this.registry.set('mission', `Finală: demască-l pe ${MAYOR} la Casa Guvernului (E).`)
     this.toast('Ai toate dovezile! Mergi la Casa Guvernului.')
   }
 
   toast(msg) { this.registry.set('toast', { msg, id: this.time.now }) }
   frozen() { return this.cop || this.shopOpen || this.exposeOpen || this.won }
+
+  save() {
+    try {
+      const s = this.state
+      localStorage.setItem('cr-save', JSON.stringify({
+        v: 1, lei: s.lei, score: s.score, xp: s.xp, cred: s.cred, civic: s.civic, satchel: s.satchel,
+        mission: s.mission, speedBoost: s.speedBoost, acteFalse: s.acteFalse, rankIdx: this.rankIdx,
+        clues: this.clues, cluesEnabled: this.cluesEnabled, weaponUnlocked: this.weaponUnlocked,
+        homelessFlipped: this._homelessFlipped, finaleReady: this.finaleReady,
+      }))
+    } catch (e) { /* storage blocked */ }
+  }
+
+  load() {
+    try {
+      const raw = localStorage.getItem('cr-save'); if (!raw) return
+      const d = JSON.parse(raw); if (!d || d.v !== 1) return
+      const s = this.state
+      ;['lei', 'score', 'xp', 'cred', 'civic', 'satchel', 'mission', 'speedBoost', 'acteFalse'].forEach((k) => { if (d[k] !== undefined) s[k] = d[k] })
+      if (d.rankIdx !== undefined) this.rankIdx = d.rankIdx
+      if (d.clues) this.clues = d.clues
+      if (d.weaponUnlocked) this.weaponUnlocked = d.weaponUnlocked
+      this.cluesEnabled = !!d.cluesEnabled
+      this._homelessFlipped = !!d.homelessFlipped
+      this.finaleReady = !!d.finaleReady
+      this.toast('Progres încărcat. Davai!')
+    } catch (e) { /* corrupt save */ }
+  }
 
   menuKey(n) {
     if (this.cop) this.copChoice(n)
@@ -779,7 +824,7 @@ export default class CentruScene extends Phaser.Scene {
     const opts = [
       `1 · Vinde amintiri (${s.satchel}) — ~${s.satchel * 12} lei`,
       '2 · Cumpără plăcintă (-15 lei, +35 HP)',
-      '3 · Cumpără Eugenia (-10 lei, +20 HP)',
+      '3 · Cumpără biscuiți (-10 lei, +20 HP)',
     ]
     if (!s.acteFalse) opts.push('4 · Acte false (-120 lei) — sari peste un control')
     if (!s.speedBoost) opts.push('5 · Tuning motor (-200 lei) — mașina zboară')
@@ -798,7 +843,7 @@ export default class CentruScene extends Phaser.Scene {
     } else if (n === 2) {
       if (s.lei >= 15) { s.lei -= 15; s.hp = Math.min(s.maxHp, s.hp + 35); this.toast('Plăcintă caldă! +35 HP') } else this.toast('N-ai 15 lei.')
     } else if (n === 3) {
-      if (s.lei >= 10) { s.lei -= 10; s.hp = Math.min(s.maxHp, s.hp + 20); this.toast('Eugenia! +20 HP') } else this.toast('N-ai 10 lei.')
+      if (s.lei >= 10) { s.lei -= 10; s.hp = Math.min(s.maxHp, s.hp + 20); this.toast('Biscuiți! +20 HP') } else this.toast('N-ai 10 lei.')
     } else if (n === 4) {
       if (!s.acteFalse) { if (s.lei >= 120) { s.lei -= 120; s.acteFalse = true; this.toast('Acte false. Nu le arăta pe bulevard.') } else this.toast('N-ai 120 lei.') }
     } else if (n === 5) {
@@ -897,7 +942,7 @@ export default class CentruScene extends Phaser.Scene {
   openExpose() {
     this.exposeOpen = true
     this.registry.set('finale', {
-      q: 'Dovada e completă: matryoshka, telefoanele rusești, ruta cortegiului spre ambasadă, actele de la ofițer. Demaști Primarul?',
+      q: `Dovada e completă: matryoshka, telefoanele rusești, ruta cortegiului spre ambasadă, actele de la ofițer. Îl demaști pe ${MAYOR}?`,
       opts: ['1 · Demască-l public și ia-i locul'],
     })
   }
@@ -943,7 +988,7 @@ export default class CentruScene extends Phaser.Scene {
   omLine() {
     const lines = [
       'Omul: Matryoshka... telefonul... în beciul de la primărie... eu am văzut.',
-      'Omul: Primarul vorbește cu Moscova noaptea. Nimeni nu crede pe nebunul din parc.',
+      `Omul: ${MAYOR} vorbește cu Moscova noaptea. Nimeni nu crede pe nebunul din parc.`,
       'Omul: Caută sub Arc, băiete. Acolo-i o păpușă care știe tot.',
     ]
     return lines[Math.floor(Math.random() * lines.length)]
@@ -1045,10 +1090,10 @@ export default class CentruScene extends Phaser.Scene {
     const s = this.state
     if (n === 1) {
       if (s.lei >= this.copBribe) { s.lei -= this.copBribe; s.heat = 0; s.cred = Math.max(0, s.cred - 3); this.toast('Mită dată. Drum bun, șefu.') }
-      else { s.heat = 30; s.hp = Math.max(0, s.hp - 8); this.toast('N-ai bani de mită — amendă și nervi! (-8 HP)') }
+      else { s.heat = 30; s.hp = Math.max(0, s.hp - 5); this.toast('N-ai bani de mită — amendă și nervi! (-5 HP)') }
     } else if (n === 2) {
       if (Math.random() < 0.6) { s.heat = 0; s.score += 20; this.toast('Te-ai descurcat cu vorba.') }
-      else { s.lei = Math.max(0, s.lei - 15); s.heat = 35; s.hp = Math.max(0, s.hp - 10); this.toast('N-a mers — amendă -15 lei, -10 HP.') }
+      else { s.lei = Math.max(0, s.lei - 15); s.heat = 35; s.hp = Math.max(0, s.hp - 6); this.toast('N-a mers — amendă -15 lei, -6 HP.') }
     } else {
       // flee — gopnik respect makes it cleaner
       s.heat = (s.cred >= 60) ? 8 : 20; s.score += 40; s.cred = Phaser.Math.Clamp(s.cred + 6, 0, 100)
@@ -1192,7 +1237,7 @@ export default class CentruScene extends Phaser.Scene {
       else if (near.type === 'gopnik') prompt = 'E: vorbește cu gopnicii (vino cu mașina pt. cursă)'
       else if (near.type === 'drop') prompt = 'E: livrează babanul'
       else if (near.type === 'pothole') prompt = 'E: astupă gropa (+civic)'
-      else if (near.type === 'expose') prompt = 'E: demască Primarul'
+      else if (near.type === 'expose') prompt = `E: demască-l pe ${MAYOR}`
     }
     this.registry.set('prompt', prompt)
   }
@@ -1216,16 +1261,21 @@ export default class CentruScene extends Phaser.Scene {
     if (this.hudT > 0.2) { this.hudT = 0; this.syncHud() }
   }
 
-  // hunger drain + soft fail (gives food/lei real stakes, no hard softlock)
+  // slow hunger drain + a clear warning before fainting (no hard softlock)
   updateSurvival(d) {
     const s = this.state
-    s.hp = Math.max(0, s.hp - 0.7 * d)
+    s.hp = Math.max(0, s.hp - 0.32 * d) // gentle hunger (~5 min from full)
+    // low-HP disclaimer: flash + warn once when crossing 25
+    const low = s.hp <= 25
+    this.registry.set('lowhp', low)
+    if (low && !this._lowWarned) { this._lowWarned = true; this.toast('⚠ Ți-e foame! Mănâncă urgent (kebab/cvas/magazin) altfel leșini.') }
+    if (!low) this._lowWarned = false
     if (s.hp <= 0) {
       if (s.driving) this.exitCar()
       s.hp = 60; s.lei = Math.max(0, s.lei - 10); s.score = Math.max(0, s.score - 50)
       this.ion.setPosition(1360, BD_BOT + 26)
       this.cameras.main.startFollow(this.ion, true, 0.12, 0.12)
-      this.toast('Ai leșinat de foame! Mănâncă ceva. (-10 lei)')
+      this.toast('Ai leșinat de foame! Te-ai trezit lângă Arc. (-10 lei)')
       this.syncHud()
     }
   }
