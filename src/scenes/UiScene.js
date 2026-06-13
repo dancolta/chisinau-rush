@@ -12,15 +12,24 @@ export default class UiScene extends Phaser.Scene {
   create() {
     const W = this.scale.width, H = this.scale.height
 
-    // top bar
-    this.topbar = this.add.rectangle(0, 0, W, 22, 0x10121a, 0.55).setOrigin(0)
-    this.add.text(8, 4, 'CHIȘINĂU RUSH · Centru', { fontFamily: F, fontSize: '13px', color: '#ebc372' })
-    this.help = this.add.text(W - 8, 5, 'WASD · Shift · E acțiune · click: nume · T CRT', { fontFamily: F, fontSize: '10px', color: '#aeb5c0' }).setOrigin(1, 0)
+    // ── continuous absurd news ticker (very top of screen) ──
+    this.newsBand = this.add.rectangle(0, 0, W, 17, 0x140d12, 0.92).setOrigin(0)
+    this.newsLine = this.add.rectangle(0, 16, W, 1, 0x8f2f1f, 1).setOrigin(0)
+    this.newsX = W
+    this.newsText = this.add.text(W, 2, '', { fontFamily: F, fontSize: '11px', color: '#ffd9a0' }).setOrigin(0, 0)
+    this.add.rectangle(0, 0, 56, 17, 0x8f2f1f, 1).setOrigin(0).setDepth(2)
+    this.add.text(6, 2, 'ȘTIRI', { fontFamily: F, fontSize: '11px', color: '#fff6d6' }).setOrigin(0, 0).setDepth(3)
+    this.newsText.setText(this.makeNews())
+
+    // top bar (below the ticker)
+    this.topbar = this.add.rectangle(0, 17, W, 22, 0x10121a, 0.55).setOrigin(0)
+    this.add.text(8, 21, 'CHIȘINĂU RUSH · Centru', { fontFamily: F, fontSize: '13px', color: '#ebc372' })
+    this.help = this.add.text(W - 8, 22, 'WASD · Shift · E acțiune · click: nume · T CRT', { fontFamily: F, fontSize: '10px', color: '#aeb5c0' }).setOrigin(1, 0)
 
     // HP bar
-    this.add.rectangle(8, 30, 124, 14, 0x10121a, 0.7).setOrigin(0)
-    this.hpFill = this.add.rectangle(10, 32, 120, 10, 0xcc3b30).setOrigin(0)
-    this.hpText = this.add.text(70, 31, '', { fontFamily: F, fontSize: '9px', color: '#ffffff' }).setOrigin(0.5, 0).setStroke('#10121a', 3)
+    this.add.rectangle(8, 47, 124, 14, 0x10121a, 0.7).setOrigin(0)
+    this.hpFill = this.add.rectangle(10, 49, 120, 10, 0xcc3b30).setOrigin(0)
+    this.hpText = this.add.text(70, 48, '', { fontFamily: F, fontSize: '9px', color: '#ffffff' }).setOrigin(0.5, 0).setStroke('#10121a', 3)
 
     // HEAT / CRED / CIVIC bars (reputation triangle)
     const bar = (y, label, color) => {
@@ -29,18 +38,18 @@ export default class UiScene extends Phaser.Scene {
       this.add.text(136, y - 1, label, { fontFamily: F, fontSize: '9px', color: '#' + color.toString(16).padStart(6, '0') })
       return fill
     }
-    this.heatFill = bar(48, 'HEAT', 0xf9a200)
-    this.credFill = bar(60, 'CRED', 0x4caf50)
-    this.civicFill = bar(72, 'CIVIC', 0x2f6fb0)
+    this.heatFill = bar(64, 'HEAT', 0xf9a200)
+    this.credFill = bar(76, 'CRED', 0x4caf50)
+    this.civicFill = bar(88, 'CIVIC', 0x2f6fb0)
 
     // top-right: lei, score, rank, clues
-    this.leiText = this.add.text(W - 8, 24, '', { fontFamily: F, fontSize: '13px', color: '#ffd24a' }).setOrigin(1, 0)
-    this.scoreText = this.add.text(W - 8, 40, '', { fontFamily: F, fontSize: '11px', color: '#cdd2dc' }).setOrigin(1, 0)
-    this.rankText = this.add.text(W - 8, 54, '', { fontFamily: F, fontSize: '11px', color: '#ebc372' }).setOrigin(1, 0)
-    this.clueText = this.add.text(W - 8, 68, '', { fontFamily: F, fontSize: '11px', color: '#9ec0ff' }).setOrigin(1, 0)
+    this.leiText = this.add.text(W - 8, 42, '', { fontFamily: F, fontSize: '13px', color: '#ffd24a' }).setOrigin(1, 0)
+    this.scoreText = this.add.text(W - 8, 58, '', { fontFamily: F, fontSize: '11px', color: '#cdd2dc' }).setOrigin(1, 0)
+    this.rankText = this.add.text(W - 8, 72, '', { fontFamily: F, fontSize: '11px', color: '#ebc372' }).setOrigin(1, 0)
+    this.clueText = this.add.text(W - 8, 86, '', { fontFamily: F, fontSize: '11px', color: '#9ec0ff' }).setOrigin(1, 0)
 
     // mission banner
-    this.missionText = this.add.text(8, 90, '', { fontFamily: F, fontSize: '11px', color: '#ebc372', backgroundColor: '#10121aBB', padding: { x: 5, y: 3 } }).setOrigin(0, 0)
+    this.missionText = this.add.text(8, 106, '', { fontFamily: F, fontSize: '11px', color: '#ebc372', backgroundColor: '#10121aBB', padding: { x: 5, y: 3 } }).setOrigin(0, 0)
 
     // weapon chip (bottom-left)
     this.weaponText = this.add.text(8, 0, '', { fontFamily: F, fontSize: '10px', color: '#d7dce4', backgroundColor: '#10121aBB', padding: { x: 5, y: 3 } }).setOrigin(0, 1)
@@ -81,6 +90,7 @@ export default class UiScene extends Phaser.Scene {
 
   relayout(W, H) {
     this.topbar.width = W
+    this.newsBand.width = W; this.newsLine.width = W
     this.help.setX(W - 8)
     this.leiText.setX(W - 8); this.scoreText.setX(W - 8); this.rankText.setX(W - 8); this.clueText.setX(W - 8)
     this.promptText.setPosition(W / 2, H - 116)
@@ -91,7 +101,12 @@ export default class UiScene extends Phaser.Scene {
     this.copBox.setPosition(W / 2, H / 2); this.copQ.setPosition(W / 2, H / 2 - 52); this.copOpts.setPosition(W / 2, H / 2 + 6)
   }
 
-  update() {
+  update(_t, dt) {
+    // scroll the news ticker; regenerate fresh headlines each loop
+    this.newsX -= 0.06 * (dt || 16)
+    if (this.newsX + this.newsText.width < 0) { this.newsText.setText(this.makeNews()); this.newsX = this.scale.width }
+    this.newsText.x = this.newsX
+
     const hud = this.registry.get('hud')
     if (hud) {
       this.hpFill.displayWidth = Math.max(0, 120 * (hud.hp / hud.maxHp))
@@ -161,6 +176,43 @@ export default class UiScene extends Phaser.Scene {
       this.winText.setPosition(this.scale.width / 2, this.scale.height / 2)
       this.winText.setText(`★ PRIMAR DE CHIȘINĂU ★\n\nL-ai demascat pe Primar. Orașul e al tău.\n\nScor final: ${win.score}    Lei: ${win.lei}\nRang: ${win.rank}\n\nCu ${win.lei} lei ai cumpărat\n${win.sqm} m² de apartament în Chișinău.\n\nFelicitări — ai ajuns nimeni-cineva.\n\nApasă R pentru a reîncepe.`)
     }
+  }
+
+  makeNews() {
+    const hud = this.registry.get('hud') || {}
+    const rank = hud.rank || 'cetățean'
+    const lei = hud.lei != null ? hud.lei : 0
+    const score = hud.score || 0
+    const rnd = (a) => a[Math.floor(Math.random() * a.length)]
+    const n = () => 2 + Math.floor(Math.random() * 97)
+    const lm = () => rnd(['Arcul de Triumf', 'Piața Centrală', 'Botanica', 'Gara', 'bd. Ștefan cel Mare', 'Grădina Publică', 'Hotel Național', 'Catedrală'])
+    const it = () => rnd(['cvas', 'plăcintă', 'Eugenia', 'baban', 'semechki', 'must', 'sarmale', 'mămăligă'])
+    const car = () => rnd(['Logan', 'G-Wagon', 'Cayenne', 'Land Cruiser', 'troleibuz'])
+    const T = [
+      () => `Primarul declară gropile din ${lm()} „opere de artă urbană".`,
+      () => `ULTIMA ORĂ: troleibuzul ${n()} a depășit limita de... 3 pasageri.`,
+      () => `Studiu: ${n()}% dintre chișinăuieni confundă ${it()} cu micul dejun.`,
+      () => `Un cetățean pe nume „${rank}" a astupat o groapă; Primăria cere explicații.`,
+      () => `Curs valutar: cu ${lei} lei mai iei ${n()} plăcinte și o iluzie.`,
+      () => `Cortegiul primarului, surprins iar pe drumul spre „o vizită de lucru" la est.`,
+      () => `Meteo: azi ${n()}% praf, ${n()}% promisiuni, 0% gropi astupate.`,
+      () => `Baba Zina: „pe vremea mea, cvasul era cvas, nu apă cu vise".`,
+      () => `Sondaj: ${n()} din 10 gopnici preferă semechki în locul dialogului.`,
+      () => `Linella scumpește punga; punga scumpește nervii.`,
+      () => `Bărbat traversează tot bulevardul fără să fie oprit de poliție. Caz unic.`,
+      () => `Reformă: gropile vor fi numerotate, ca să fie ignorate mai ușor.`,
+      () => `Hotel Național, în continuare deschis... pentru porumbei.`,
+      () => `„${rank}" văzut conducând o ${car()}. Vecinii au chemat televiziunea.`,
+      () => `Record: scor ${score} de puncte și tot nu ajunge de-un apartament în Botanica.`,
+      () => `Experți: ${n()} matryoshka găsite la primărie. „Pur decorative", spune primarul.`,
+      () => `Un „client din est" cumpără telefoane. Borea zice că-i absolut normal.`,
+      () => `Anunț: de mâine, semaforul de la ${lm()} funcționează... uneori.`,
+      () => `Festival de plăcinte amânat din lipsă de... plăcinte.`,
+      () => `Bursă: leul a crescut cu ${n()}% în inima fiecărui moldovean.`,
+    ]
+    const items = []
+    for (let i = 0; i < 7; i++) items.push(rnd(T)())
+    return '◆ ' + items.join('   ◆   ') + '   ◆   '
   }
 
   drawMinimap() {
