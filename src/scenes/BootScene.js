@@ -26,6 +26,11 @@ export default class BootScene extends Phaser.Scene {
     this.makeChurch()
     this.makeStatue()
     this.makeFountain()
+    this.makeHotel()
+    this.makeMuseum()
+    this.makeTheatre()
+    this.makeMarket()
+    this.makeGara()
     this.makeShops()
     // Residential
     this.makeKhrushchyovka()
@@ -363,6 +368,88 @@ export default class BootScene extends Phaser.Scene {
       }
       // ground entrances
       g.fillStyle(0x4a3f33, 1); g.fillRect(10, H - 9, 7, 9); g.fillRect(W - 20, H - 9, 7, 9)
+    })
+  }
+
+  makeHotel() {
+    // Hotel Național — brutalist concrete ruin (tall)
+    const W = 66, H = 124
+    this.tex('hotel', W, H, (g) => {
+      g.fillStyle(0x9a9ea4, 1); g.fillRect(3, 6, W - 6, H - 6)
+      g.fillStyle(0x868b91, 1); g.fillRect(3, 6, 3, H - 6)
+      g.fillStyle(0x7e848a, 1); g.fillRect(3, 6, W - 6, 3)
+      g.fillStyle(0x8a8f95, 1)
+      for (let x = 3; x < W; x += 9) g.fillRect(x, 9, 1, H - 9)
+      g.fillStyle(0x2b3036, 1)
+      for (let y = 14; y < H - 8; y += 9) for (let x = 8; x < W - 8; x += 9) g.fillRect(x, y, 5, 6)
+      g.fillStyle(0x3b424a, 1)
+      ;[[17, 32], [44, 50], [26, 77], [53, 95]].forEach(([x, y]) => g.fillRect(x, y, 5, 6)) // broken/lighter
+    })
+  }
+
+  makeMuseum() {
+    // National History Museum — neoclassical with pediment + columns
+    const W = 88, H = 72
+    this.tex('museum', W, H, (g) => {
+      g.fillStyle(0xb9b3a2, 1); g.fillRect(6, H - 8, W - 12, 8)        // steps
+      g.fillStyle(0xe7e2d4, 1); g.fillRect(10, 30, W - 20, H - 38)     // body
+      g.fillStyle(0xcfc9b8, 1)
+      for (let x = 16; x < W - 14; x += 9) g.fillRect(x, 34, 4, H - 44) // columns
+      g.fillStyle(0xeceae0, 1); g.fillRect(8, 26, W - 16, 6)          // architrave
+      g.fillStyle(0xe7e2d4, 1); g.fillTriangle(8, 26, W - 8, 26, W / 2, 8) // pediment
+      g.fillStyle(0xcfc9b8, 1); g.fillTriangle(8, 26, W / 2, 26, W / 2, 10)
+      g.fillStyle(0x6b6b6b, 1); g.fillRect(W / 2, -6, 1, 14)          // flag
+      g.fillStyle(0x0033a0, 1); g.fillRect(W / 2 + 1, -6, 3, 2); g.fillStyle(0xffd200, 1); g.fillRect(W / 2 + 4, -6, 3, 2); g.fillStyle(0xcc092f, 1); g.fillRect(W / 2 + 7, -6, 3, 2)
+    })
+  }
+
+  makeTheatre() {
+    // Teatrul Național — classical, columns, roof statues
+    const W = 82, H = 68
+    this.tex('theatre', W, H, (g) => {
+      g.fillStyle(0xe9dcc2, 1); g.fillRect(8, 26, W - 16, H - 26)
+      g.fillStyle(0xd6c9ac, 1); g.fillRect(8, 26, 3, H - 26)
+      g.fillStyle(0xcabd9e, 1)
+      for (let x = 14; x < W - 12; x += 9) g.fillRect(x, 30, 4, H - 38)
+      g.fillStyle(0xf0e6cf, 1); g.fillRect(6, 22, W - 12, 6)          // entablature
+      g.fillStyle(0x9a8f72, 1); g.fillRect(12, 14, 6, 8); g.fillRect(W - 18, 14, 6, 8) // roof statues
+      g.fillStyle(0x7c5a3a, 1); g.fillRect(W / 2 - 7, H - 16, 14, 16) // doors
+    })
+  }
+
+  makeMarket() {
+    // Piața Centrală — long hall + striped stall awnings
+    const W = 116, H = 60
+    this.tex('market', W, H, (g) => {
+      g.fillStyle(0xddd0b0, 1); g.fillRect(4, 12, W - 8, H - 20)
+      g.fillStyle(0xc7ba98, 1); g.fillRect(4, 12, W - 8, 3)
+      g.fillStyle(0x5a4630, 1); g.fillRect(W / 2 - 9, 22, 18, H - 30)  // arched entrance
+      g.fillStyle(0x3a4654, 1)
+      for (let x = 12; x < W - 10; x += 14) { if (Math.abs(x - W / 2) > 16) g.fillRect(x, 20, 7, 8) }
+      // stall awnings in front
+      for (let x = 6; x < W - 10; x += 16) {
+        g.fillStyle(0xcc3b30, 1); g.fillRect(x, H - 10, 14, 5)
+        g.fillStyle(0xeeeeee, 1); g.fillRect(x + 3, H - 10, 4, 5); g.fillRect(x + 10, H - 10, 3, 5)
+      }
+    })
+  }
+
+  makeGara() {
+    // Gara Feroviară — grand station, central clock tower
+    const W = 100, H = 90
+    this.tex('gara', W, H, (g) => {
+      g.fillStyle(0xe2d3b0, 1); g.fillRect(6, 34, W - 12, H - 34)
+      g.fillStyle(0xcdbf9a, 1); g.fillRect(6, 34, 3, H - 34)
+      g.fillStyle(0xb5462f, 1); g.fillRect(6, 34, W - 12, 4)          // red band
+      // central tower
+      g.fillStyle(0xe2d3b0, 1); g.fillRect(W / 2 - 12, 10, 24, 30)
+      g.fillStyle(0x8f2f1f, 1); g.fillTriangle(W / 2 - 14, 12, W / 2 + 14, 12, W / 2, 0)
+      g.fillStyle(0xf4ecd6, 1); g.fillCircle(W / 2, 22, 5)
+      g.fillStyle(0x2a2a2a, 1); g.fillRect(W / 2 - 1, 18, 1, 4); g.fillRect(W / 2, 22, 3, 1)
+      // arched windows
+      g.fillStyle(0x3a4654, 1)
+      for (let x = 14; x < W - 12; x += 13) { if (Math.abs(x - W / 2) > 16) g.fillRect(x, 44, 7, 12) }
+      g.fillStyle(0x5a4630, 1); g.fillRect(W / 2 - 8, H - 16, 16, 16)
     })
   }
 
