@@ -32,6 +32,10 @@ export default class BootScene extends Phaser.Scene {
     this.makeMarket()
     this.makeGara()
     this.makeShops()
+    this.makeStreetFood()
+    this.makeTransit()
+    this.makeKotovsky()
+    this.makeStallPlay()
     // Residential
     this.makeKhrushchyovka()
     this.makeScanlines()
@@ -494,6 +498,101 @@ export default class BootScene extends Phaser.Scene {
     this.makeShop('shop_andys', 0x16181c, 0x0d0e11, 0xffe400)    // ANDY'S — black/yellow
     this.makeShop('shop_placinte', 0x21336a, 0x18264f, 0xebc372) // La Plăcinte — navy/gold
     this.makeShop('shop_tucano', 0xf3e7cf, 0xddcba6, 0xf9b200)   // Tucano Coffee — orange
+  }
+
+  makeStreetFood() {
+    // Kebab / shaorma stall
+    this.tex('kebab', 26, 28, (g) => {
+      g.fillStyle(0x9a6b3a, 1); g.fillRect(2, 14, 22, 14)
+      g.fillStyle(0x7a5630, 1); g.fillRect(2, 14, 22, 2)
+      for (let x = 2; x < 24; x += 6) { g.fillStyle(0xcc3b30, 1); g.fillRect(x, 6, 3, 6); g.fillStyle(0xeeeeee, 1); g.fillRect(x + 3, 6, 3, 6) }
+      g.fillStyle(0x6a8aa0, 1); g.fillRect(5, 18, 12, 6)           // counter window
+      g.fillStyle(0x7a3b1f, 1); g.fillRect(20, 8, 3, 16)          // shaorma spit
+      g.fillStyle(0xb5462f, 1); g.fillRect(20, 8, 3, 3)
+    })
+    // Iconic Soviet yellow cvas barrel-on-wheels
+    this.tex('cvas', 32, 22, (g) => {
+      g.fillStyle(0xe6b800, 1); g.fillRect(4, 4, 24, 12)
+      g.fillStyle(0xf2cd33, 1); g.fillRect(4, 4, 24, 3)
+      g.fillStyle(0xc79a00, 1); g.fillRect(4, 13, 24, 3)
+      g.fillStyle(0xb5462f, 1); g.fillRect(12, 8, 8, 3)           // red label band
+      g.fillStyle(0x555a60, 1); g.fillRect(26, 12, 3, 4)         // tap
+      g.fillStyle(0x1a1a1f, 1); g.fillCircle(10, 18, 3); g.fillCircle(22, 18, 3) // wheels
+    })
+    // Generic newspaper/snack kiosk
+    this.tex('kiosk', 22, 26, (g) => {
+      g.fillStyle(0x5b6e8c, 1); g.fillRect(2, 8, 18, 18)
+      g.fillStyle(0x46566e, 1); g.fillRect(2, 5, 18, 4)
+      g.fillStyle(0xbcd0e0, 1); g.fillRect(5, 12, 12, 9)         // window
+      ;[0xcc3b30, 0x2f9a44, 0xe6b800].forEach((c, i) => { g.fillStyle(c, 1); g.fillRect(6 + i * 4, 13, 3, 7) })
+    })
+  }
+
+  makeTransit() {
+    // bus / trolleybus shelter
+    this.tex('busstop', 44, 28, (g) => {
+      g.fillStyle(0x3f4651, 1); g.fillRect(0, 4, 44, 4)          // roof
+      g.fillStyle(0x2c323b, 1); g.fillRect(2, 8, 2, 18); g.fillRect(40, 8, 2, 18) // posts
+      g.fillStyle(0x6a7a8a, 1); g.fillRect(6, 12, 30, 2)         // glass top rail
+      g.fillStyle(0x7a5a36, 1); g.fillRect(8, 22, 24, 3)         // bench
+      g.fillStyle(0x2f6fb0, 1); g.fillRect(38, 10, 6, 5)        // sign
+    })
+    // Chișinău trolleybus (white/green) with poles — horizontal
+    this.tex('trolleybus', 74, 26, (g) => {
+      g.fillStyle(0xeef0ee, 1); g.fillRect(3, 4, 68, 18)
+      g.fillStyle(0x2f7d5c, 1); g.fillRect(3, 9, 68, 5)         // green band
+      g.fillStyle(0x223040, 1); for (let x = 8; x < 66; x += 10) g.fillRect(x, 5, 7, 5) // windows
+      g.fillStyle(0x6a8aa0, 1); g.fillRect(4, 5, 5, 5)         // windscreen
+      g.fillStyle(0x1a1a1f, 1); g.fillCircle(18, 23, 3); g.fillCircle(56, 23, 3) // wheels
+      g.fillStyle(0x444a52, 1); g.fillRect(40, -8, 2, 12); g.fillRect(48, -8, 2, 12) // trolley poles
+      g.fillStyle(0xffd200, 1); g.fillRect(64, 6, 6, 4)        // route board
+    })
+    // city bus / rutiera (white/blue)
+    this.tex('bus', 60, 24, (g) => {
+      g.fillStyle(0xeef0ee, 1); g.fillRect(3, 4, 54, 16)
+      g.fillStyle(0x2f6fb0, 1); g.fillRect(3, 8, 54, 4)
+      g.fillStyle(0x223040, 1); for (let x = 8; x < 52; x += 9) g.fillRect(x, 5, 6, 5)
+      g.fillStyle(0x1a1a1f, 1); g.fillCircle(16, 21, 3); g.fillCircle(46, 21, 3)
+      g.fillStyle(0x46566e, 1); g.fillRect(50, 12, 5, 8)       // door
+    })
+  }
+
+  makeKotovsky() {
+    // Equestrian monument (Kotovsky) — rider on horse, bronze, on pedestal
+    this.tex('kotovsky', 36, 46, (g) => {
+      g.fillStyle(0x9a9488, 1); g.fillRect(8, 30, 20, 16)        // pedestal
+      g.fillStyle(0x7e7a70, 1); g.fillRect(8, 30, 2, 16)
+      g.fillStyle(0x8a857a, 1); g.fillRect(6, 28, 24, 3)
+      g.fillStyle(0x4f6b58, 1)                                   // bronze horse (profile)
+      g.fillRect(8, 16, 20, 8)                                   // body
+      g.fillRect(25, 10, 5, 8)                                   // neck/head
+      g.fillRect(9, 22, 3, 7); g.fillRect(15, 22, 3, 7); g.fillRect(21, 22, 3, 7); g.fillRect(25, 22, 3, 6) // legs
+      g.fillStyle(0x3f5848, 1); g.fillRect(6, 16, 3, 6)         // tail
+      g.fillStyle(0x4f6b58, 1); g.fillRect(15, 6, 4, 11); g.fillCircle(17, 5, 3) // rider
+      g.fillStyle(0x5e7e66, 1); g.fillRect(19, 8, 6, 2)         // raised arm
+    })
+  }
+
+  makeStallPlay() {
+    // market stall (small awning)
+    this.tex('stall', 22, 16, (g) => {
+      g.fillStyle(0x8a6a44, 1); g.fillRect(3, 9, 16, 7)
+      for (let x = 1; x < 21; x += 5) { g.fillStyle(0xcc3b30, 1); g.fillRect(x, 3, 3, 5); g.fillStyle(0xeeeeee, 1); g.fillRect(x + 2, 3, 3, 5) }
+      ;[0x2f9a44, 0xe6b800, 0xcc3b30].forEach((c, i) => { g.fillStyle(c, 1); g.fillRect(5 + i * 4, 11, 3, 3) })
+    })
+    // playground (slide + frame)
+    this.tex('playground', 28, 20, (g) => {
+      g.fillStyle(0xcc3b30, 1); g.fillRect(4, 6, 2, 12)
+      g.fillStyle(0x2f6fb0, 1); g.fillRect(4, 6, 12, 2); g.fillTriangle(14, 8, 14, 18, 22, 18) // slide
+      g.fillStyle(0xe6b800, 1); g.fillRect(18, 4, 2, 14); g.fillRect(26, 4, 2, 14); g.fillRect(18, 4, 10, 2)
+      g.fillStyle(0x2f9a44, 1); g.fillRect(22, 10, 3, 3)        // swing seat
+    })
+    // parked car (top-down, tint per instance)
+    this.tex('parkedcar', 28, 14, (g) => {
+      g.fillStyle(0xffffff, 1); g.fillRect(2, 2, 24, 10)
+      g.fillStyle(0xbcd0e0, 1); g.fillRect(6, 3, 6, 8); g.fillRect(16, 3, 6, 8) // windows
+      g.fillStyle(0x1a1a1f, 1); g.fillRect(0, 3, 2, 3); g.fillRect(0, 8, 2, 3); g.fillRect(26, 3, 2, 3); g.fillRect(26, 8, 2, 3)
+    })
   }
 
   makeScanlines() {

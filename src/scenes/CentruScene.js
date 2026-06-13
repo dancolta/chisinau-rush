@@ -16,6 +16,7 @@ const VY0 = HROADS[0].y - HROADS[0].half
 const VY1 = HROADS[2].y + HROADS[2].half
 const BD_TOP = HROADS[1].y - HROADS[1].half // 974
 const BD_BOT = HROADS[1].y + HROADS[1].half // 1106
+const ROAD_Y = HROADS[1].y // 1040 (boulevard centre)
 
 // block interiors (x0,x1,cx) between cross streets
 const COLS = [
@@ -48,6 +49,10 @@ export default class CentruScene extends Phaser.Scene {
     this.buildLandmarks()
     this.buildResidential()
     this.buildGreenery()
+    this.buildStreetLife()
+    this.buildTransit()
+    this.buildMarket()
+    this.buildMonuments()
     this.buildVergeProps()
     this.buildIon()
     this.buildCamera()
@@ -78,6 +83,14 @@ export default class CentruScene extends Phaser.Scene {
     })
     VX.forEach((x) => this.region(x - VHALF, VY0, VHALF * 2, VY1 - VY0, 'road', -870))
     ;[760, 1360, 1760].forEach((x) => this.region(x - 20, BD_TOP, 40, HROADS[1].half * 2, 'zebra', -862))
+
+    // interior service alleys that break up the big blocks
+    const alley = (y, x0, x1) => {
+      this.region(x0, y - 20, x1 - x0, 40, 'sidewalk', -882)
+      this.region(x0, y - 14, x1 - x0, 28, 'road', -872)
+    }
+    alley(764, 0, WORLD_W)                                // R1 courtyards
+    alley(1346, 0, 1180); alley(1346, 1950, WORLD_W)     // R2 (skip central parks)
   }
 
   // place a building with its BASE (bottom-centre) at (x, baseY)
@@ -112,7 +125,7 @@ export default class CentruScene extends Phaser.Scene {
     this.placeRow(4, 1, 'parliament', 'Parlamentul', 'Dă spre Grădina Publică.')
     this.placeRow(5, 1, 'presidency', 'Președinția', 'Palatul Președintelui.', undefined, 36)
     this.place(COLS[5].cx - 52, ROWS[1].y1, 'church', 'Biserica Schimbarea la Față', 'Între Parlament și Președinție.')
-    this.placeRow(6, 1, 'parliament', 'Universitatea de Stat', 'USM — alma mater a capitalei.', 0xcdbf9a)
+    this.placeRow(6, 1, 'market', 'Piața Centrală', 'Hala de nord — carne, brânză, de toate.')
 
     // R2 — south of the boulevard
     this.placeRow(0, 2, 'theatre', 'Teatrul Național „M. Eminescu"', 'Scena dramatică a țării.')
@@ -161,9 +174,10 @@ export default class CentruScene extends Phaser.Scene {
       })
     })
     // back-fill behind the civic landmarks so R1/R2 blocks aren't half-empty
+    // (skip park col 3, gradina col 4, and the market district cols 5-6)
     COLS.forEach((c, col) => {
-      if (col !== 3) [c.cx - 96, c.cx, c.cx + 96].forEach((x) => bloc(x, 648))           // behind R1
-      if (col !== 3 && col !== 4) [c.cx - 96, c.cx, c.cx + 96].forEach((x) => bloc(x, 1560)) // behind R2
+      if (col !== 3 && col !== 6) [c.cx - 96, c.cx, c.cx + 96].forEach((x) => bloc(x, 648))
+      if (col < 3) [c.cx - 96, c.cx, c.cx + 96].forEach((x) => bloc(x, 1560))
     })
   }
 
@@ -185,6 +199,74 @@ export default class CentruScene extends Phaser.Scene {
       const y = row <= 1 ? r.y1 - 6 : r.y0 + 110
       this.add.image(c.x0 + 22, y, 'tree').setOrigin(0.5, 1).setDepth(y)
       this.add.image(c.x1 - 22, y, 'tree').setOrigin(0.5, 1).setDepth(y)
+    })
+  }
+
+  // ---- courtyard street life along the interior alleys -------------------
+  buildStreetLife() {
+    const carT = [0xb23b3b, 0x3b5bb2, 0x2f8f4f, 0xdedede, 0x2a2a2a, 0xe6b800]
+    let ci = 0
+    const car = (x, y) => this.add.image(x, y, 'parkedcar').setOrigin(0.5, 1).setDepth(y).setTint(carT[ci++ % carT.length])
+    const prop = (x, y, key) => this.add.image(x, y, key).setOrigin(0.5, 1).setDepth(y)
+    // R1 alley (y=764): cols 1,2 are monument squares; 3 park; 6 market
+    COLS.forEach((c, col) => {
+      if ([1, 2, 3, 6].includes(col)) return
+      prop(c.cx - 92, 742, 'kebab'); prop(c.cx + 92, 742, 'cvas'); prop(c.cx, 800, 'kiosk')
+      car(c.cx - 60, 762); car(c.cx + 60, 762)
+      prop(c.cx - 44, 812, 'playground'); prop(c.cx + 48, 808, 'bench')
+      this.add.image(c.cx + 100, 816, 'tree').setOrigin(0.5, 1).setDepth(816)
+    })
+    // R2 alley (y=1346): cols 0,1,2 only (3,4 parks; 5,6 market)
+    COLS.forEach((c, col) => {
+      if (col > 2) return
+      prop(c.cx - 92, 1324, 'cvas'); prop(c.cx + 92, 1324, 'kebab'); prop(c.cx, 1382, 'kiosk')
+      car(c.cx - 60, 1344); car(c.cx + 60, 1344)
+      prop(c.cx - 44, 1394, 'bench'); prop(c.cx + 48, 1392, 'playground')
+    })
+    // a few stalls right on the boulevard verge near crossings
+    ;[[680, BD_BOT + 32, 'kebab'], [1040, BD_TOP - 26, 'cvas'], [1840, BD_BOT + 32, 'kebab']]
+      .forEach(([x, y, k]) => prop(x, y, k))
+  }
+
+  // ---- bus / trolleybus stations ----------------------------------------
+  buildTransit() {
+    const stop = (x, y) => this.add.image(x, y, 'busstop').setOrigin(0.5, 1).setDepth(y)
+    ;[600, 1180, 1840, 2200].forEach((x) => { stop(x, BD_TOP - SW); stop(x + 70, BD_BOT + SW + 22) })
+    // parked trolleybus by the north curb + a bus by the south curb
+    this.add.image(1080, ROAD_Y - 6, 'trolleybus').setOrigin(0.5, 1).setDepth(ROAD_Y - 6)
+    this.add.image(2160, ROAD_Y + 34, 'bus').setOrigin(0.5, 1).setDepth(ROAD_Y + 34)
+  }
+
+  // ---- Piața Centrală — a whole market district -------------------------
+  buildMarket() {
+    const stall = (x, y) => this.add.image(x, y, 'stall').setOrigin(0.5, 1).setDepth(y)
+    // stall fields that avoid the hall/station footprints
+    const fields = [
+      { col: 5, y0: 1210, y1: 1552 }, // south hall block
+      { col: 6, y0: 626, y1: 838 },   // north hall block
+      { col: 6, y0: 1238, y1: 1552 }, // station-side block
+    ]
+    fields.forEach(({ col, y0, y1 }) => {
+      const c = COLS[col]
+      for (let y = y0; y < y1; y += 30) for (let x = c.x0 + 18; x < c.x1 - 8; x += 28) stall(x, y)
+    })
+    // a couple of delivery vans + kiosks
+    ;[[COLS[6].cx - 60, 900], [COLS[5].cx, 1180]].forEach(([x, y]) =>
+      this.add.image(x, y, 'parkedcar').setOrigin(0.5, 1).setDepth(y).setTint(0xdedede))
+    this.labelSpot(COLS[6].cx, ROWS[1].y1 - 30, 'Piața Centrală', 'Un cartier întreg de hale și tarabe.')
+  }
+
+  // ---- monuments: Kotovsky + Ștefan -------------------------------------
+  buildMonuments() {
+    // paved monument squares on the R1 alley
+    this.region(COLS[2].cx - 54, 712, 108, 104, 'plaza', -940)
+    this.place(COLS[2].cx, 804, 'kotovsky', 'Monumentul lui Kotovsky', 'Călare — eroul controversat al orașului.')
+    this.region(COLS[1].cx - 50, 716, 100, 100, 'plaza', -940)
+    this.place(COLS[1].cx, 804, 'statue', 'Bustul lui Ștefan cel Mare', 'Domnitorul veghează și aici.')
+    // ring each square with a few trees
+    ;[COLS[1].cx, COLS[2].cx].forEach((cx) => {
+      ;[[cx - 64, 740], [cx + 64, 740], [cx - 64, 812], [cx + 64, 812]].forEach(([x, y]) =>
+        this.add.image(x, y, 'tree').setOrigin(0.5, 1).setDepth(y))
     })
   }
 
