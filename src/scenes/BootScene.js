@@ -36,6 +36,7 @@ export default class BootScene extends Phaser.Scene {
     this.makeTransit()
     this.makeKotovsky()
     this.makeStallPlay()
+    this.makePiataArch()
     // Residential
     this.makeKhrushchyovka()
     this.makeScanlines()
@@ -592,6 +593,19 @@ export default class BootScene extends Phaser.Scene {
       g.fillStyle(0xffffff, 1); g.fillRect(2, 2, 24, 10)
       g.fillStyle(0xbcd0e0, 1); g.fillRect(6, 3, 6, 8); g.fillRect(16, 3, 6, 8) // windows
       g.fillStyle(0x1a1a1f, 1); g.fillRect(0, 3, 2, 3); g.fillRect(0, 8, 2, 3); g.fillRect(26, 3, 2, 3); g.fillRect(26, 8, 2, 3)
+    })
+  }
+
+  makePiataArch() {
+    // Wide market gateway with a banner (text drawn in-world over it)
+    const W = 96, H = 56
+    this.tex('piataarch', W, H, (g) => {
+      g.fillStyle(0xb9a883, 1); g.fillRect(4, 16, 16, H - 16); g.fillRect(W - 20, 16, 16, H - 16) // pillars
+      g.fillStyle(0x8f7f60, 1); g.fillRect(4, 16, 3, H - 16); g.fillRect(W - 20, 16, 3, H - 16)
+      g.fillStyle(0xd8cbb0, 1); g.fillRect(2, 2, W - 4, 16)        // top beam
+      g.fillStyle(0x8f2f1f, 1); g.fillRect(8, 5, W - 16, 10)       // red banner
+      g.fillStyle(0xe6c75a, 1); g.fillRect(8, 5, W - 16, 1); g.fillRect(8, 14, W - 16, 1)
+      g.fillStyle(0x6f6248, 1); g.fillRect(2, 16, W - 4, 2)
     })
   }
 

@@ -83,14 +83,6 @@ export default class CentruScene extends Phaser.Scene {
     })
     VX.forEach((x) => this.region(x - VHALF, VY0, VHALF * 2, VY1 - VY0, 'road', -870))
     ;[760, 1360, 1760].forEach((x) => this.region(x - 20, BD_TOP, 40, HROADS[1].half * 2, 'zebra', -862))
-
-    // interior service alleys that break up the big blocks
-    const alley = (y, x0, x1) => {
-      this.region(x0, y - 20, x1 - x0, 40, 'sidewalk', -882)
-      this.region(x0, y - 14, x1 - x0, 28, 'road', -872)
-    }
-    alley(764, 0, WORLD_W)                                // R1 courtyards
-    alley(1346, 0, 1180); alley(1346, 1950, WORLD_W)     // R2 (skip central parks)
   }
 
   // place a building with its BASE (bottom-centre) at (x, baseY)
@@ -125,14 +117,14 @@ export default class CentruScene extends Phaser.Scene {
     this.placeRow(4, 1, 'parliament', 'Parlamentul', 'Dă spre Grădina Publică.')
     this.placeRow(5, 1, 'presidency', 'Președinția', 'Palatul Președintelui.', undefined, 36)
     this.place(COLS[5].cx - 52, ROWS[1].y1, 'church', 'Biserica Schimbarea la Față', 'Între Parlament și Președinție.')
-    this.placeRow(6, 1, 'market', 'Piața Centrală', 'Hala de nord — carne, brânză, de toate.')
+    this.placeRow(6, 1, 'parliament', 'Universitatea de Stat', 'USM — alma mater a capitalei.', 0xcdbf9a)
 
     // R2 — south of the boulevard
     this.placeRow(0, 2, 'theatre', 'Teatrul Național „M. Eminescu"', 'Scena dramatică a țării.')
     this.placeRow(1, 2, 'museum', 'Muzeul Național de Istorie', 'Cu Lupa Capitolina în față.')
     this.placeRow(2, 2, 'museum', 'Sala cu Orgă', 'Concerte de orgă, acustică legendară.', 0xe7d6b0)
-    this.placeRow(5, 2, 'market', 'Piața Centrală', 'Cel mai mare bazar din oraș.')
     this.placeRow(6, 2, 'gara', 'Gara Feroviară', 'Trenuri spre Iași, București, Odesa.')
+    // (C5/R2 is the Piața Centrală square — built in buildMarket)
 
     // C3/R2 — Cathedral Park (Arc + Catedrala + Clopotnița)
     this.place(1360, BD_BOT + 70, 'arc', 'Arcul de Triumf', 'Poarta Sfântă, 1840. Față în față cu Guvernul.')
@@ -174,10 +166,10 @@ export default class CentruScene extends Phaser.Scene {
       })
     })
     // back-fill behind the civic landmarks so R1/R2 blocks aren't half-empty
-    // (skip park col 3, gradina col 4, and the market district cols 5-6)
+    // (skip park col 3, gradina col 4, and the Piața square col 5)
     COLS.forEach((c, col) => {
-      if (col !== 3 && col !== 6) [c.cx - 96, c.cx, c.cx + 96].forEach((x) => bloc(x, 648))
-      if (col < 3) [c.cx - 96, c.cx, c.cx + 96].forEach((x) => bloc(x, 1560))
+      if (col !== 3) [c.cx - 96, c.cx, c.cx + 96].forEach((x) => bloc(x, 648))
+      if ([0, 1, 2, 6].includes(col)) [c.cx - 96, c.cx, c.cx + 96].forEach((x) => bloc(x, 1560))
     })
   }
 
@@ -202,58 +194,80 @@ export default class CentruScene extends Phaser.Scene {
     })
   }
 
-  // ---- courtyard street life along the interior alleys -------------------
+  // ---- branded mini-markets + food, ALL inside the green courtyards ------
   buildStreetLife() {
-    const carT = [0xb23b3b, 0x3b5bb2, 0x2f8f4f, 0xdedede, 0x2a2a2a, 0xe6b800]
-    let ci = 0
-    const car = (x, y) => this.add.image(x, y, 'parkedcar').setOrigin(0.5, 1).setDepth(y).setTint(carT[ci++ % carT.length])
-    const prop = (x, y, key) => this.add.image(x, y, key).setOrigin(0.5, 1).setDepth(y)
-    // R1 alley (y=764): cols 1,2 are monument squares; 3 park; 6 market
-    COLS.forEach((c, col) => {
-      if ([1, 2, 3, 6].includes(col)) return
-      prop(c.cx - 92, 742, 'kebab'); prop(c.cx + 92, 742, 'cvas'); prop(c.cx, 800, 'kiosk')
-      car(c.cx - 60, 762); car(c.cx + 60, 762)
-      prop(c.cx - 44, 812, 'playground'); prop(c.cx + 48, 808, 'bench')
-      this.add.image(c.cx + 100, 816, 'tree').setOrigin(0.5, 1).setDepth(816)
-    })
-    // R2 alley (y=1346): cols 0,1,2 only (3,4 parks; 5,6 market)
-    COLS.forEach((c, col) => {
-      if (col > 2) return
-      prop(c.cx - 92, 1324, 'cvas'); prop(c.cx + 92, 1324, 'kebab'); prop(c.cx, 1382, 'kiosk')
-      car(c.cx - 60, 1344); car(c.cx + 60, 1344)
-      prop(c.cx - 44, 1394, 'bench'); prop(c.cx + 48, 1392, 'playground')
-    })
-    // a few stalls right on the boulevard verge near crossings
-    ;[[680, BD_BOT + 32, 'kebab'], [1040, BD_TOP - 26, 'cvas'], [1840, BD_BOT + 32, 'kebab']]
-      .forEach(([x, y, k]) => prop(x, y, k))
-  }
-
-  // ---- bus / trolleybus stations ----------------------------------------
-  buildTransit() {
-    const stop = (x, y) => this.add.image(x, y, 'busstop').setOrigin(0.5, 1).setDepth(y)
-    ;[600, 1180, 1840, 2200].forEach((x) => { stop(x, BD_TOP - SW); stop(x + 70, BD_BOT + SW + 22) })
-    // parked trolleybus by the north curb + a bus by the south curb
-    this.add.image(1080, ROAD_Y - 6, 'trolleybus').setOrigin(0.5, 1).setDepth(ROAD_Y - 6)
-    this.add.image(2160, ROAD_Y + 34, 'bus').setOrigin(0.5, 1).setDepth(ROAD_Y + 34)
-  }
-
-  // ---- Piața Centrală — a whole market district -------------------------
-  buildMarket() {
-    const stall = (x, y) => this.add.image(x, y, 'stall').setOrigin(0.5, 1).setDepth(y)
-    // stall fields that avoid the hall/station footprints
-    const fields = [
-      { col: 5, y0: 1210, y1: 1552 }, // south hall block
-      { col: 6, y0: 626, y1: 838 },   // north hall block
-      { col: 6, y0: 1238, y1: 1552 }, // station-side block
+    const brands = [
+      ['shop_linella', 'Linella', 'Supermarket de cartier.'],
+      ['shop_linella', 'Nr.1', 'Market non-stop.'],
+      ['shop_linella', 'Fidesco', 'Supermarket.'],
+      ['shop_linella', 'Velmart', 'Market de cartier.'],
+      ['shop_davidan', 'DaviDan', 'Brutărie & cofetărie.'],
+      ['shop_davidan', 'Franzeluța', 'Pâinea Chișinăului.'],
+      ['shop_davidan', 'Fornetti', 'Brioșe calde.'],
+      ['shop_placinte', 'La Plăcinte', 'Plăcinte fierbinți.'],
+      ['shop_tucano', 'Tucano Coffee', 'Cafea de specialitate.'],
+      ['shop_tucano', 'Gustok', 'Cafenea de cartier.'],
+      ['shop_andys', "ANDY'S Pizza", 'Pizza & paste.'],
+      ['shop_andys', 'La Taifas', 'Bucate moldovenești.'],
     ]
-    fields.forEach(({ col, y0, y1 }) => {
+    let bi = 0
+    const shop = (x, base) => { const b = brands[bi++ % brands.length]; this.place(x, base, b[0], b[1], b[2]) }
+    const food = (x, base, kind) => this.place(x, base, kind,
+      kind === 'kebab' ? 'Șaorma la colț' : 'Cvas la halbă',
+      kind === 'kebab' ? 'Șaorma, kebab, hot-dog.' : 'Cvas rece la halbă, 4 lei.')
+    const prop = (x, y, key) => this.add.image(x, y, key).setOrigin(0.5, 1).setDepth(y)
+
+    // R1 courtyards (green between back-fill and landmark): cols 0,4,5
+    ;[0, 4, 5].forEach((col) => {
       const c = COLS[col]
-      for (let y = y0; y < y1; y += 30) for (let x = c.x0 + 18; x < c.x1 - 8; x += 28) stall(x, y)
+      shop(c.cx - 92, 778); shop(c.cx + 92, 778); food(c.cx + 4, 740, 'kebab')
+      prop(c.cx - 50, 730, 'playground'); prop(c.cx + 54, 726, 'bench')
+      prop(c.cx - 96, 724, 'tree'); prop(c.cx + 96, 724, 'tree')
     })
-    // a couple of delivery vans + kiosks
-    ;[[COLS[6].cx - 60, 900], [COLS[5].cx, 1180]].forEach(([x, y]) =>
-      this.add.image(x, y, 'parkedcar').setOrigin(0.5, 1).setDepth(y).setTint(0xdedede))
-    this.labelSpot(COLS[6].cx, ROWS[1].y1 - 30, 'Piața Centrală', 'Un cartier întreg de hale și tarabe.')
+    // R2 courtyards: cols 0,1,2
+    ;[0, 1, 2].forEach((col) => {
+      const c = COLS[col]
+      shop(c.cx - 92, 1340); shop(c.cx + 92, 1340); food(c.cx + 4, 1302, 'cvas')
+      prop(c.cx - 50, 1392, 'bench'); prop(c.cx + 54, 1388, 'playground')
+      prop(c.cx - 96, 1388, 'tree'); prop(c.cx + 96, 1388, 'tree')
+    })
+  }
+
+  // ---- bus / trolleybus stops + MOVING traffic --------------------------
+  buildTransit() {
+    this.traffic = []
+    const stop = (x, y) => this.add.image(x, y, 'busstop').setOrigin(0.5, 1).setDepth(y)
+    // shelters just inside the green, next to the curb
+    ;[600, 1180, 1840, 2200].forEach((x) => { stop(x, BD_TOP - SW - 4); stop(x + 70, BD_BOT + SW + 26) })
+    const veh = (key, x, vx) => {
+      const lane = vx > 0 ? ROAD_Y - 20 : ROAD_Y + 36 // eastbound north lane / westbound south lane
+      const s = this.add.image(x, lane, key).setOrigin(0.5, 1)
+      s.vx = vx; s.setFlipX(vx < 0); s.setDepth(lane)
+      this.traffic.push(s)
+    }
+    veh('trolleybus', 200, 62); veh('trolleybus', 1500, 70)
+    veh('bus', 2300, -78)
+    veh('parkedcar', 900, 120); veh('parkedcar', 1800, -130)
+  }
+
+  // ---- Piața Centrală — ONE square, stalls on the perimeter + arch -------
+  buildMarket() {
+    const c = COLS[5], r = ROWS[2]
+    this.region(c.x0, r.y0 + 28, c.x1 - c.x0, r.y1 - r.y0 - 34, 'plaza', -940) // paved square
+    this.place(c.cx, r.y1 - 6, 'market', 'Piața Centrală — Hala', 'Hala centrală: carne, brânză, legume.')
+    // stalls ONLY around the perimeter (inside the square edges)
+    const stall = (x, y) => this.add.image(x, y, 'stall').setOrigin(0.5, 1).setDepth(y)
+    const top = r.y0 + 78, bot = r.y1 - 96, left = c.x0 + 26, right = c.x1 - 26
+    for (let x = left; x <= right; x += 38) stall(x, top)
+    for (let y = top + 42; y <= bot; y += 40) { stall(left, y); stall(right, y) }
+    // big entrance arch on the boulevard side, with its name
+    const ax = c.cx, ay = r.y0 + 40
+    this.place(ax, ay, 'piataarch', null, null)
+    this.add.text(ax, ay - 34, 'PIAȚA CENTRALĂ', {
+      fontFamily: 'monospace', fontSize: '11px', color: '#f4ecd6',
+      backgroundColor: '#8f2f1f', padding: { x: 4, y: 2 },
+    }).setOrigin(0.5, 1).setDepth(ay + 1)
+    this.labelSpot(ax, r.y0 + 70, 'Piața Centrală', 'Cel mai mare bazar din oraș. Intră prin arc.')
   }
 
   // ---- monuments: Kotovsky + Ștefan -------------------------------------
@@ -336,7 +350,14 @@ export default class CentruScene extends Phaser.Scene {
     if ((cur && cur.name) !== name) this.registry.set('nearLm', near ? { name: near.name, desc: near.desc } : null)
   }
 
-  update() {
+  update(_t, dt) {
+    // moving traffic on the boulevard (wraps around)
+    if (this.traffic) for (const v of this.traffic) {
+      v.x += v.vx * (dt / 1000)
+      if (v.x > WORLD_W + 130) v.x = -130
+      else if (v.x < -130) v.x = WORLD_W + 130
+    }
+
     const k = this.keys, c = this.cursors
     const speed = k.SHIFT.isDown ? 175 : 100
     let vx = 0, vy = 0
