@@ -51,8 +51,8 @@ export default class UiScene extends Phaser.Scene {
     // cop modal
     this.copDim = this.add.rectangle(0, 0, W, H, 0x000000, 0.5).setOrigin(0).setVisible(false)
     this.copBox = this.add.rectangle(W / 2, H / 2, 360, 150, 0x12131c, 0.97).setStrokeStyle(2, 0x2f5bb0).setVisible(false)
-    this.copQ = this.add.text(W / 2, H / 2 - 52, '', { fontFamily: F, fontSize: '14px', color: '#9ec0ff', align: 'center', wordWrap: { width: 330 } }).setOrigin(0.5).setVisible(false)
-    this.copOpts = this.add.text(W / 2, H / 2 + 6, '', { fontFamily: F, fontSize: '13px', color: '#fff6d6', align: 'left', lineSpacing: 8 }).setOrigin(0.5).setVisible(false)
+    this.copQ = this.add.text(W / 2, H / 2, '', { fontFamily: F, fontSize: '14px', color: '#9ec0ff', align: 'center', wordWrap: { width: 460 } }).setOrigin(0.5, 0).setVisible(false)
+    this.copOpts = this.add.text(W / 2, H / 2, '', { fontFamily: F, fontSize: '13px', color: '#fff6d6', align: 'left', lineSpacing: 9 }).setOrigin(0, 0).setVisible(false)
 
     // CRT
     this.crt = this.add.tileSprite(0, 0, W, H, 'scan').setOrigin(0).setAlpha(0.16)
@@ -114,7 +114,19 @@ export default class UiScene extends Phaser.Scene {
     const cop = this.registry.get('cop')
     const on = !!cop
     this.copDim.setVisible(on); this.copBox.setVisible(on); this.copQ.setVisible(on); this.copOpts.setVisible(on)
-    if (on) { this.copQ.setText(cop.q); this.copOpts.setText(cop.opts.join('\n')) }
+    if (on) {
+      if (cop.q !== this._copQ) {
+        this._copQ = cop.q
+        this.copQ.setText(cop.q)
+        this.copOpts.setText(cop.opts.join('\n'))
+        const w = Math.max(this.copQ.width, this.copOpts.width) + 52
+        const h = this.copQ.height + this.copOpts.height + 40
+        const cx = this.scale.width / 2, cy = this.scale.height / 2
+        this.copBox.setSize(w, h).setPosition(cx, cy)
+        this.copQ.setPosition(cx, cy - h / 2 + 14)
+        this.copOpts.setPosition(cx - w / 2 + 26, cy - h / 2 + 14 + this.copQ.height + 14)
+      }
+    } else { this._copQ = null }
 
     this.crt.setVisible(this.registry.get('crt') !== false)
     this.drawMinimap()
