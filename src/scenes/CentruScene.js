@@ -53,6 +53,7 @@ export default class CentruScene extends Phaser.Scene {
     this.buildTransit()
     this.buildMarket()
     this.buildMonuments()
+    this.buildRail()
     this.buildVergeProps()
     this.buildIon()
     this.buildCamera()
@@ -71,6 +72,8 @@ export default class CentruScene extends Phaser.Scene {
     // Piața Marii Adunări Naționale (north of bd) + Arc forecourt (south)
     this.region(1210, 760, 300, BD_TOP - 760, 'plaza', -950)
     this.region(1230, BD_BOT, 260, 72, 'plaza', -950)
+    // Cathedral Park (C3/R2) is a concrete square, not green
+    this.region(COLS[3].x0, ROWS[2].y0, COLS[3].x1 - COLS[3].x0, ROWS[2].y1 - ROWS[2].y0, 'beton', -948)
     // Grădina Publică paths (C4)
     this.region(1740, BD_BOT, 40, ROWS[2].y1 - BD_BOT, 'path', -950)
     this.region(1610, 1298, 300, 32, 'path', -949)
@@ -113,10 +116,12 @@ export default class CentruScene extends Phaser.Scene {
     this.placeRow(0, 1, 'hotel', 'Hotel Național', 'Ruina brutalistă — niciodată terminat.')
     this.placeRow(1, 1, 'opera', 'Teatrul de Operă și Balet', 'Maria Bieșu. Operă și balet.')
     this.placeRow(2, 1, 'primaria', 'Primăria Chișinău', 'Turnul cu ceas, 1902.')
-    this.placeRow(3, 1, 'govern', 'Casa Guvernului', 'Față în față cu Arcul de Triumf.')
+    const gov = this.placeRow(3, 1, 'govern', 'Casa Guvernului', 'Față în față cu Arcul de Triumf.')
     this.placeRow(4, 1, 'parliament', 'Parlamentul', 'Dă spre Grădina Publică.')
-    this.placeRow(5, 1, 'presidency', 'Președinția', 'Palatul Președintelui.', undefined, 36)
+    const pres = this.placeRow(5, 1, 'presidency', 'Președinția', 'Palatul Președintelui.', undefined, 36)
     this.place(COLS[5].cx - 52, ROWS[1].y1, 'church', 'Biserica Schimbarea la Față', 'Între Parlament și Președinție.')
+    // Moldova flag above Casa Guvernului + Președinția
+    ;[gov, pres].forEach((b) => this.add.image(b.x, b.y - b.height + 6, 'flag').setOrigin(0.5, 1).setDepth(b.y + 2))
     this.placeRow(6, 1, 'parliament', 'Universitatea de Stat', 'USM — alma mater a capitalei.', 0xcdbf9a)
 
     // R2 — south of the boulevard
@@ -126,10 +131,10 @@ export default class CentruScene extends Phaser.Scene {
     this.placeRow(6, 2, 'gara', 'Gara Feroviară', 'Trenuri spre Iași, București, Odesa.')
     // (C5/R2 is the Piața Centrală square — built in buildMarket)
 
-    // C3/R2 — Cathedral Park (Arc + Catedrala + Clopotnița)
+    // C3/R2 — Cathedral Park: one vertical line on the concrete square
     this.place(1360, BD_BOT + 70, 'arc', 'Arcul de Triumf', 'Poarta Sfântă, 1840. Față în față cu Guvernul.')
-    this.place(1330, 1400, 'cathedral', 'Catedrala Nașterea Domnului', '1836. Inima Parcului Catedralei.')
-    this.place(1424, 1388, 'belltower', 'Clopotnița', 'Dărâmată în 1962, refăcută în 1997.')
+    this.place(1360, 1336, 'belltower', 'Clopotnița', 'Pe axa centrală, în spatele Arcului.')
+    this.place(1360, 1504, 'cathedral', 'Catedrala Nașterea Domnului', '1836. Inima Parcului Catedralei.')
 
     // C4/R2 — Grădina Publică Ștefan cel Mare
     this.place(1690, BD_BOT + 56, 'statue', 'Monumentul lui Ștefan cel Mare', 'La intrarea în Grădina Publică.')
@@ -181,9 +186,6 @@ export default class CentruScene extends Phaser.Scene {
     gp.forEach(([x, y]) => this.add.image(x, y, 'tree').setOrigin(0.5, 1).setDepth(y))
     ;[[1670, 1250], [1850, 1250], [1670, 1440], [1850, 1440]].forEach(([x, y]) =>
       this.add.image(x, y, 'bench').setOrigin(0.5, 1).setDepth(y))
-    // Cathedral Park (C3) trees
-    ;[[1240, 1240], [1480, 1240], [1250, 1470], [1470, 1470]].forEach(([x, y]) =>
-      this.add.image(x, y, 'tree').setOrigin(0.5, 1).setDepth(y))
     // trees flanking the big civic buildings (fill the block sides)
     const flank = [[1, 1], [2, 1], [4, 1], [0, 1], [0, 2], [1, 2], [5, 1], [6, 1]]
     flank.forEach(([col, row]) => {
@@ -243,18 +245,40 @@ export default class CentruScene extends Phaser.Scene {
   // ---- bus / trolleybus stops + MOVING traffic --------------------------
   buildTransit() {
     this.traffic = []
+    // horizontal shelters along the boulevard
     const stop = (x, y) => this.add.image(x, y, 'busstop').setOrigin(0.5, 1).setDepth(y)
-    // shelters just inside the green, next to the curb
     ;[600, 1180, 1840, 2200].forEach((x) => { stop(x, BD_TOP - SW - 4); stop(x + 70, BD_BOT + SW + 26) })
+    // ROTATED shelters on the vertical cross streets (face the street)
+    const vstop = (x, y, ang) => this.add.image(x, y, 'busstop').setOrigin(0.5, 1).setAngle(ang).setDepth(y)
+    vstop(VX[1] + VHALF + SW + 18, 700, 90)
+    vstop(VX[2] - VHALF - SW - 18, 1820, -90)
+    vstop(VX[4] + VHALF + SW + 18, 1300, 90)
+
     const veh = (key, x, vx) => {
       const lane = vx > 0 ? ROAD_Y - 20 : ROAD_Y + 36 // eastbound north lane / westbound south lane
       const s = this.add.image(x, lane, key).setOrigin(0.5, 1)
       s.vx = vx; s.setFlipX(vx < 0); s.setDepth(lane)
       this.traffic.push(s)
     }
-    veh('trolleybus', 200, 62); veh('trolleybus', 1500, 70)
-    veh('bus', 2300, -78)
-    veh('parkedcar', 900, 120); veh('parkedcar', 1800, -130)
+    veh('trolleybus', 200, 62); veh('trolleybus', 1500, 70); veh('bus', 2300, -78)
+    // 3D-style cars, many models
+    const styles = ['car_sedan', 'car_cayenne', 'car_gwagon', 'car_cruiser', 'car_logan']
+    let si = 0
+    const carVeh = (x, vx) => veh(styles[si++ % styles.length], x, vx)
+    carVeh(500, 100); carVeh(1000, 135); carVeh(2050, 90)
+    carVeh(1700, -115); carVeh(2400, -150)
+  }
+
+  // ---- railway: a train that departs east off the map -------------------
+  buildRail() {
+    const y = 1410, x0 = 2330, x1 = WORLD_W
+    for (let x = x0; x < x1; x += 32) this.add.image(x, y, 'rail').setOrigin(0, 0.5).setDepth(-855)
+    this.region(x0, y - 30, x1 - x0, 20, 'beton', -858) // platform
+    this.train = [
+      { key: 'loco', off: 0 }, { key: 'wagon', off: 60 }, { key: 'wagon', off: 112 },
+    ].map((p) => { const s = this.add.image(2360 - p.off, y + 6, p.key).setOrigin(0.5, 1).setDepth(y + 8); s.off = p.off; return s })
+    this.trainHead = 2360
+    this.trainY = y + 6
   }
 
   // ---- Piața Centrală — ONE square, stalls on the perimeter + arch -------
@@ -278,18 +302,23 @@ export default class CentruScene extends Phaser.Scene {
     this.labelSpot(ax, r.y0 + 70, 'Piața Centrală', 'Cel mai mare bazar din oraș. Intră prin arc.')
   }
 
-  // ---- monuments: Kotovsky + Ștefan -------------------------------------
+  // ---- monuments + squares ----------------------------------------------
   buildMonuments() {
-    // paved monument squares on the R1 alley
-    this.region(COLS[2].cx - 54, 712, 108, 104, 'plaza', -940)
-    this.place(COLS[2].cx, 804, 'kotovsky', 'Monumentul lui Kotovsky', 'Călare — eroul controversat al orașului.')
-    this.region(COLS[1].cx - 50, 716, 100, 100, 'plaza', -940)
+    // Ștefan cel Mare bust square (C1/R1)
+    this.region(COLS[1].cx - 52, 716, 104, 100, 'plaza', -940)
     this.place(COLS[1].cx, 804, 'statue', 'Bustul lui Ștefan cel Mare', 'Domnitorul veghează și aici.')
-    // ring each square with a few trees
-    ;[COLS[1].cx, COLS[2].cx].forEach((cx) => {
-      ;[[cx - 64, 740], [cx + 64, 740], [cx - 64, 812], [cx + 64, 812]].forEach(([x, y]) =>
-        this.add.image(x, y, 'tree').setOrigin(0.5, 1).setDepth(y))
-    })
+    ;[[COLS[1].cx - 64, 740], [COLS[1].cx + 64, 740]].forEach(([x, y]) => this.add.image(x, y, 'tree').setOrigin(0.5, 1).setDepth(y))
+
+    // C2/R1 square — coffee boutiques where Kotovsky used to stand
+    this.region(COLS[2].cx - 70, 712, 140, 104, 'plaza', -940)
+    this.place(COLS[2].cx - 86, 804, 'shop_tucano', 'Tucano Coffee', 'Cafea de specialitate.')
+    this.place(COLS[2].cx + 86, 804, 'shop_tucano', 'Gustok', 'Cafenea de cartier.', 0xc3812d)
+    this.place(COLS[2].cx, 800, 'kiosk', 'Cafe-bar „La Colț"', 'Cappuccino și prăjituri.')
+    ;[[COLS[2].cx - 64, 738], [COLS[2].cx + 64, 738]].forEach(([x, y]) => this.add.image(x, y, 'tree').setOrigin(0.5, 1).setDepth(y))
+
+    // Kotovsky — moved to the far-WEST edge, at the edge of the street
+    this.region(6, BD_TOP - 74, 98, 66, 'plaza', -940)
+    this.place(56, BD_TOP - 12, 'kotovsky', 'Monumentul lui Kotovsky', 'Călare, la marginea de vest a bulevardului.')
   }
 
   // ---- street trees + lamps on the boulevard verge (never on roads) ------
@@ -342,20 +371,36 @@ export default class CentruScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-Z', () => this.zoomBy(0.4))
     this.input.keyboard.on('keydown-X', () => this.zoomBy(-0.4))
     this.input.on('wheel', (_p, _o, _dx, dy) => this.zoomBy(dy > 0 ? -0.25 : 0.25))
+    // click a building/location → reveal its name
+    this.input.on('pointerdown', (p) => {
+      const wp = this.cameras.main.getWorldPoint(p.x, p.y)
+      let near = null, best = 170 * 170
+      for (const lm of this.landmarks) {
+        const d = (wp.x - lm.x) ** 2 + (wp.y - lm.y) ** 2
+        if (d < best) { best = d; near = lm }
+      }
+      if (near) { this.pin = { name: near.name, desc: near.desc }; this.pinUntil = this.time.now + 3200 }
+    })
   }
 
   zoomBy(d) { this.cameras.main.setZoom(Phaser.Math.Clamp(this.cameras.main.zoom + d, 1.6, 5)) }
 
   updateNameplate() {
-    let near = null, best = 150 * 150
-    for (const lm of this.landmarks) {
-      const dx = this.ion.x - lm.x, dy = this.ion.y - lm.y
-      const d2 = dx * dx + dy * dy
-      if (d2 < best) { best = d2; near = lm }
+    let chosen = null
+    if (this.pin && this.time.now < this.pinUntil) {
+      chosen = this.pin // a clicked building takes priority for a few seconds
+    } else {
+      let near = null, best = 150 * 150
+      for (const lm of this.landmarks) {
+        const dx = this.ion.x - lm.x, dy = this.ion.y - lm.y
+        const d2 = dx * dx + dy * dy
+        if (d2 < best) { best = d2; near = lm }
+      }
+      chosen = near ? { name: near.name, desc: near.desc } : null
     }
     const cur = this.registry.get('nearLm')
-    const name = near ? near.name : null
-    if ((cur && cur.name) !== name) this.registry.set('nearLm', near ? { name: near.name, desc: near.desc } : null)
+    const name = chosen ? chosen.name : null
+    if ((cur && cur.name) !== name) this.registry.set('nearLm', chosen)
   }
 
   update(_t, dt) {
@@ -364,6 +409,12 @@ export default class CentruScene extends Phaser.Scene {
       v.x += v.vx * (dt / 1000)
       if (v.x > WORLD_W + 130) v.x = -130
       else if (v.x < -130) v.x = WORLD_W + 130
+    }
+    // the train departs east, then returns to the station
+    if (this.train) {
+      this.trainHead += 90 * (dt / 1000)
+      if (this.trainHead > WORLD_W + 180) this.trainHead = 2360
+      for (const p of this.train) p.x = this.trainHead - p.off
     }
 
     const k = this.keys, c = this.cursors

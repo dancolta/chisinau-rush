@@ -37,6 +37,9 @@ export default class BootScene extends Phaser.Scene {
     this.makeKotovsky()
     this.makeStallPlay()
     this.makePiataArch()
+    this.makeCars()
+    this.makeTrain()
+    this.makeFlag()
     // Residential
     this.makeKhrushchyovka()
     this.makeScanlines()
@@ -139,6 +142,12 @@ export default class BootScene extends Phaser.Scene {
       g.fillStyle(0xb39a5c, 1);[[3, 4], [9, 9], [13, 2], [6, 12]].forEach(([x, y]) => g.fillRect(x, y, 2, 1))
     })
     this.tex('dash', 10, 2, (g) => { g.fillStyle(0xc9b13a, 1); g.fillRect(0, 0, 10, 2) })
+    // beton (concrete) paving
+    this.tex('beton', T, T, (g) => {
+      g.fillStyle(0x9a9ea4, 1); g.fillRect(0, 0, T, T)
+      g.fillStyle(0x8a8e94, 1); g.fillRect(0, 0, T, 1); g.fillRect(0, 8, T, 1); g.fillRect(0, 0, 1, T); g.fillRect(8, 0, 1, T)
+      g.fillStyle(0xa6aab0, 1); g.fillRect(3, 3, 1, 1); g.fillRect(11, 11, 1, 1)
+    })
     // zebra crossing strip (vertical white bars on a road tile span)
     this.tex('zebra', 16, 16, (g) => {
       g.fillStyle(0xeeeeee, 1); g.fillRect(1, 0, 4, 16); g.fillRect(9, 0, 4, 16)
@@ -606,6 +615,73 @@ export default class BootScene extends Phaser.Scene {
       g.fillStyle(0x8f2f1f, 1); g.fillRect(8, 5, W - 16, 10)       // red banner
       g.fillStyle(0xe6c75a, 1); g.fillRect(8, 5, W - 16, 1); g.fillRect(8, 14, W - 16, 1)
       g.fillStyle(0x6f6248, 1); g.fillRect(2, 16, W - 4, 2)
+    })
+  }
+
+  // 3/4 side-view cars (face right; flipX for left) — "3D" look, many styles
+  makeCar(key, body, opts = {}) {
+    const W = 44, H = 26
+    this.tex(key, W, H, (g) => {
+      g.fillStyle(0x000000, 0.16); g.fillEllipse(W / 2, H - 2, W - 6, 6)        // shadow
+      g.fillStyle(0x141417, 1); g.fillCircle(13, H - 6, 5); g.fillCircle(W - 13, H - 6, 5) // wheels
+      g.fillStyle(0x4a4d53, 1); g.fillCircle(13, H - 6, 2); g.fillCircle(W - 13, H - 6, 2)
+      const bodyY = opts.suv ? 8 : 12
+      g.fillStyle(body, 1); g.fillRect(4, bodyY, W - 8, H - bodyY - 6)          // body
+      const roofY = opts.suv ? 3 : 6
+      const cx0 = opts.suv ? 8 : 13, cx1 = opts.suv ? W - 8 : W - 15
+      g.fillStyle(body, 1); g.fillRect(cx0, roofY, cx1 - cx0, bodyY - roofY + 2) // cabin
+      g.fillStyle(0xffffff, 0.18); g.fillRect(4, bodyY, W - 8, 2); g.fillRect(cx0, roofY, cx1 - cx0, 1) // top sheen
+      g.fillStyle(0x223040, 1)                                                  // windows
+      const half = (cx1 - cx0) / 2
+      g.fillRect(cx0 + 2, roofY + 1, half - 2, bodyY - roofY)
+      g.fillRect(cx0 + half + 1, roofY + 1, half - 3, bodyY - roofY)
+      g.fillStyle(0xffe08a, 1); g.fillRect(W - 6, bodyY + 1, 2, 3)              // headlight
+      g.fillStyle(0xcc3b30, 1); g.fillRect(4, bodyY + 1, 2, 3)                  // taillight
+      g.fillStyle(0x000000, 0.18); g.fillRect(4, H - 7, W - 8, 2)              // sill shadow
+    })
+  }
+
+  makeCars() {
+    this.makeCar('car_sedan', 0xb23b3b, { suv: false })   // red sedan
+    this.makeCar('car_logan', 0xdedede, { suv: false })   // white Logan
+    this.makeCar('car_gwagon', 0x26262a, { suv: true })   // black G-Wagon
+    this.makeCar('car_cayenne', 0x2f5bb0, { suv: true })  // blue Cayenne
+    this.makeCar('car_cruiser', 0x2f6b3a, { suv: true })  // green Land Cruiser
+  }
+
+  makeTrain() {
+    this.tex('rail', 32, 14, (g) => {
+      g.fillStyle(0x6b5a44, 1); for (let x = 0; x < 32; x += 6) g.fillRect(x, 2, 3, 10) // sleepers
+      g.fillStyle(0x8a8f96, 1); g.fillRect(0, 3, 32, 2); g.fillRect(0, 9, 32, 2)        // rails
+    })
+    this.tex('loco', 58, 32, (g) => {
+      g.fillStyle(0x141417, 1);[12, 26, 44].forEach((x) => g.fillCircle(x, 28, 4))
+      g.fillStyle(0x44474d, 1);[12, 26, 44].forEach((x) => g.fillCircle(x, 28, 1.5))
+      g.fillStyle(0x2f4f7d, 1); g.fillRect(3, 8, 52, 17)        // body
+      g.fillStyle(0x26446e, 1); g.fillRect(3, 8, 52, 2)
+      g.fillStyle(0x1c2b44, 1); g.fillRect(38, 3, 15, 10)       // cabin (right)
+      g.fillStyle(0x9ec0dc, 1); g.fillRect(41, 5, 9, 5)         // cabin window
+      g.fillStyle(0x3a3f47, 1); g.fillRect(9, 2, 5, 7)          // chimney
+      g.fillStyle(0xffe08a, 1); g.fillRect(53, 16, 3, 4)        // headlight (front=right)
+      g.fillStyle(0xcc3b30, 1); g.fillRect(3, 22, 52, 2)
+    })
+    this.tex('wagon', 50, 28, (g) => {
+      g.fillStyle(0x141417, 1);[11, 39].forEach((x) => g.fillCircle(x, 25, 4))
+      g.fillStyle(0x2f7d5c, 1); g.fillRect(2, 6, 46, 18)
+      g.fillStyle(0x276a4d, 1); g.fillRect(2, 6, 46, 2)
+      g.fillStyle(0x223040, 1); for (let x = 7; x < 44; x += 9) g.fillRect(x, 10, 6, 7)
+      g.fillStyle(0xe6c75a, 1); g.fillRect(2, 21, 46, 1)
+    })
+  }
+
+  makeFlag() {
+    this.tex('flag', 15, 30, (g) => {
+      g.fillStyle(0x7a7d82, 1); g.fillRect(2, 0, 2, 30)        // pole
+      g.fillStyle(0xffd24a, 1); g.fillCircle(3, 0, 1.5)        // finial
+      g.fillStyle(0x0033a0, 1); g.fillRect(4, 2, 3, 8)         // blue
+      g.fillStyle(0xffd200, 1); g.fillRect(7, 2, 3, 8)         // yellow
+      g.fillStyle(0xcc092f, 1); g.fillRect(10, 2, 3, 8)        // red
+      g.fillStyle(0x000000, 0.12); g.fillRect(4, 8, 9, 2)
     })
   }
 
