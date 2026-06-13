@@ -64,8 +64,8 @@ export default class UiScene extends Phaser.Scene {
     this.cluePips = []
     for (let i = 0; i < 5; i++) this.cluePips.push(this.add.rectangle(W - 71 + i * 12, 139, 9, 9, 0x2a3242).setOrigin(0).setStrokeStyle(1, 0x000000, 0.5))
 
-    // mission banner (clear gap below the vitals plate which ends at y130)
-    this.missionText = this.add.text(8, 144, '', { fontFamily: F, fontSize: '12px', color: '#ebc372', backgroundColor: '#10121aEE', padding: { x: 7, y: 5 } }).setOrigin(0, 0)
+    // mission banner / objective list (clear gap below the vitals plate which ends at y130)
+    this.missionText = this.add.text(8, 144, '', { fontFamily: F, fontSize: '12px', color: '#ebc372', backgroundColor: '#10121aEE', padding: { x: 8, y: 6 }, lineSpacing: 5, align: 'left' }).setOrigin(0, 0)
 
     // weapon chip (bottom-left)
     this.weaponText = this.add.text(8, 0, '', { fontFamily: F, fontSize: '10px', color: '#d7dce4', backgroundColor: '#10121aBB', padding: { x: 5, y: 3 } }).setOrigin(0, 1)
@@ -285,8 +285,9 @@ export default class UiScene extends Phaser.Scene {
 
     // toast (fades over ~2.6s)
     const toast = this.registry.get('toast')
-    if (toast && toast.id !== this.toastId) { this.toastId = toast.id; this.toastText.setText(toast.msg); this.toastText.setAlpha(1); this._toastT = this.time.now }
-    if (this.toastText.alpha > 0 && this.time.now - this._toastT > 3600) this.toastText.setAlpha(Math.max(0, this.toastText.alpha - 0.02))
+    // reading-time based hold: ~18 chars/sec (160-180 wpm) + base, min 3s, max 8s, then fade
+    if (toast && toast.id !== this.toastId) { this.toastId = toast.id; this.toastText.setText(toast.msg); this.toastText.setAlpha(1); this._toastT = this.time.now; this._toastHold = Phaser.Math.Clamp(1500 + (toast.msg || '').length * 55, 3000, 8000) }
+    if (this.toastText.alpha > 0 && this.time.now - this._toastT > (this._toastHold || 3600)) this.toastText.setAlpha(Math.max(0, this.toastText.alpha - 0.02))
 
     // landmark nameplate
     const lm = this.registry.get('nearLm')
@@ -318,15 +319,16 @@ export default class UiScene extends Phaser.Scene {
       }
     } else { this._menuSig = null }
 
-    // dialogue panel
+    // dialogue panel (one sentence/page at a time; player advances with E)
     const dlg = this.registry.get('dialog')
     const dOn = !!dlg
     this.dlgBox.setVisible(dOn); this.dlgName.setVisible(dOn); this.dlgText.setVisible(dOn); this.dlgHint.setVisible(dOn)
-    if (dOn && dlg.line !== this._dlgLine) {
-      this._dlgLine = dlg.line
-      this.dlgName.setText(dlg.speaker || '')
+    if (dOn && (dlg.line !== this._dlgLine || dlg.page !== this._dlgPg)) {
+      this._dlgLine = dlg.line; this._dlgPg = dlg.page
+      this.dlgName.setText((dlg.speaker || '') + (dlg.total > 1 ? `   ${dlg.page}/${dlg.total}` : ''))
       this.dlgText.setText(dlg.line || '')
-    } else if (!dOn) { this._dlgLine = null }
+      this.dlgHint.setText(dlg.more ? 'E ▸' : 'E ✕')
+    } else if (!dOn) { this._dlgLine = null; this._dlgPg = null }
 
     // character / pause menu (zoned character-sheet)
     const cm = this.registry.get('charmenu')

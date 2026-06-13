@@ -780,7 +780,7 @@ export default class CentruScene extends Phaser.Scene {
 
   onRankUp(i) {
     const r = this.ranks[i]
-    this.toast(`Nivel ${i + 1}: ${r.name}` + (r.joke ? ' — ' + r.joke : ''))
+    this.toast(`Nivel ${i + 1}: ${r.name}` + (r.joke ? '. ' + r.joke : ''))
     if (i >= 2) { this.weaponUnlocked.covor = true; this.bribeDiscount = true }
     if (i >= 4) { this.weaponUnlocked.baban = true; this.potholeTime = 0.9; this.sprintSpeed = 210 }
   }
@@ -790,9 +790,17 @@ export default class CentruScene extends Phaser.Scene {
     this.clues[key] = true
     this.state.civic = Phaser.Math.Clamp(this.state.civic + 5, 0, 100)
     this.state.score += 80; this.addXp(80)
-    this.toast('Indiciu: ' + text)
+    this.toast('Dovadă nouă: ' + text)
     this.syncHud()
     if (this.clueCount() >= 5) this.unlockFinale()
+    else if (this.cluesEnabled) this.updateDovezBanner()
+  }
+
+  // live evidence checklist shown as the mission (so the player always sees what's left, in order)
+  updateDovezBanner() {
+    const c = this.clues, m = (k) => (c[k] ? '✔' : '○')
+    const done = ['gopnik', 'borea', 'homeless', 'cop'].filter((k) => c[k]).length
+    this.registry.set('mission', `DOVEZI ${done}/4   (Esc = listă completă)\n${m('gopnik')} fă o cursă cu gopnicii\n${m('borea')} fă afaceri cu Borea\n${m('homeless')} ascultă omul din parc\n${m('cop')} scapă o dată de poliție`)
   }
 
   unlockFinale() {
@@ -804,7 +812,31 @@ export default class CentruScene extends Phaser.Scene {
 
   toast(msg) { this.registry.set('toast', { msg, id: this.time.now }) }
   frozen() { return this.cop || this.shopOpen || this.exposeOpen || this.won || this.dialogOpen || this.menuPause }
-  openDialog(speaker, line) { this.dialogOpen = true; this.registry.set('dialog', { speaker, line }) }
+
+  // paged dialogue: long lines are split into one sentence at a time; player advances with E
+  openDialog(speaker, text) {
+    this.dialogOpen = true
+    this.dlgSpeaker = speaker
+    this.dlgPages = this.paginate(text)
+    this.dlgPage = 0
+    this._dlgShownAt = this.time.now
+    this.showDlgPage()
+  }
+  paginate(text) {
+    const t = String(text).trim()
+    // split on sentence end (. ! ?) only when followed by the start of a new sentence — keeps "..." pauses intact
+    const pages = t.split(/(?<=[.!?])\s+(?=[A-ZĂÂÎȘȚ„«])/).map((s) => s.trim()).filter(Boolean)
+    return pages.length ? pages : [t]
+  }
+  showDlgPage() {
+    const total = this.dlgPages.length
+    this.registry.set('dialog', { speaker: this.dlgSpeaker, line: this.dlgPages[this.dlgPage], page: this.dlgPage + 1, total, more: this.dlgPage < total - 1 })
+  }
+  advanceDialog() {
+    if (this.time.now - (this._dlgShownAt || 0) < 220) return // guard against held-E blowing through pages
+    if (this.dlgPage < this.dlgPages.length - 1) { this.dlgPage++; this._dlgShownAt = this.time.now; this.showDlgPage() }
+    else this.closeDialog()
+  }
   closeDialog() { this.dialogOpen = false; this.registry.set('dialog', null) }
 
   toggleMenu() {
@@ -1026,7 +1058,7 @@ export default class CentruScene extends Phaser.Scene {
 
   // ---- interaction -------------------------------------------------------
   onAction() {
-    if (this.dialogOpen) { this.closeDialog(); return }
+    if (this.dialogOpen) { this.advanceDialog(); return }
     if (this.shopOpen) { this.closeShop(); return }
     if (this.cop || this.exposeOpen || this.won) return
     if (this.state.driving) {
@@ -1123,26 +1155,28 @@ export default class CentruScene extends Phaser.Scene {
     const s = this.state
     if (s.mission === 0) {
       s.mission = 1
-      this.registry.set('mission', 'Misiune: adu pâine de la Linella.')
-      this.toast('Pensionara: adu-mi pâine de la Linella, maică.')
+      this.registry.set('mission', 'Pasul 1: adu pâine de la Linella.')
+      this.openDialog('Pensionara', 'Bine c-ai venit acasă, maică. Fă-mi întâi un bine: adu-mi o pâine de la Linella. Pe urmă stăm de vorbă.')
     } else if (s.mission === 2) {
       s.mission = 3; s.lei += 30; s.score += 150; this.addXp(150)
       this.cluesEnabled = true; this.clues.zina = true; this.addCivic(12)
       if (this._homelessFlipped) this.addClue('homeless', 'matryoshka și un telefon rusesc în beciul primăriei') // recover an early flip
-      this.registry.set('mission', 'Strânge 4 dovezi (Esc = listă): cursă cu gopnicii · vinde la Borea · ascultă omul din parc · scapă de poliție.')
-      this.toast('Pensionara: mulțumesc! (+30 lei) Acuma strânge dovezi că Ceon Eban lucrează cu Moscova. Vezi lista cu Esc.')
+      this.updateDovezBanner()
+      this.openDialog('Pensionara', 'Mulțumesc, maică. Acuma ascultă. Primarul ăsta vorbește prea des la telefon, și tot în rusă. Ceva nu-i curat. Adu-mi dovezi: gopnicii, Borea, omul din parc și poliția. Lista o ai la Esc.')
       this.syncHud()
     } else if (s.mission === 1) {
-      this.toast('Pensionara: pâinea, maică, de la Linella!')
+      this.openDialog('Pensionara', 'Pâinea, maică. De la Linella. Te aștept pe bancă.')
+    } else if (this.finaleReady) {
+      this.openDialog('Pensionara', 'Ai tot ce-ți trebuie, maică. Du-te la Casa Guvernului și spune-le adevărul.')
     } else {
-      this.toast('Pensionara: Domnul cu tine.')
+      this.openDialog('Pensionara', 'Mai caută dovezi, maică. Vezi lista cu Esc. Domnul cu tine.')
     }
   }
 
   getBread() {
     if (this.state.mission !== 1) return
     this.state.mission = 2
-    this.registry.set('mission', 'Du pâinea înapoi la Pensionara.')
+    this.registry.set('mission', 'Pasul 2: du pâinea înapoi la Pensionara.')
     this.toast('Ai luat pâinea.')
   }
 
