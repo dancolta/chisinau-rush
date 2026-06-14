@@ -582,6 +582,7 @@ export default class CentruScene extends Phaser.Scene {
     this.exposeOpen = false
     this.dialogOpen = false
     this.menuPause = false
+    this.smuggleReturn = false
     this._homelessFlipped = false
     this.copTimer = 0
     this.hudT = 0
@@ -769,10 +770,10 @@ export default class CentruScene extends Phaser.Scene {
     this.landmarks.push({ x: 1860, y: 1446, name: 'Borea Țigan', desc: 'Negustor. Trăiește jumate în gropă.' })
     this.boreaIcon = this.add.image(1860, 1416, 'questicon').setOrigin(0.5, 1).setDepth(99970).setVisible(false)
 
-    // Primarul — satirical mayor at a permanent ribbon-cutting by Casa Guvernului
-    this.add.image(1300, BD_TOP - 16, 'ribbon').setOrigin(0.5, 1).setDepth(BD_TOP - 16)
-    this.add.image(1338, BD_TOP - 16, 'npc_mayor').setOrigin(0.5, 1).setDepth(BD_TOP - 16)
-    this.landmarks.push({ x: 1325, y: BD_TOP - 22, name: MAYOR, desc: '„Lucrăm la asta." Taie panglici. Cortegiul drift spre est.' })
+    // Primarul — satirical mayor at a permanent ribbon-cutting in front of the Primăria
+    this.add.image(922, BD_TOP - 16, 'ribbon').setOrigin(0.5, 1).setDepth(BD_TOP - 16)
+    this.mayorSpr = this.add.image(960, BD_TOP - 16, 'npc_mayor').setOrigin(0.5, 1).setDepth(BD_TOP - 16)
+    this.landmarks.push({ x: 947, y: BD_TOP - 22, name: MAYOR, desc: '„Lucrăm la asta." Taie panglici. Găuri și probleme cu bugetul? Guvernarea e de vină.' })
 
     this.marker = this.add.image(0, 0, 'marker').setOrigin(0.5, 1).setDepth(99980).setVisible(false)
     this.copSprite = this.add.image(0, 0, 'npc_cop').setOrigin(0.5, 1).setDepth(99975).setVisible(false)
@@ -828,20 +829,22 @@ export default class CentruScene extends Phaser.Scene {
   unlockFinale() {
     if (this.finaleReady) return
     this.finaleReady = true
-    this.registry.set('mission', `Finală: demască-l pe ${MAYOR} la Casa Guvernului (E).`)
-    this.toast('Ai toate dovezile! Mergi la Casa Guvernului.')
+    this.registry.set('mission', `Finală: demască-l pe ${MAYOR} la Primărie (E).`)
+    this.toast('Ai toate dovezile! Mergi la Primărie.')
   }
 
   toast(msg) { this.registry.set('toast', { msg, id: this.time.now }) }
   frozen() { return this.cop || this.shopOpen || this.exposeOpen || this.won || this.dialogOpen || this.menuPause }
 
-  // paged dialogue: long lines are split into one sentence at a time; player advances with E
-  openDialog(speaker, text) {
+  // paged dialogue: long lines are split into one sentence at a time; player advances with E.
+  // optional `after` runs when the dialogue is dismissed (e.g. open Borea's shop after his greeting).
+  openDialog(speaker, text, after) {
     this.dialogOpen = true
     this.dlgSpeaker = speaker
     this.dlgPages = this.paginate(text)
     this.dlgPage = 0
     this._dlgShownAt = this.time.now
+    this._dlgAfter = after || null
     this.showDlgPage()
   }
   paginate(text) {
@@ -859,7 +862,11 @@ export default class CentruScene extends Phaser.Scene {
     if (this.dlgPage < this.dlgPages.length - 1) { this.dlgPage++; this._dlgShownAt = this.time.now; this.showDlgPage() }
     else this.closeDialog()
   }
-  closeDialog() { this.dialogOpen = false; this.registry.set('dialog', null) }
+  closeDialog() {
+    this.dialogOpen = false; this.registry.set('dialog', null)
+    const a = this._dlgAfter; this._dlgAfter = null
+    if (a) a()
+  }
 
   doSideQuest(sn) {
     this.openDialog(sn.label, sn.line)
@@ -942,10 +949,19 @@ export default class CentruScene extends Phaser.Scene {
 
   // ---- Borea Țigan — black market ---------------------------------------
   openBorea() {
-    this.shopOpen = true
-    this.toast('Borea Țigan: Tu pe mine a sculat!')
-    this.renderShop()
+    // returning from the smuggle run: pay up + drop the clue, then open the shop
+    if (this.smuggleReturn) {
+      this.smuggleReturn = false
+      this.state.lei += 90; this.addCred(15); this.addXp(60)
+      if (this.cluesEnabled) this.addClue('borea', 'Borea fence-uiește pentru un „client din est": telefoane rusești')
+      else this.registry.set('mission', '')
+      this.syncHud()
+      this.openDialog('Borea Țigan', 'Tu pe mine a sculat! Molodeț, ai dus babanul întreg. Uite banii, +90 lei. Un client din est tot întreabă de marfă, ceva cu telefoane rusești.', () => this.openShop())
+      return
+    }
+    this.openDialog('Borea Țigan', 'Tu pe mine a sculat! Hai, zi, vinzi ori cumperi?', () => this.openShop())
   }
+  openShop() { this.shopOpen = true; this.renderShop() }
 
   renderShop() {
     const s = this.state
@@ -956,7 +972,7 @@ export default class CentruScene extends Phaser.Scene {
     ]
     if (!s.acteFalse) opts.push('4 · Acte false (-120 lei) — sari peste un control')
     if (!s.speedBoost) opts.push('5 · Tuning motor (-200 lei) — mașina zboară')
-    if (!s.smuggling) opts.push('6 · Misiune: cară un baban la Gară (+lei)')
+    if (!s.smuggling && !this.smuggleReturn && !this.clues.borea) opts.push('6 · Misiune: cară un baban la Gară (+90 lei + dovadă)')
     opts.push('E · Pleacă')
     this.registry.set('shop', { q: 'Borea Țigan: marfa-i curată, mai mult sau mai puțin. Ce iei?', opts })
   }
@@ -977,25 +993,26 @@ export default class CentruScene extends Phaser.Scene {
     } else if (n === 5) {
       if (!s.speedBoost) { if (s.lei >= 200) { s.lei -= 200; s.speedBoost = true; this.toast('Tuning făcut — acum zbori, nu mergi!') } else this.toast('N-ai 200 lei.') }
     } else if (n === 6) {
-      if (!s.smuggling) { this.startSmuggle(); this.syncHud(); this.closeShop(); return }
+      if (!s.smuggling && !this.smuggleReturn && !this.clues.borea) { this.closeShop(); this.startSmuggle(); this.syncHud(); return }
     }
     this.syncHud()
     this.renderShop()
   }
 
   startSmuggle() {
-    this.state.smuggling = true
+    this.state.smuggling = true // carrying the baban toward the Gară
     this.dropPoint = this.add.image(2500, 1300, 'marker').setOrigin(0.5, 1).setDepth(99950).setTint(0xff8a4a)
-    this.toast('Borea Țigan: cară babanul la gară. Fugi de gabori, auzi?')
+    this.registry.set('mission', 'Borea: du babanul la semnul portocaliu de la Gară. Fugi de poliție.')
+    this.openDialog('Borea Țigan', 'Ține babanul ăsta. Du-l la Gară, la semnul portocaliu. Fugi de gabori, auzi? Pe urmă vii înapoi la mine după bani.')
   }
 
   deliverSmuggle() {
     if (!this.state.smuggling) return
     this.state.smuggling = false
+    this.smuggleReturn = true // delivered at the Gară; now return to Borea for payment + the clue
     if (this.dropPoint) { this.dropPoint.destroy(); this.dropPoint = null }
-    this.state.lei += 90; this.addCred(15); this.addXp(60)
-    this.toast('Livrat! +90 lei. Borea Țigan: un client din est tot întreabă de marfă... ceva cu telefoane rusești.')
-    if (this.cluesEnabled) this.addClue('borea', 'Borea fence-uiește pentru un „client din est": telefoane rusești')
+    this.registry.set('mission', 'Borea: întoarce-te la Borea Țigan (parc) pentru bani.')
+    this.toast('Ai lăsat babanul la Gară. Acuma înapoi la Borea Țigan pentru bani.')
   }
 
   // ---- Potholes (civic) -------------------------------------------------
@@ -1110,7 +1127,7 @@ export default class CentruScene extends Phaser.Scene {
     else if (n.type === 'om-befriend') this.befriendHomeless()
     else if (n.type === 'om-talk') {
       if (this.cluesEnabled && !this.clues.homeless) {
-        this.openDialog('Omul din parc', 'Și aiurești wai, șii cu tine?! Ai să mă arăți la televizor? Matryoshka... telefonul... în beciul de la primărie... io am văzut, băiete.')
+        this.openDialog('Omul din parc', 'Și aiurești wai, șii cu tine?! Ai să mă arăți la televizor? Matryoshka... telefonul... în beciul de la primărie... eu am văzut, băiete.')
         this.addClue('homeless', 'matryoshka și un telefon rusesc în beciul primăriei')
       } else {
         this.openDialog('Omul din parc', 'Și aiurești wai, șii cu tine?! Ai să mă arăți la televizor? ' + this.omLine())
@@ -1119,29 +1136,29 @@ export default class CentruScene extends Phaser.Scene {
     else if (n.type === 'borea') this.openBorea()
     else if (n.type === 'drop') this.deliverSmuggle()
     else if (n.type === 'expose') this.openExpose()
-    else if (n.type === 'gopnik') this.toast('Gopnicii: ia o mașină de pe bulevard și vino, facem o cursă.')
+    else if (n.type === 'gopnik') this.openDialog('Gopnicii', 'Ia o mașină de pe bulevard și vino, bratan, facem o cursă pe curte.')
     else if (n.type === 'pothole') { this.filling = { ref: n.ref, t: 0, dur: this.potholeTime }; this.toast('Astupi gropa... stai pe loc.') }
   }
 
   omLine() {
     const lines = [
-      'Toți aiurați, numa io vorbesc cu porumbeii.',
-      'Bă, da\' tu de ce te uiți? Io stau aici de când era Lenin în piață, wai.',
-      'Matryoshka... telefonul... în beciul de la primărie... io am văzut, băiete.',
+      'Toți aiurați, numa eu vorbesc cu porumbeii.',
+      'Wai, da tu și te uiți? Eu stau aici de când era Lenin în piață.',
+      'Matryoshka... telefonul... în beciul de la primărie... eu am văzut, băiete.',
       `${MAYOR} vorbește cu Moscova noaptea. Nimeni nu crede pe nebunul din parc.`,
       'Caută sub Arc, băiete. Acolo-i o păpușă de lemn care știe tot.',
-      'Cortegiul negru iar a trecut spre est. Numa io văd. Voi dormiți, oameni buni.',
+      'Cortegiul negru iar a trecut spre est. Numa eu văd. Voi dormiți, oameni buni.',
       'Mi-au pus cip în plombă la stomatolog. De-asta aud Moscova noaptea, wai.',
       'Dă un leu de divin, băiete. Pentru sănătatea ta, jur pe groapa de pe Dacia.',
-      'Io am fost inginer. Acuma-s filozof în parc. Salariul, tot acela, băiete.',
+      'Eu am fost inginer. Acuma-s filozof în parc. Salariul, tot acela, băiete.',
       'Șșș... auzi? Țevile. Țevile de la Termoelectrica vorbesc rusește noaptea.',
       'Extratereștrii au aterizat pe Malldova. Au luat un șaurmă și-au plecat. Deștepți.',
       'Wai, ce vremuri. Pe vremea mea venea troleibuzul. Acuma vine numa frica.',
       `Dă-mi semechki, băiete, că-mi trec nervii. Și spune-i lui ${MAYOR} că-l văd.`,
-      'Io-s împărat, băiete. Nu vezi coroana? E invizibilă, ca pensia mea.',
+      'Eu-s împărat, băiete. Nu vezi coroana? E invizibilă, ca pensia mea.',
       'Pămîntul e plat, da\' gropile-s adânci. Contradicție. Mă doare capul, wai.',
       'Noaptea, sub Arc, vine un domn în costum. Vorbește la telefon. În rusă. Mereu.',
-      'Io nu-s nebun, băiete. Io-s singurul treaz. Aiurați-vă voi mai departe, șii cu tine.',
+      'Eu nu-s nebun, băiete. Eu-s singurul treaz. Aiurați-vă voi mai departe, șii cu tine.',
       'Am scris primarului. Mi-a răspuns ecoul din groapă: „lucrăm la asta", zice.',
       'Sticla-i a mea, am pus-o sub bancă în nouăj\' patru. Nu te atinge, wai.',
       'Bea apă de la robinet, băiete. Maro, da\' gratis. Asta-i independența, băiete.',
@@ -1209,7 +1226,7 @@ export default class CentruScene extends Phaser.Scene {
     } else if (s.mission === 1) {
       this.openDialog('Pensionara', 'Pâinea, maică. De la Linella. Te aștept pe bancă.')
     } else if (this.finaleReady) {
-      this.openDialog('Pensionara', 'Ai tot ce-ți trebuie, maică. Du-te la Casa Guvernului și spune-le adevărul.')
+      this.openDialog('Pensionara', 'Ai tot ce-ți trebuie, maică. Du-te la Primărie și spune-le adevărul.')
     } else {
       this.openDialog('Pensionara', 'Mai caută dovezi, maică. Vezi lista cu Esc. Domnul cu tine.')
     }
@@ -1402,7 +1419,7 @@ export default class CentruScene extends Phaser.Scene {
     if (this.gopnik) test(this.gopnik.x, this.gopnik.y, 38, { type: 'gopnik' })
     if (this.potholes) for (const p of this.potholes) if (!p.filled) test(p.x, p.y, 30, { type: 'pothole', ref: p })
     if (this.state.smuggling && this.dropPoint) test(this.dropPoint.x, this.dropPoint.y, 42, { type: 'drop' })
-    if (this.finaleReady && !this.won) test(1310, ROWS[1].y1, 60, { type: 'expose' }) // at Casa Guvernului
+    if (this.finaleReady && !this.won) test(960, ROWS[1].y1, 60, { type: 'expose' }) // at the Primăria (where the mayor stands)
     // befriending an aggro'd homeless must be reachable BEFORE forced melee range
     if (this.homeless && this.homeless.aggro && !this.homeless.calm && this.homeless.state !== 'ko') {
       const d2 = (ix - this.homeless.spr.x) ** 2 + (iy - this.homeless.spr.y) ** 2
@@ -1475,7 +1492,9 @@ export default class CentruScene extends Phaser.Scene {
     let target = null
     if (m === 1) target = this.breadTarget
     else if (m === 2) target = this.zina
-    if (this.finaleReady && !this.won) target = { x: 1310, y: ROWS[1].y1 } // point to Casa Guvernului for the exposé
+    if (this.state.smuggling && this.dropPoint) target = this.dropPoint // carry the baban to the Gară
+    else if (this.smuggleReturn && this.borea) target = this.borea // bring it back to Borea
+    if (this.finaleReady && !this.won) target = { x: 960, y: ROWS[1].y1 } // point to the Primăria for the exposé
     this.curTarget = target
     if (target) this.marker.setVisible(true).setPosition(target.x, target.y - 44 + bob).setDepth(99980)
     else this.marker.setVisible(false)

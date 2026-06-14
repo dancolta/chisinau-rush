@@ -24,30 +24,27 @@ export default class UiScene extends Phaser.Scene {
     // top bar (below the ticker)
     this.topbar = this.add.rectangle(0, 17, W, 22, 0x10121a, 0.55).setOrigin(0)
     this.add.text(8, 21, 'CHIȘINĂU RUSH · Centru', { fontFamily: F, fontSize: '13px', color: '#ebc372' })
-    this.help = this.add.text(W - 8, 22, 'WASD · Shift · E acțiune · click: nume · T CRT', { fontFamily: F, fontSize: '10px', color: '#aeb5c0' }).setOrigin(1, 0)
+    this.help = this.add.text(W - 8, 21, 'WASD mișcă · Shift fugă · E acțiune · SPACE lovește · Esc meniu', { fontFamily: F, fontSize: '11px', color: '#cdd2dc' }).setOrigin(1, 0)
 
-    // ===== LEFT cluster — VITALS plate (HP / HEAT / CRED+CIVIC) =====
-    this.add.rectangle(4, 44, 232, 86, 0x0b0c14, 0.86).setOrigin(0).setStrokeStyle(1, 0x000000, 0.55)
-    this.add.rectangle(4, 44, 232, 86, 0x000000, 0).setOrigin(0).setStrokeStyle(1, 0xebc372, 0.22) // inner accent hairline
+    // ===== LEFT cluster — VITALS plate: 4 aligned full-width meters (label left, value right) =====
+    this.add.rectangle(4, 44, 232, 92, 0x0b0c14, 0.88).setOrigin(0).setStrokeStyle(1, 0x000000, 0.55)
+    this.add.rectangle(4, 44, 232, 92, 0x000000, 0).setOrigin(0).setStrokeStyle(1, 0xebc372, 0.22) // inner accent hairline
     // HP — primary, tall
-    this.add.rectangle(10, 50, 220, 22, 0x07080d, 0.9).setOrigin(0)
-    this.hpFill = this.add.rectangle(12, 52, 216, 18, 0x4caf50).setOrigin(0)
-    this.add.text(16, 52, 'HP', { fontFamily: F, fontSize: '13px', color: '#ffffff' }).setOrigin(0, 0).setStroke('#07080d', 4).setDepth(2)
-    this.hpText = this.add.text(226, 52, '', { fontFamily: F, fontSize: '15px', color: '#ffffff' }).setOrigin(1, 0).setStroke('#07080d', 4).setDepth(2)
-    // HEAT — danger meter, full width
-    this.add.rectangle(10, 78, 220, 15, 0x07080d, 0.9).setOrigin(0)
-    this.heatFill = this.add.rectangle(12, 80, 216, 11, 0xf9a200).setOrigin(0)
-    this.add.text(16, 79, 'HEAT', { fontFamily: F, fontSize: '11px', color: '#ffd9a0' }).setOrigin(0, 0).setStroke('#07080d', 3).setDepth(2)
-    this.heatText = this.add.text(226, 79, '', { fontFamily: F, fontSize: '12px', color: '#ffffff' }).setOrigin(1, 0).setStroke('#07080d', 3).setDepth(2)
-    // CRED + CIVIC — paired half-width
-    this.add.rectangle(10, 95, 107, 15, 0x07080d, 0.9).setOrigin(0)
-    this.credFill = this.add.rectangle(12, 97, 103, 11, 0x4caf50).setOrigin(0)
-    this.add.text(16, 96, 'CRED', { fontFamily: F, fontSize: '10px', color: '#bfe6c2' }).setOrigin(0, 0).setStroke('#07080d', 3).setDepth(2)
-    this.credText = this.add.text(113, 96, '', { fontFamily: F, fontSize: '11px', color: '#ffffff' }).setOrigin(1, 0).setStroke('#07080d', 3).setDepth(2)
-    this.add.rectangle(123, 95, 107, 15, 0x07080d, 0.9).setOrigin(0)
-    this.civicFill = this.add.rectangle(125, 97, 103, 11, 0x2f6fb0).setOrigin(0)
-    this.add.text(129, 96, 'CIVIC', { fontFamily: F, fontSize: '10px', color: '#9ec0ff' }).setOrigin(0, 0).setStroke('#07080d', 3).setDepth(2)
-    this.civicText = this.add.text(226, 96, '', { fontFamily: F, fontSize: '11px', color: '#ffffff' }).setOrigin(1, 0).setStroke('#07080d', 3).setDepth(2)
+    this.add.rectangle(10, 50, 220, 20, 0x07080d, 0.9).setOrigin(0)
+    this.hpFill = this.add.rectangle(12, 52, 216, 16, 0x4caf50).setOrigin(0)
+    this.add.text(16, 51, 'HP', { fontFamily: F, fontSize: '13px', color: '#ffffff' }).setOrigin(0, 0).setStroke('#07080d', 4).setDepth(2)
+    this.hpText = this.add.text(226, 51, '', { fontFamily: F, fontSize: '14px', color: '#ffffff' }).setOrigin(1, 0).setStroke('#07080d', 4).setDepth(2)
+    // POLIȚIE (cât te caută poliția) / STRADĂ (respect gopnici) / CIVIC (respect oameni) — aligned full-width meters
+    const meter = (y, label, color, lblColor) => {
+      this.add.rectangle(10, y, 220, 14, 0x07080d, 0.9).setOrigin(0)
+      const fill = this.add.rectangle(12, y + 2, 216, 10, color).setOrigin(0)
+      this.add.text(16, y + 1, label, { fontFamily: F, fontSize: '11px', color: lblColor }).setOrigin(0, 0).setStroke('#07080d', 3).setDepth(2)
+      const val = this.add.text(226, y, '', { fontFamily: F, fontSize: '12px', color: '#ffffff' }).setOrigin(1, 0).setStroke('#07080d', 3).setDepth(2)
+      return { fill, val }
+    }
+    const mH = meter(74, 'POLIȚIE', 0xf9a200, '#ffd9a0'); this.heatFill = mH.fill; this.heatText = mH.val
+    const mC = meter(92, 'STRADĂ', 0x4caf50, '#bfe6c2'); this.credFill = mC.fill; this.credText = mC.val
+    const mV = meter(110, 'CIVIC', 0x2f6fb0, '#9ec0ff'); this.civicFill = mV.fill; this.civicText = mV.val
 
     // ===== RIGHT cluster — ECONOMY plate (LEI / SCOR / RANK / XP / DOVEZI) =====
     this.econPlate = this.add.rectangle(W - 218, 44, 212, 108, 0x0b0c14, 0.86).setOrigin(0).setStrokeStyle(1, 0x000000, 0.55).setName('statpanel')
@@ -161,10 +158,10 @@ export default class UiScene extends Phaser.Scene {
     txt(-232, -222, 11, '#aeb5c0', 0, 0, 'P E R S O N A J')
     this.cmName = txt(-232, -206, 22, '#ffffff', 0, 0)
     this.cmType = txt(-232, -178, 12, '#aeb5c0', 0, 0)
-    // rank badge (top-right)
-    rect(232, -210, 150, 44, 0x1b1d2b, 1, 1, 0, 0xebc372, 1)
-    this.cmLvl = txt(218, -201, 13, '#ebc372', 1, 0)
-    this.cmRank = txt(218, -183, 11, '#e7ebf2', 1, 0)
+    // rank badge (top-right) — wide enough for the full rank name
+    rect(232, -210, 184, 44, 0x1b1d2b, 1, 1, 0, 0xebc372, 1)
+    this.cmLvl = txt(220, -201, 13, '#ebc372', 1, 0)
+    this.cmRank = txt(220, -182, 10, '#e7ebf2', 1, 0)
     rect(82, -160, 150, 6, 0x0c0d14, 1, 0, 0.5, 0x2a2c3a, 1)
     this.cmXp = rect(83, -160, 150, 4, 0xebc372, 1, 0, 0.5)
     // labelled bars
@@ -177,7 +174,7 @@ export default class UiScene extends Phaser.Scene {
       this.cmBars[key] = { val, fill }
     }
     makeBar('hp', -120, 'HP', '#ffffff')
-    makeBar('heat', -86, 'HEAT', '#ffffff')
+    makeBar('heat', -86, 'POLIȚIE', '#ffffff')
     makeBar('cred', -38, 'STRADĂ', '#e7ebf2')
     makeBar('civic', -4, 'CIVIC', '#e7ebf2')
     this.cmBars.civic.fill.fillColor = 0x2f6fb0 // civic = blue identity
@@ -214,7 +211,7 @@ export default class UiScene extends Phaser.Scene {
     const lvlNum = (String(cm.level).match(/\d+/) || ['1'])[0]
     const rankName = String(cm.level).split(': ')[1] || String(cm.level)
     this.cmLvl.setText('Niv. ' + lvlNum)
-    this.cmRank.setText(rankName.length > 16 ? rankName.slice(0, 15) + '…' : rankName)
+    this.cmRank.setText(rankName.length > 26 ? rankName.slice(0, 25) + '…' : rankName)
     const xp = String(cm.xp).split('/'); const xc = +xp[0] || 0, xn = +xp[1] || 0
     this.cmXp.displayWidth = xn > xc ? Math.max(0, Math.min(150, 150 * (xc / xn))) : 150
     const hcol = (c) => '#' + c.toString(16).padStart(6, '0')
@@ -259,9 +256,9 @@ export default class UiScene extends Phaser.Scene {
       this.heatFill.displayWidth = 216 * heatR
       this.heatFill.fillColor = heatR < 0.4 ? 0x4caf50 : heatR < 0.7 ? 0xf9a200 : 0xcc3b30
       this.heatText.setText(`${Math.round(hud.heat || 0)}%`)
-      this.credFill.displayWidth = 103 * ((hud.cred || 0) / 100)
+      this.credFill.displayWidth = 216 * ((hud.cred || 0) / 100)
       this.credText.setText(String(hud.cred | 0))
-      this.civicFill.displayWidth = 103 * ((hud.civic || 0) / 100)
+      this.civicFill.displayWidth = 216 * ((hud.civic || 0) / 100)
       this.civicText.setText(String(hud.civic | 0))
       this.leiText.setText(this.fmt(hud.lei))
       this.scoreText.setText(this.fmt(hud.score))
