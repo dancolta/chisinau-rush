@@ -388,7 +388,7 @@ export default class CentruScene extends Phaser.Scene {
     this.anims.create({ key: 'walk-up', frames: [{ key: 'ion_up0' }, { key: 'ion_up1' }], frameRate: 8, repeat: -1 })
     this.anims.create({ key: 'walk-side', frames: [{ key: 'ion_side0' }, { key: 'ion_side1' }], frameRate: 8, repeat: -1 })
     this.facing = 'down'
-    this.ion = this.physics.add.sprite(1360, BD_BOT + 26, 'ion_down0') // on the boulevard, by the Arc
+    this.ion = this.physics.add.sprite(1280, BD_BOT + 120, 'ion_down0') // in the plaza on the south side of the Arc (visible, not behind it)
     this.ion.body.setSize(8, 6).setOffset(2, 10)
     this.ion.setCollideWorldBounds(true)
     this.physics.add.collider(this.ion, this.solids)
@@ -645,7 +645,7 @@ export default class CentruScene extends Phaser.Scene {
     // one-time intro so the goal is clear from the start (fresh games only)
     if (!this.registry.get('continueSave')) {
       const opener = ({
-        patan: 'Te-ai întors în Chișinău, bratan, pe covor bătut și cu fasonu\' la locul lui. Curtea te știe, davai, arată cine-i șefu\'.',
+        patan: 'Te-ai întors în Chișinău, bratan, cu fasonu\' la locul lui și raioncikul în sânge. Curtea te știe, davai, arată cine-i șefu\'.',
         taxist: 'Te-ai întors în Chișinău, șefu, și fiecare groapă din Centru încă-ți știe Loganul pe nume. Hai, urcă, ne-nțelegem pe loc.',
         conductor: 'Te-ai întors în Chișinău, maică, și troleibuzu\' 22 iar te-așteaptă. Biletu\', vă rog, da\' ție-i gratis, normalno.',
         agent: 'Te-ai întors în Chișinău, bratan, unde un balcon în Râșcani tot „studio cu amplasare reușită" se cheamă. Marfa se vinde, davai.',
@@ -1583,7 +1583,7 @@ export default class CentruScene extends Phaser.Scene {
     if (s.hp <= 0) {
       if (s.driving) this.exitCar()
       s.hp = 60; s.lei = Math.max(0, s.lei - 10); s.score = Math.max(0, s.score - 50)
-      this.ion.setPosition(1360, BD_BOT + 26)
+      this.ion.setPosition(1280, BD_BOT + 120)
       this.cameras.main.startFollow(this.ion, true, 0.12, 0.12)
       this.toast('Ai leșinat de foame! Te-ai trezit lângă Arc. (-10 lei)')
       this.syncHud()

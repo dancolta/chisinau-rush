@@ -4,7 +4,7 @@ const F = 'monospace'
 
 // the playable types — professions/types, no personal names. 1-line blurbs so cards never overflow.
 export const TYPES = [
-  { key: 'patan', name: 'Patan de pe Raioncik', role: 'gopnik crescut în Ciocana', blurb: 'Gopnik crescut în Ciocana, pe covor bătut. Lovește tare.', perk: 'Lovești mult mai tare + respect pe stradă din start.' },
+  { key: 'patan', name: 'Pațan de pe Raioncik', role: 'gopnik crescut la Ciocana', blurb: 'Gopnik crescut la Ciocana. Lovește tare, vorbește puțin.', perk: 'Lovești mult mai tare + respect pe stradă din start.' },
   { key: 'taxist', name: 'Taxistul', role: 'taxist', blurb: 'Logan vechi, dar știe fiecare groapă din Centru pe nume.', perk: 'Pornești cu mai mulți lei + bani din curse.' },
   { key: 'conductor', name: 'Conductorul', role: 'conductor pe ruta 11', blurb: 'Rupe biletul pe troleibuzul 22 cu autoritate.', perk: 'Lei pasivi încet + ție gratis troleibuzul.' },
   { key: 'agent', name: 'Agentul Imobiliar', role: 'agent imobiliar', blurb: '„Studio cu amplasare reușită" = un balcon în Râșcani.', perk: 'Fence-uiești hârtiile mai scump la Borea Țigan.' },
