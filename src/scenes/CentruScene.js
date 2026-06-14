@@ -38,7 +38,7 @@ const ROWS = [
 
 // 100 authentic Moldovan collectibles, grouped by which pickup sprite they use
 // the collectible: hârtii scurse de la primărie — acte care n-ar trebui să fie pe stradă.
-// You scoop them off the street and fence them to Borea (who sells them east) — the same paper the mayor smuggles.
+// You scoop them off the street and hand them off to Borea (who sells them east) — the same paper the mayor smuggles.
 const COLLECT_GROUPS = {
   c_dosar: ['Bon de la primărie', 'Deviz de asfalt nefolosit', 'Contract de salubrizare', 'Ștampilă uitată', 'Factură la Termoelectrica', 'Dosar cu colțul rupt', 'Hârtie cu antet de la Consiliu', 'Chitanță de cortegiu', 'Plic gros nedeschis', 'Aviz de demolare', 'Listă de deputați plecați în China', 'Notă de serviciu în rusă', 'Schiță de parc pe hârtie', 'Proces-verbal de groapă', 'Mandat de evacuator', 'Copie xerox spălăcită'],
 }
@@ -388,9 +388,10 @@ export default class CentruScene extends Phaser.Scene {
     this.anims.create({ key: 'walk-up', frames: [{ key: 'ion_up0' }, { key: 'ion_up1' }], frameRate: 8, repeat: -1 })
     this.anims.create({ key: 'walk-side', frames: [{ key: 'ion_side0' }, { key: 'ion_side1' }], frameRate: 8, repeat: -1 })
     this.facing = 'down'
-    this.ion = this.physics.add.sprite(1280, BD_BOT + 120, 'ion_down0') // in the plaza on the south side of the Arc (visible, not behind it)
+    this.ion = this.physics.add.sprite(1240, BD_BOT + 150, 'ion_down0') // open plaza SOUTH of the Arc, clear of its footprint (visible, not behind it)
     this.ion.body.setSize(8, 6).setOffset(2, 10)
     this.ion.setCollideWorldBounds(true)
+    this.ion.setDepth(this.ion.y) // pin depth at spawn so it renders in front of the Arc on the very first frame
     this.physics.add.collider(this.ion, this.solids)
   }
 
@@ -767,7 +768,7 @@ export default class CentruScene extends Phaser.Scene {
       [1310, BD_TOP - 14, 'Sergentul', 'la Casa Guvernului'],
       [1860, BD_TOP - 14, 'Caporalul', 'la Parlament'],
       [760, BD_BOT + 16, 'Sergentul', 'la trecere'],
-      [1760, BD_BOT + 16, 'Plutonierul', 'la Grădina Publică'],
+      [1760, BD_BOT + 16, 'Sergent Căldare', 'la Grădina Publică'],
     ]
     cops.forEach(([x, y, name, where]) => {
       this.add.image(x, y, 'npc_cop').setOrigin(0.5, 1).setDepth(y)
@@ -947,7 +948,7 @@ export default class CentruScene extends Phaser.Scene {
 
   menuData() {
     const s = this.state, r = this.ranks[this.rankIdx], next = this.ranks[this.rankIdx + 1]
-    const names = { gopnik: 'Gopnicii', borea: 'Borea Țigan', cop: 'Plutonierul', homeless: 'Omul din Parc' }
+    const names = { gopnik: 'Gopnicii', borea: 'Borea Țigan', cop: 'Sergent Căldare', homeless: 'Omul din Parc' }
     const clues = Object.keys(this.clues).map((k) => `${this.clues[k] ? '✔' : '✗'} ${names[k]}`).join('    ')
     return {
       name: this.playerName, type: this.playerTypeName,
@@ -1019,7 +1020,7 @@ export default class CentruScene extends Phaser.Scene {
     if (this.smuggleReturn) {
       this.smuggleReturn = false
       this.state.lei += 90; this.addCred(15); this.addXp(60)
-      if (this.cluesEnabled) this.addClue('borea', 'Borea fence-uiește pentru un „client din est": telefoane rusești')
+      if (this.cluesEnabled) this.addClue('borea', 'Borea le toarnă spre un „client din est": telefoane rusești')
       else this.registry.set('mission', '')
       this.syncHud()
       this.openDialog('Borea Țigan', 'Băi, tu pe mine a sculat! Molodeț, ai dus babanu\' întreg, jostko. Uite banii, +90 lei. Un client din est tot întreabă de marfă, ceva cu telefoane rusești.', () => this.openShop())
@@ -1033,7 +1034,7 @@ export default class CentruScene extends Phaser.Scene {
     if (this.shopMode === 'arme') return this.renderArme()
     const s = this.state
     const opts = [
-      `1 · Fence-uiește hârtiile (${s.satchel}) — ~${s.satchel * 12} lei`,
+      `1 · Dă hârtiile la mână (${s.satchel}) — ~${s.satchel * 12} lei`,
       '2 · Cumpără plăcintă (-15 lei, +35 HP)',
       '3 · Arme de la Borea »',
     ]
@@ -1061,7 +1062,7 @@ export default class CentruScene extends Phaser.Scene {
     const s = this.state
     if (n === 1) {
       if (s.satchel > 0) { const g = Math.round(s.satchel * (10 + Math.random() * 4) * (this.sellMarkup || 1)); s.lei += g; this.toast(`Borea ia hârtiile pentru clientul din est: +${g} lei`); s.satchel = 0; this.addXp(20) }
-      else this.toast('N-ai hârtii de fence-uit, bratu.')
+      else this.toast('N-ai hârtii de dat, bratu.')
     } else if (n === 2) {
       if (s.lei >= 15) { s.lei -= 15; s.hp = Math.min(s.maxHp, s.hp + 35); this.toast('Plăcintă caldă! +35 HP') } else this.toast('N-ai 15 lei.')
     } else if (n === 3) {
@@ -1346,10 +1347,10 @@ export default class CentruScene extends Phaser.Scene {
     this.copBribe = Math.round((20 + this.state.heat / 3) * (this.bribeDiscount ? 0.6 : 1))
     if (this.car) this.car.speed = 0
     const openers = [
-      'Plutonierul: Bună ziua. Documentele... știți de ce v-am oprit?',
-      'Plutonierul: Băi, șefu, încotro așa grăbit? Hai actele iute, davai.',
-      'Plutonierul: Băi, ai cam zburat pe bulevard. Șo încălcăm, kak?',
-      'Plutonierul: Control de rutină, șefu. Văd că ne grăbim tare, normalno...',
+      'Sergent Căldare: Bună ziua. Documentele... știți de ce v-am oprit?',
+      'Sergent Căldare: Băi, șefu, încotro așa grăbit? Hai actele iute, davai.',
+      'Sergent Căldare: Băi, ai cam zburat pe bulevard. Șo încălcăm, kak?',
+      'Sergent Căldare: Control de rutină, șefu. Văd că ne grăbim tare, normalno...',
     ]
     const q = openers[Math.floor(Math.random() * openers.length)]
     if (this.car && this.copSprite) {
@@ -1487,7 +1488,7 @@ export default class CentruScene extends Phaser.Scene {
         this.state.combo += 1; this.state.comboT = 2.5
         this.state.score += 15 * this.state.combo
         if (this.addXp) this.addXp(10 * this.state.combo)
-        this.toast(`Hârtie: ${s.item.n}` + (this.state.combo > 1 ? ` (x${this.state.combo})` : '') + '. Fence-uiește la Borea.')
+        this.toast(`Hârtie: ${s.item.n}` + (this.state.combo > 1 ? ` (x${this.state.combo})` : '') + '. Du-le la Borea.')
         this.syncHud()
       }
     }
@@ -1583,7 +1584,7 @@ export default class CentruScene extends Phaser.Scene {
     if (s.hp <= 0) {
       if (s.driving) this.exitCar()
       s.hp = 60; s.lei = Math.max(0, s.lei - 10); s.score = Math.max(0, s.score - 50)
-      this.ion.setPosition(1280, BD_BOT + 120)
+      this.ion.setPosition(1240, BD_BOT + 150)
       this.cameras.main.startFollow(this.ion, true, 0.12, 0.12)
       this.toast('Ai leșinat de foame! Te-ai trezit lângă Arc. (-10 lei)')
       this.syncHud()
