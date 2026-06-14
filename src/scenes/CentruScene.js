@@ -411,6 +411,7 @@ export default class CentruScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-SPACE', () => this.swing())
     this.input.on('wheel', (_p, _o, _dx, dy) => this.zoomBy(dy > 0 ? -0.25 : 0.25))
     this.input.on('pointerdown', (p) => {
+      if (this.levelPause) { this.dismissLevelUp(); return }
       if (this.frozen()) return
       const wp = this.cameras.main.getWorldPoint(p.x, p.y)
       // click an aggro'd enemy to hit it
@@ -585,7 +586,9 @@ export default class CentruScene extends Phaser.Scene {
     this.exposeOpen = false
     this.dialogOpen = false
     this.menuPause = false
+    this.levelPause = false
     this.smuggleReturn = false
+    this.gopnikRaceWon = false
     this._homelessFlipped = false
     this.copTimer = 0
     this.hudT = 0
@@ -641,8 +644,16 @@ export default class CentruScene extends Phaser.Scene {
     ])
     // one-time intro so the goal is clear from the start (fresh games only)
     if (!this.registry.get('continueSave')) {
+      const opener = ({
+        patan: 'Te-ai întors în Chișinău, bratan, pe covor bătut și cu fasonu\' la locul lui. Curtea te știe, davai, arată cine-i șefu\'.',
+        taxist: 'Te-ai întors în Chișinău, șefu, și fiecare groapă din Centru încă-ți știe Loganul pe nume. Hai, urcă, ne-nțelegem pe loc.',
+        conductor: 'Te-ai întors în Chișinău, maică, și troleibuzu\' 22 iar te-așteaptă. Biletu\', vă rog, da\' ție-i gratis, normalno.',
+        agent: 'Te-ai întors în Chișinău, bratan, unde un balcon în Râșcani tot „studio cu amplasare reușită" se cheamă. Marfa se vinde, davai.',
+        director: 'Te-ai întors în Chișinău, băiete, cu BMW-ul pe numere din Lituania și portmoneu\' baban. Hai să discutăm, numerar, da?',
+        ionel: 'Te-ai întors în Chișinău, măi, cu un sac de plăcinte de la mama, da\' tot e scump aici, jostko. Mănâncă și mergem.',
+      })[this.playerType] || 'Te-ai întors în Chișinău, bratan.'
       this.time.delayedCall(400, () => this.openDialog('Chișinău Rush',
-        'Te-ai întors la Chișinău și orașu-i tot strâmb: gropi, cortegii, hârtii pe jos ca frunzele. Lumea zice că primarul nu-i prost, că-i ascultător. De cine? Asta afli tu. Adună hârtiile, fă rost de patru dovezi că Ceon Eban ține orașul stricat din ordin de la est, și ia-i locul. Începe: vorbește cu Pensionara de pe bancă (apasă E).'))
+        opener + ' Scopul: să ajungi PRIMAR, bratan. Fă bani, adună hârtii și strânge 4 dovezi că Ceon Eban lucrează cu Moscova, apoi demască-l. Începe: vorbește cu Pensionara de pe bancă (apasă E).'))
     }
   }
 
@@ -697,26 +708,26 @@ export default class CentruScene extends Phaser.Scene {
     // 20 Moldovan NPCs (professions only) — talk to them (E) for a dialogue line
     this.talkNpcs = []
     const cast = [
-      ['npc_zina', 360, 958, 'Pensionara de pe Bancă', 'Da\' tu a cui ești, băiete? Eu pe maică-ta o cunosc, stai jos.'],
-      ['npc_gopnik', 700, 1122, 'Gopnicul din Curte', 'Bratan, ai o siga? Și de ce te uiți așa la mine?'],
-      ['npc_c3', 1080, 958, 'Funcționara la Primărie', 'Reveniți după pauză, acuma-i tehnic pererîv. Lucrăm la asta.'],
-      ['npc_c4', 1700, 1122, 'Vânzătoarea la Linella', 'Pachet luați? Doi lei. Card ori cash, mai repede, că-i coadă.'],
-      ['npc_c2', 2080, 958, 'Șoferul de Rutieră', 'Treci spatele, fă loc! Transmite banii pe rând.'],
-      ['npc_c5', 2300, 958, 'Pensionarul de la Piață', 'Pe vremea mea cu salariu cumpărai un Jiguli. Acuma o pungă de hrișcă.'],
-      ['npc_c6', 420, 1122, 'Studenta la USM', 'Auzi, după sesiune plec în Italia ca toți. Bursa? Ajunge de-o cafea și gata.'],
-      ['npc_c1', 900, 1122, 'Popa din Centru', 'Hristos a-nviat, fiule. Mașina nouă? Domnul a dat. Lasă ceva la cutie.'],
-      ['npc_c7', 1380, 1122, 'Deputatul', 'Stimați alegători, anul ăsta reparăm toate gropile, vă garantez.'],
-      ['npc_c0', 2120, 1122, 'Revenit din Italia', 'Allora, băieți, în Italia altă viață. Da\' acasă-i acasă, torn fundația.'],
-      ['npc_c4', 2560, 1300, 'Plăcintăreasa de la Gară', 'Mănâncă, slăbănogule, ia o plăcintă cât îi caldă, de la mine cadou.'],
-      ['npc_c2', 2300, 1300, 'Schimbătorul Valutar', 'Euro, dolar, ruble? Cel mai bun curs la mine, bratan, hai în colț.'],
-      ['npc_c5', 1660, 1180, 'Conductorul de Troleibuz', 'Biletul, vă rog. N-aveți? Coborâți la următoarea, aici nu-i taxi gratis.'],
-      ['npc_c3', 2100, 690, 'Șoferul de Evacuator', 'Ai parcat pe trotuar, băiete? Hai-hai, ți-o ridic acuma.'],
-      ['npc_c4', 1080, 1122, 'Doamna Doctor', 'Ce te doare? Tensiunea de la nervi. Ia trei zile concediu și gata, că n-am ce-ți face.'],
-      ['npc_c0', 300, 690, 'Marfagiul de la Piață', 'Roșii de Costești, castraveți, două kile la preț de una! Hai, că închid.'],
-      ['npc_c7', 1920, 1480, 'Mecanicul din Garaj', 'Băi bratu, motorul de Logan? Îi pun turbină, faci drift pe Dacia.'],
-      ['npc_c1', 1620, 1480, 'Blogherița', 'Salutare, gașcă! Azi vă arăt cel mai aesthetic kofe din Chișinău, link în bio.'],
-      ['npc_c6', 1480, 1180, 'Viticultorul', 'Gustă vinul, ăsta-i de Cricova, nu apă chioară. Da\' primarul ăla ascunde ceva.'],
-      ['npc_c2', 560, 690, 'Directorul de Fabrică', 'Hai să discutăm, băiete. O fabrică de mobilă, nu contează care. Numerar, da?'],
+      ['npc_zina', 360, 958, 'Pensionara de pe Bancă', 'Da\' tu a cui ești, măi băiete? Eu pe maică-ta o cunosc de-amu, stai jos.'],
+      ['npc_gopnik', 700, 1122, 'Gopnicul din Curte', 'Băi bratan, ai o siga? Și șo te zgâiești așa la mine, kak?'],
+      ['npc_c3', 1080, 958, 'Funcționara la Primărie', 'Reveniți după pauză, amu-i tehnic pererîv, normalno. Lucrăm la asta.'],
+      ['npc_c4', 1700, 1122, 'Vânzătoarea la Linella', 'Pachet luați? Doi lei. Card ori cash, davai mai iute, că-i coadă.'],
+      ['npc_c2', 2080, 958, 'Șoferul de Rutieră', 'Treci spatele, fă loc, băi! Transmite banii pe rând, davai.'],
+      ['npc_c5', 2300, 958, 'Pensionarul de la Piață', 'Pe vremea mea cu salariu luai un Jiguli. Amu o pungă de hrișcă, paka.'],
+      ['npc_c6', 420, 1122, 'Studenta la USM', 'Auzi, după sesiune plec în Italia ca toți, normalno. Bursa? Ajunge de-un kofe și gata.'],
+      ['npc_c1', 900, 1122, 'Popa din Centru', 'Hristos a-nviat, fiule. Mașina nouă? Domnul a dat, kaneshno. Lasă ceva la cutie.'],
+      ['npc_c7', 1380, 1122, 'Deputatul', 'Stimați alegători, anu\' ăsta astupăm toate gropile, vă garantez, jur.'],
+      ['npc_c0', 2120, 1122, 'Revenit din Italia', 'Allora, băieți, în Italia altă viață. Da\' acasă-i acasă, normalno, torn fundația.'],
+      ['npc_c4', 2560, 1300, 'Plăcintăreasa de la Gară', 'Mănâncă, slăbănogule, hai ia o plăcintă cât îi caldă, de la mine cadou.'],
+      ['npc_c2', 2300, 1300, 'Schimbătorul Valutar', 'Euro, dolar, ruble? Cel mai jostko curs la mine, bratan, hai în colț, davai.'],
+      ['npc_c5', 1660, 1180, 'Conductorul de Troleibuz', 'Biletu\', vă rog. N-aveți? Coborâți la următoarea, aici nu-i taxi pe blat.'],
+      ['npc_c3', 2100, 690, 'Șoferul de Evacuator', 'Ai parcat pe trotuar, băi? Hai-hai, ți-o ridic amuș, davai.'],
+      ['npc_c4', 1080, 1122, 'Doamna Doctor', 'Șo te doare? Tensiunea de la nervi. Ia trei zile concediu și gata, că n-am ce-ți face, măi.'],
+      ['npc_c0', 300, 690, 'Marfagiul de la Piață', 'Roșii de Costești, castraveți, două kile la preț de una! Hai, davai, că închid.'],
+      ['npc_c7', 1920, 1480, 'Mecanicul din Garaj', 'Băi bratu, motoru\' de Logan? Îi pun turbină, jostko, faci drift pe Dacia, normalno.'],
+      ['npc_c1', 1620, 1480, 'Blogherița', 'Salut, gașcă! Azi vă arăt cel mai aesthetic kofe din Chișinău, baban, link în bio.'],
+      ['npc_c6', 1480, 1180, 'Viticultorul', 'Gustă vinu\', ăsta-i de Cricova, nu apă chioară, normalno. Da\' primaru\' ăla ascunde ceva, jur.'],
+      ['npc_c2', 560, 690, 'Directorul de Fabrică', 'Hai să discutăm, băi. O fabrică de mobilă, nu contează care. Numerar, da?'],
     ]
     cast.forEach(([key, x, y, label, line]) => {
       this.add.image(x, y, key).setOrigin(0.5, 1).setDepth(y)
@@ -740,10 +751,10 @@ export default class CentruScene extends Phaser.Scene {
       ['npc_c0', 2160, 1470, 'Vânzătoarea de Pește', 'Caras proaspăt azi, crap, scrumbie, miroase a râu, nu a frigider. Ia-l pe ăsta, ți-l curăț pe loc, ție-ți dau și icrele cadou. Hai, că pe la prânz rămân doar oase.', 20, 20, 'lei'],
       ['npc_c2', 2060, 1320, 'Cântăritorul de la Piață', 'Cântarul meu e cinstit, băiete, nu ca al lui de colo cu magnet sub talger. Dacă te-a tras careva în piață, vino la mine, recântăresc gratis, de principiu.', 10, 30, 'civic'],
       ['npc_c7', 1960, 1200, 'Acordeonistul din Pasaj', 'O melodie pentru tine, băiete, ceva de suflet ori ceva de joc? Lumea trece grăbită și uită că are urechi. Lasă un leu în pălărie, nu pentru mine, pentru muzică.', 15, 20, 'lei'],
-      ['npc_gopnik', 200, 1500, 'Gopnicii din Buiucani', 'Bratan, aici tu nu treci așa. Întâi arăți ce poți, apoi vorbim. Ai o siga?', 8, 20, 'cred'],
-      ['npc_gopnik', 1080, 1460, 'Gopnicii din Botanica', 'Bratan, stai jos, mănâncă semechki, da nu scuipa pe curtea mea. Cine ți-o dat voie să parchezi aici?', 8, 20, 'cred'],
-      ['npc_gopnik', 2540, 820, 'Gopnicii din Ciocana', 'Siga, fraer, drumu ăsta îi al nostru. Vrei să treci la Borea? Plătești tribut ori faci o cursă, davai.', 8, 20, 'cred'],
-      ['npc_gopnik', 2360, 1460, 'Gopnicii din Râșcani', 'Ce te uiți, bratan? În piață umblă lume cu bani, noi doar ne uităm. Tu ești cu noi ori contra?', 8, 20, 'cred'],
+      ['npc_gopnik', 200, 1500, 'Gopnicii din Buiucani', 'Băi bratan, aici tu nu treci numa așa, jostko. Întâi arăți ce poți, apoi vorbim. Ai o siga?', 8, 20, 'cred'],
+      ['npc_gopnik', 1080, 1460, 'Gopnicii din Botanica', 'Băi bratan, stai jos, mănâncă semechki, da nu scuipa pe curtea mea, blat. Cine ț-o dat voie să parchezi aici, kak?', 8, 20, 'cred'],
+      ['npc_gopnik', 2540, 820, 'Gopnicii din Ciocana', 'Siga, fraer, drumu ăsta-i al nostru, normalno. Vrei la Borea? Plătești tribut ori faci o cursă, davai, mișcă.', 8, 20, 'cred'],
+      ['npc_gopnik', 2360, 1460, 'Gopnicii din Râșcani', 'Șo te zgâiești, bratan? În piață umblă lume cu bani, noi numa ne uităm. Tu ești cu noi ori contra, da ori niet?', 8, 20, 'cred'],
     ]
     side.forEach(([key, x, y, label, line, lei, xp, kind]) => {
       this.add.image(x, y, key).setOrigin(0.5, 1).setDepth(y)
@@ -810,13 +821,16 @@ export default class CentruScene extends Phaser.Scene {
 
   onRankUp(i) {
     const r = this.ranks[i]
-    this.registry.set('levelup', { n: i + 1, name: r.name, joke: r.joke || '', id: this.time.now }) // full-screen announcement
     let newWeapon = null
     if (i >= 2) { if (!this.weaponUnlocked.covor) newWeapon = 'Covor'; this.weaponUnlocked.covor = true; this.weaponUnlocked.parbar = true; this.bribeDiscount = true }
     if (i >= 4) { if (!this.weaponUnlocked.baban) newWeapon = 'Sticlă de baban'; this.weaponUnlocked.baban = true; this.potholeTime = 0.9; this.sprintSpeed = 210 }
     if (i >= 5 && !this.weaponUnlocked.cart) { this.weaponUnlocked.cart = true; newWeapon = 'Cărucior de Linella' }
-    if (newWeapon) this.time.delayedCall(2400, () => { if (!this.won) this.toast(`Armă nouă deblocată: ${newWeapon}. Apasă Q.`) })
+    // full-screen announcement that freezes the game until the player clicks / presses E
+    this.levelPause = true
+    this.registry.set('levelup', { n: i + 1, name: r.name, joke: r.joke || '', weapon: newWeapon, id: this.time.now })
   }
+
+  dismissLevelUp() { this.levelPause = false; this.registry.set('levelup', null) }
 
   // chained investigation: a dovadă is only collectable when it's the CURRENT lead; each one points to the next.
   addClue(key, text) {
@@ -834,7 +848,7 @@ export default class CentruScene extends Phaser.Scene {
 
   leadHint(key) {
     return ({
-      gopnik: 'Ia o mașină de pe bulevard, du-te la gopnicii din curte (vest) și câștigă cursa.',
+      gopnik: this.gopnikRaceWon ? 'Întoarce-te la gopnicii din curte (pe jos) — au ceva să-ți zică.' : 'Ia o mașină de pe bulevard, du-te la gopnicii din curte (vest) și câștigă cursa.',
       borea: 'Du-te la Borea Țigan, în groapa din parc, și acceptă misiunea cu babanul.',
       homeless: 'Caută omul din parc (Grădina Publică). Calmează-l cu 15 lei, apoi ascultă-l (E).',
       cop: 'Urcă în mașină, condu repede pe bulevard (ține Shift) până te oprește poliția, apoi alege „Fugi".',
@@ -879,7 +893,7 @@ export default class CentruScene extends Phaser.Scene {
   }
 
   toast(msg) { this.registry.set('toast', { msg, id: this.time.now }) }
-  frozen() { return this.cop || this.shopOpen || this.exposeOpen || this.won || this.dialogOpen || this.menuPause }
+  frozen() { return this.cop || this.shopOpen || this.exposeOpen || this.won || this.dialogOpen || this.menuPause || this.levelPause }
 
   // paged dialogue: long lines are split into one sentence at a time; player advances with E.
   // optional `after` runs when the dialogue is dismissed (e.g. open Borea's shop after his greeting).
@@ -1008,10 +1022,10 @@ export default class CentruScene extends Phaser.Scene {
       if (this.cluesEnabled) this.addClue('borea', 'Borea fence-uiește pentru un „client din est": telefoane rusești')
       else this.registry.set('mission', '')
       this.syncHud()
-      this.openDialog('Borea Țigan', 'Tu pe mine a sculat! Molodeț, ai dus babanul întreg. Uite banii, +90 lei. Un client din est tot întreabă de marfă, ceva cu telefoane rusești.', () => this.openShop())
+      this.openDialog('Borea Țigan', 'Băi, tu pe mine a sculat! Molodeț, ai dus babanu\' întreg, jostko. Uite banii, +90 lei. Un client din est tot întreabă de marfă, ceva cu telefoane rusești.', () => this.openShop())
       return
     }
-    this.openDialog('Borea Țigan', 'Tu pe mine a sculat! Hai, zi, vinzi ori cumperi?', () => this.openShop())
+    this.openDialog('Borea Țigan', 'Băi, tu pe mine a sculat! Hai, zi, davai, vinzi ori cumperi?', () => this.openShop())
   }
   openShop() { this.shopOpen = true; this.shopMode = 'main'; this.renderShop() }
 
@@ -1078,7 +1092,7 @@ export default class CentruScene extends Phaser.Scene {
     this.state.smuggling = true // carrying the baban toward the Gară
     this.dropPoint = this.add.image(2500, 1300, 'marker').setOrigin(0.5, 1).setDepth(99950).setTint(0xff8a4a)
     this.registry.set('mission', 'Borea: du babanul la semnul portocaliu de la Gară. Fugi de poliție.')
-    this.openDialog('Borea Țigan', 'Ține babanul ăsta. Du-l la Gară, la semnul portocaliu. Fugi de gabori, auzi? Pe urmă vii înapoi la mine după bani.')
+    this.openDialog('Borea Țigan', 'Ține babanu\' ăsta. Du-l la Gară, la semnu\' portocaliu. Fugi de gabori, auzi, bratan? Pe urmă vii înapoi la mine după bani, davai.')
   }
 
   deliverSmuggle() {
@@ -1124,7 +1138,7 @@ export default class CentruScene extends Phaser.Scene {
     this.racing = true; this.raceCp = 0; this.raceT = 0
     this.raceRings.forEach((r) => r.setVisible(true))
     this._missionBak = this.registry.get('mission')
-    this.toast('GO! Treci prin inele, bratan!')
+    this.toast('DAVAI! Treci prin inele, bratan, jostko!')
   }
 
   updateRace(d) {
@@ -1138,16 +1152,21 @@ export default class CentruScene extends Phaser.Scene {
       this.toast(`Punct! ${this.raceCp}/${this.raceRings.length}`)
     }
     this.registry.set('mission', `Cursă: ${this.raceCp}/${this.raceRings.length} inele · ${Math.max(0, Math.ceil(this.raceLimit - this.raceT))}s`)
-    if (this.raceT > this.raceLimit) this.failRace('Prea lent, bratu.')
+    if (this.raceT > this.raceLimit) this.failRace('Prea lent, bratu. Paka.')
   }
 
   winRace() {
     this.racing = false; this.raceRings.forEach((r) => r.setVisible(false))
     const stake = 120 + (this._raceWins || 0) * 20 + (this.leiPerRideBonus || 0); this._raceWins = (this._raceWins || 0) + 1
     this.state.lei += stake; this.state.score += 80; this.addCred(40); this.addXp(80)
-    this.toast(`Respect, bratan! +${stake} lei`)
     this.registry.set('mission', this._missionBak || '')
-    if (this.cluesEnabled) this.addClue('gopnik', 'cortegiul negru merge mereu spre ambasada rusă; gopnicii văd tot din curte')
+    if (this.cluesEnabled && this.leadOrder[this.leadIdx] === 'gopnik' && !this.clues.gopnik) {
+      this.gopnikRaceWon = true
+      this.updateDovezBanner() // pin points back to the gopnici
+      this.openDialog('Gopnicii', `Jostko, bratan! Ai inimă, nu glumă. Uite banii, +${stake} lei. Amu vino la noi pe jos, îți zicem ceva important.`)
+    } else {
+      this.toast(`Jostko, bratan! Ai meritat. +${stake} lei`)
+    }
     this.syncHud()
   }
 
@@ -1183,11 +1202,12 @@ export default class CentruScene extends Phaser.Scene {
 
   // ---- interaction -------------------------------------------------------
   onAction() {
+    if (this.levelPause) { this.dismissLevelUp(); return }
     if (this.dialogOpen) { this.advanceDialog(); return }
     if (this.shopOpen) { this.closeShop(); return }
     if (this.cop || this.exposeOpen || this.won) return
     if (this.state.driving) {
-      if (this.gopnik && !this.racing && (this.car.x - this.gopnik.x) ** 2 + (this.car.y - this.gopnik.y) ** 2 < 80 * 80) { this.startRace(); return }
+      if (this.gopnik && !this.racing && !(this.gopnikRaceWon && !this.clues.gopnik) && (this.car.x - this.gopnik.x) ** 2 + (this.car.y - this.gopnik.y) ** 2 < 80 * 80) { this.startRace(); return }
       this.exitCar(); return
     }
     const n = this.nearest
@@ -1201,7 +1221,7 @@ export default class CentruScene extends Phaser.Scene {
     else if (n.type === 'om-befriend') this.befriendHomeless()
     else if (n.type === 'om-talk') {
       if (this.cluesEnabled && !this.clues.homeless) {
-        this.openDialog('Omul din parc', 'Și aiurești wai, șii cu tine?! Ai să mă arăți la televizor? Matryoshka... telefonul... în beciul de la primărie... eu am văzut, băiete.')
+        this.openDialog('Omul din parc', 'Și aiurești wai, șii cu tine?! Ai să mă arăți la televizor? Matryoshka... telefonu\'... în beciu\' de la primărie... eu am văzut, băi băiete.')
         this.addClue('homeless', 'matryoshka și un telefon rusesc în beciul primăriei')
       } else {
         this.openDialog('Omul din parc', 'Și aiurești wai, șii cu tine?! Ai să mă arăți la televizor? ' + this.omLine())
@@ -1211,32 +1231,39 @@ export default class CentruScene extends Phaser.Scene {
     else if (n.type === 'drop') this.deliverSmuggle()
     else if (n.type === 'expose') this.openExpose()
     else if (n.type === 'mayor') this.openDialog('Ceon Eban', this.mayorLine())
-    else if (n.type === 'gopnik') this.openDialog('Gopnicii', 'Ia o mașină de pe bulevard și vino, bratan, facem o cursă pe curte.')
+    else if (n.type === 'gopnik') {
+      if (this.cluesEnabled && this.leadOrder[this.leadIdx] === 'gopnik' && this.gopnikRaceWon && !this.clues.gopnik) {
+        this.openDialog('Gopnicii', 'Băi, ai inimă, recunosc. Amu ascultă-ncoace, bratan, da\' ține-ți gura: cortegiul ăla negru merge mereu spre ambasada rusă, jostko. Noi vedem tot din curte, fiecare mașină care intră și iese. Cine-l încarcă? Borea, frate. El bagă marfa și o trimite spre est. Numa să nu zici că de la noi ai aflat, ori îți fărâm oasele amuș.')
+        this.addClue('gopnik', 'cortegiul negru merge spre ambasada rusă; Borea încarcă marfa, gopnicii văd tot din curte')
+      } else {
+        this.openDialog('Gopnicii', 'Ia o mașină de pe bulevard și vino-ncoace, bratan, da\' iute, facem o cursă pe curte ori îți fărâm fasonu\'.')
+      }
+    }
     else if (n.type === 'pothole') { this.filling = { ref: n.ref, t: 0, dur: this.potholeTime }; this.toast('Astupi gropa... stai pe loc.') }
   }
 
   omLine() {
     const lines = [
-      'Toți aiurați, numa eu vorbesc cu porumbeii.',
+      'Toți aiurați, numa eu vorbesc cu porumbeii, wai.',
       'Wai, da tu și te uiți? Eu stau aici de când era Lenin în piață.',
-      'Matryoshka... telefonul... în beciul de la primărie... eu am văzut, băiete.',
+      'Matryoshka... telefonu\'... în beciu\' de la primărie... eu am văzut, băi băiete.',
       `${MAYOR} vorbește cu Moscova noaptea. Nimeni nu crede pe nebunul din parc.`,
       'Caută sub Arc, băiete. Acolo-i o păpușă de lemn care știe tot.',
-      'Cortegiul negru iar a trecut spre est. Numa eu văd. Voi dormiți, oameni buni.',
+      'Cortegiu\' negru iar a trecut spre est, jostko. Numa eu văd. Voi dormiți, oameni buni.',
       'Mi-au pus cip în plombă la stomatolog. De-asta aud Moscova noaptea, wai.',
-      'Dă un leu de divin, băiete. Pentru sănătatea ta, jur pe groapa de pe Dacia.',
+      'Dă un leu de divin, băi băiete. Pentru sănătatea ta, jur pe groapa de pe Dacia.',
       'Eu am fost inginer. Acuma-s filozof în parc. Salariul, tot acela, băiete.',
       'Șșș... auzi? Țevile. Țevile de la Termoelectrica vorbesc rusește noaptea.',
       'Extratereștrii au aterizat pe Malldova. Au luat un șaurmă și-au plecat. Deștepți.',
       'Wai, ce vremuri. Pe vremea mea venea troleibuzul. Acuma vine numa frica.',
-      `Dă-mi semechki, băiete, că-mi trec nervii. Și spune-i lui ${MAYOR} că-l văd.`,
+      `Dă-mi semechki, băi băiete, că-mi trec nervii. Și spune-i lui ${MAYOR} că-l văd, normalno.`,
       'Eu-s împărat, băiete. Nu vezi coroana? E invizibilă, ca pensia mea.',
       'Pămîntul e plat, da\' gropile-s adânci. Contradicție. Mă doare capul, wai.',
       'Noaptea, sub Arc, vine un domn în costum. Vorbește la telefon. În rusă. Mereu.',
-      'Eu nu-s nebun, băiete. Eu-s singurul treaz. Aiurați-vă voi mai departe, șii cu tine.',
+      'Eu nu-s nebun, băi băiete. Eu-s singuru\' treaz. Aiurați-vă voi mai departe, șii cu tine.',
       'Am scris primarului. Mi-a răspuns ecoul din groapă: „lucrăm la asta", zice.',
       'Sticla-i a mea, am pus-o sub bancă în nouăj\' patru. Nu te atinge, wai.',
-      'Bea apă de la robinet, băiete. Maro, da\' gratis. Asta-i independența, băiete.',
+      'Bea apă de la robinet, băi băiete. Maro, da\' pe blat. Asta-i independența, băiete.',
       'Pensia, hramul, botezul, toate-s în aceeași zi. Coincidență? Tu chiar crezi?',
       'Vărul meu locuiește acuma în groapa de pe Albișoara. Frumos, cu vedere la apă.',
     ]
@@ -1290,15 +1317,15 @@ export default class CentruScene extends Phaser.Scene {
     if (s.mission === 0) {
       s.mission = 1
       this.registry.set('mission', 'Pasul 1: adu pâine de la Linella.')
-      this.openDialog('Pensionara', 'Bine c-ai venit acasă, maică. Fă-mi întâi un bine: adu-mi o pâine de la Linella. Pe urmă stăm de vorbă.')
+      this.openDialog('Pensionara', 'Bine c-ai venit acasă, maică. Fă-mi întâi un bine: adu-mi o pâine de la Linella. Pe urmă stăm de vorbă, normalno.')
     } else if (s.mission === 2) {
       s.mission = 3; s.lei += 30; s.score += 150; this.addXp(150)
       this.cluesEnabled = true; this.addCivic(12); this.leadIdx = 0
       this.updateDovezBanner()
-      this.openDialog('Pensionara', 'Mulțumesc, maică. Acuma ascultă. Primarul ăsta vorbește prea des la telefon, și tot în rusă. Eu-s bătrână, da nu surdă. Începe de la gopnicii din curte, ei văd fiecare mașină care intră.')
+      this.openDialog('Pensionara', 'Mulțumesc, maică. Amu ascultă-ncoace. Primaru\' ăsta vorbește prea des la telefon, și tot în rusă, jostko. Eu-s bătrână, da nu surdă. Începe de la gopnicii din curte, ei văd fiecare mașină care intră.')
       this.syncHud()
     } else if (s.mission === 1) {
-      this.openDialog('Pensionara', 'Pâinea, maică. De la Linella. Te aștept pe bancă.')
+      this.openDialog('Pensionara', 'Pâinea, maică. De la Linella. Te-aștept pe bancă, davai.')
     } else if (this.finaleReady) {
       this.openDialog('Pensionara', 'Ai tot ce-ți trebuie, maică. Du-te la Primărie și spune-le adevărul.')
     } else {
@@ -1320,9 +1347,9 @@ export default class CentruScene extends Phaser.Scene {
     if (this.car) this.car.speed = 0
     const openers = [
       'Plutonierul: Bună ziua. Documentele... știți de ce v-am oprit?',
-      'Plutonierul: Băi, șefu, încotro așa grăbit? Hai actele.',
-      'Plutonierul: Ai cam zburat pe bulevard. De ce încălcăm?',
-      'Plutonierul: Control de rutină. Văd că ne grăbim tare...',
+      'Plutonierul: Băi, șefu, încotro așa grăbit? Hai actele iute, davai.',
+      'Plutonierul: Băi, ai cam zburat pe bulevard. Șo încălcăm, kak?',
+      'Plutonierul: Control de rutină, șefu. Văd că ne grăbim tare, normalno...',
     ]
     const q = openers[Math.floor(Math.random() * openers.length)]
     if (this.car && this.copSprite) {

@@ -33,7 +33,6 @@ export default class CreateScene extends Phaser.Scene {
       this.add.rectangle(0, 0, W, H, 0x0b0c14, 0.62).setOrigin(0)
     }
     this.add.tileSprite(0, 0, W, H, 'scan').setOrigin(0).setAlpha(0.1)
-    this.add.text(W / 2, 36, 'CHIȘINĂU RUSH', { fontFamily: F, fontSize: '34px', color: '#ebc372' }).setOrigin(0.5).setStroke('#0b0c14', 6)
 
     if (this.mode === 'menu') this.buildMenu(W, H)
     else this.buildCreation(W, H)
@@ -43,8 +42,13 @@ export default class CreateScene extends Phaser.Scene {
 
   // ── main menu (already-ongoing game): no character creation, just resume or start fresh ──
   buildMenu(W, H) {
-    this.add.text(W / 2, 80, 'Joc salvat găsit. Continuă ori începe altul.', { fontFamily: F, fontSize: '14px', color: '#cdd2dc' }).setOrigin(0.5).setStroke('#0b0c14', 4)
-    const cy = H / 2
+    // hero title — big, upper third, on a dark scrim band so it reads over the busy pixel backdrop
+    const bandY = Math.round(H * 0.10), bandH = Math.round(Math.min(170, H * 0.30))
+    this.add.rectangle(0, bandY, W, bandH, 0x0a0a12, 0.62).setOrigin(0)
+    const tSize = Math.max(42, Math.min(76, Math.round(W / 17)))
+    this.add.text(W / 2, bandY + bandH * 0.42, 'CHIȘINĂU RUSH', { fontFamily: F, fontSize: tSize + 'px', color: '#ffe34d', align: 'center', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#1a0e00', 10).setShadow(0, 5, '#000000', 0, false, true)
+    this.add.text(W / 2, bandY + bandH * 0.80, 'Joc salvat găsit. Continuă ori începe altul.', { fontFamily: F, fontSize: '15px', color: '#e8e1c8' }).setOrigin(0.5).setStroke('#0b0c14', 4)
+    const cy = H / 2 + 40
     const cont = this.add.rectangle(W / 2, cy - 8, 330, 58, 0x1c2440).setStrokeStyle(2, 0x2f5bb0).setInteractive({ useHandCursor: true })
     this.add.text(W / 2, cy - 8, '▶  CONTINUĂ', { fontFamily: F, fontSize: '22px', color: '#9ec0ff' }).setOrigin(0.5)
     cont.on('pointerdown', () => this.start(true))
@@ -60,6 +64,7 @@ export default class CreateScene extends Phaser.Scene {
 
   // ── character creation: only when starting a brand-new game ──
   buildCreation(W, H) {
+    this.add.text(W / 2, 38, 'CHIȘINĂU RUSH', { fontFamily: F, fontSize: '40px', color: '#ffe34d', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#1a0e00', 8).setShadow(0, 4, '#000000', 0, false, true)
     this.add.text(W / 2, 72, 'Cum te cheamă și cine ești, bratu?', { fontFamily: F, fontSize: '14px', color: '#cdd2dc' }).setOrigin(0.5).setStroke('#0b0c14', 4)
     // name field (starts EMPTY)
     this.pname = ''

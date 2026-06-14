@@ -108,7 +108,8 @@ export default class UiScene extends Phaser.Scene {
     this.luTitle = this.add.text(W / 2, H / 2 - 30, '', { fontFamily: F, fontSize: '42px', color: '#ebc372' }).setOrigin(0.5).setDepth(65).setVisible(false).setStroke('#0b0c14', 6)
     this.luRank = this.add.text(W / 2, H / 2 + 22, '', { fontFamily: F, fontSize: '22px', color: '#ffffff' }).setOrigin(0.5).setDepth(65).setVisible(false).setStroke('#0b0c14', 5)
     this.luJoke = this.add.text(W / 2, H / 2 + 58, '', { fontFamily: F, fontSize: '14px', color: '#cdd2dc', wordWrap: { width: W * 0.7 }, align: 'center' }).setOrigin(0.5).setDepth(65).setVisible(false).setStroke('#0b0c14', 4)
-    this._luT = 0; this._luId = null
+    this.luHint = this.add.text(W / 2, H / 2 + 120, '▶  click / E pentru a continua', { fontFamily: F, fontSize: '14px', color: '#ebc372' }).setOrigin(0.5).setDepth(65).setVisible(false).setStroke('#0b0c14', 4)
+    this._luId = null; this._luOn = false
 
     // win overlay
     this.winDim = this.add.rectangle(0, 0, W, H, 0x0a0b10, 0.93).setOrigin(0).setDepth(60).setVisible(false)
@@ -357,22 +358,20 @@ export default class UiScene extends Phaser.Scene {
       this.hungerText.setVisible(true).setText('⚠ Ți-e FOAME! Mănâncă (kebab/cvas/magazin) sau leșini')
     } else if (this.hungerVeil.visible) { this.hungerVeil.setVisible(false); this.hungerText.setVisible(false) }
 
-    // level-up announcement (full screen, ~2.2s, then fades)
+    // level-up announcement — full screen, stays until the player clicks / presses E
     const lu = this.registry.get('levelup')
-    if (lu && lu.id !== this._luId) {
-      this._luId = lu.id; this._luT = this.time.now
-      this.luTitle.setText('NIVEL ' + lu.n); this.luRank.setText(lu.name); this.luJoke.setText(lu.joke || '')
-      ;[this.luDim, this.luKick, this.luTitle, this.luRank, this.luJoke].forEach((o) => o.setVisible(true).setAlpha(1))
-      this.luDim.setAlpha(0.82)
+    const luOn = !!lu
+    if (luOn && lu.id !== this._luId) {
+      this._luId = lu.id
+      this.luTitle.setText('NIVEL ' + lu.n); this.luRank.setText(lu.name)
+      this.luJoke.setText((lu.joke || '') + (lu.weapon ? '\n\nArmă nouă: ' + lu.weapon + '  (apasă Q)' : ''))
     }
-    if (this._luT) {
-      const el = this.time.now - this._luT
-      if (el > 2200) {
-        const a = Math.max(0, 1 - (el - 2200) / 500)
-        this.luDim.setAlpha(0.82 * a);[this.luKick, this.luTitle, this.luRank, this.luJoke].forEach((o) => o.setAlpha(a))
-        if (a <= 0) { this._luT = 0;[this.luDim, this.luKick, this.luTitle, this.luRank, this.luJoke].forEach((o) => o.setVisible(false)) }
-      }
+    if (luOn !== this._luOn) {
+      this._luOn = luOn
+      ;[this.luDim, this.luKick, this.luTitle, this.luRank, this.luJoke, this.luHint].forEach((o) => o.setVisible(luOn).setAlpha(1))
+      if (luOn) this.luDim.setAlpha(0.86)
     }
+    if (luOn) this.luHint.setAlpha(0.55 + 0.45 * (Math.sin(this.time.now / 320) + 1) / 2) // pulse the prompt
 
     this.crt.setVisible(this.registry.get('crt') !== false)
     this.drawMinimap()
