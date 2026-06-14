@@ -505,7 +505,7 @@ export default class CentruScene extends Phaser.Scene {
 
   onHomelessFlip() {
     this._homelessFlipped = true // remember even before the investigation opens, so the clue is never lost
-    if (this.cluesEnabled) this.addClue('homeless', 'matryoshka și un telefon rusesc în beciul primăriei')
+    if (this.cluesEnabled) this.addClue('homeless', 'matryoshka, telefon în rusă, beci la primărie. Întreabă un polițai.')
     if (!this._matryoshkaSpawned) {
       this._matryoshkaSpawned = true
       const s = this.add.image(1360, 1255, 'c_matryoshka').setOrigin(0.5, 1).setDepth(1255)
@@ -575,11 +575,22 @@ export default class CentruScene extends Phaser.Scene {
       hp: 100, maxHp: 100, lei: 60, heat: 0, score: 0, combo: 0, comboT: 0, driving: false, mission: 0,
       cred: 0, civic: 0, xp: 0, satchel: 0, acteFalse: false, speedBoost: false, smuggling: false,
     }
-    this.clues = { gopnik: false, borea: false, cop: false, homeless: false } // 4 actionable dovezi (consistent HUD + menu)
+    this.clues = { gopnik: false, borea: false, homeless: false, cop: false } // 4 actionable dovezi, in investigation order (HUD + menu read this)
     this.leadOrder = ['gopnik', 'borea', 'homeless', 'cop'] // the investigation is a CHAIN: each lead points to the next
     this.leadIdx = 0
     this.cluesEnabled = false
     this.finaleReady = false
+    // staged finale + car chase
+    this.finaleActive = false   // true from the moment the unmask starts through the whole chase
+    this.unmaskFrozen = false   // true only during the scripted convergence/accusation beats (freezes the world)
+    this.accusers = []
+    this.crowdSprites = []
+    this.villainCar = null
+    this.escapeMeter = 100      // Eban's getaway; ram it down to 0 to catch him
+    this.chaseCheckpoint = null
+    this.pursuitClose = false
+    this.flags = { ramBoost: false, bonusDosar: false } // earned by the new arc side quests
+    this.recruitedAllies = []   // extra bodies that join the convergence crowd
     this.won = false
     this.car = null
     this.cop = false
@@ -756,10 +767,16 @@ export default class CentruScene extends Phaser.Scene {
       ['npc_gopnik', 1080, 1460, 'Gopnicii din Botanica', 'Băi bratan, stai jos, mănâncă semechki, da nu scuipa pe curtea mea, blat. Cine ț-o dat voie să parchezi aici, kak?', 8, 20, 'cred'],
       ['npc_gopnik', 2540, 820, 'Gopnicii din Ciocana', 'Siga, fraer, drumu ăsta-i al nostru, normalno. Vrei la Borea? Plătești tribut ori faci o cursă, davai, mișcă.', 8, 20, 'cred'],
       ['npc_gopnik', 2360, 1460, 'Gopnicii din Râșcani', 'Șo te zgâiești, bratan? În piață umblă lume cu bani, noi numa ne uităm. Tu ești cu noi ori contra, da ori niet?', 8, 20, 'cred'],
+      // ---- arc side quests: each one feeds the finale (a tool, an ally, or a smoking-gun dovadă) ----
+      ['npc_c5', 2180, 1300, 'Vatmanul de Troleibuz', 'Repară-mi tu troleibuzu 22 și-ți pun io un motoraș sub capotă, bratan. Bun pentru când fugi după cineva important. Ori cazi pe cineva.', 20, 30, 'lei', 'ramBoost'],
+      ['npc_zina', 1460, 1320, 'Baba din Scară', 'Adă-mi dreptate cu primaru ăsta și viu și io la primărie să spun ce-am văzut. Cortegiul ăla negru, cu ochii mei l-am văzut, maică.', 15, 25, 'civic', 'ally:baba'],
+      ['npc_c0', 980, 884, 'Gunoierul de la Primărie', 'Băi, am scos hârtii arse din containeru de la primărie. Semnătura primarului pe ele, jur. Da\' io n-am zis nimic, da? Ține-le tu, mie mi-i frică.', 25, 40, 'cred', 'bonusDosar'],
+      ['npc_gopnik', 360, 1880, 'Mecanicul de pe Dacia', 'Bratan, motoru tău sună a tristețe, jostko. Hai în garaj, ți-l reglez, pe urmă faci drift pe Ciocana de se sperie și gaborii.', 20, 30, 'cred', ''],
+      ['npc_c6', 1180, 884, 'Jurnalista Locală', 'Tu strângi dovezi, io am microfon și cititori. Dă-mi un pont bun și ți-l scot pe primar pe prima pagină, normalno. Presa-i cu tine.', 20, 30, 'civic', 'ally:presa'],
     ]
-    side.forEach(([key, x, y, label, line, lei, xp, kind]) => {
+    side.forEach(([key, x, y, label, line, lei, xp, kind, flag]) => {
       this.add.image(x, y, key).setOrigin(0.5, 1).setDepth(y)
-      this.sideNpcs.push({ x, y, label, line, lei, xp, kind, done: false })
+      this.sideNpcs.push({ x, y, label, line, lei, xp, kind, flag: flag || '', done: false })
       this.landmarks.push({ x, y: y - 6, name: label, desc: 'Misiune secundară · vorbește (E)' })
     })
 
@@ -836,23 +853,34 @@ export default class CentruScene extends Phaser.Scene {
   // chained investigation: a dovadă is only collectable when it's the CURRENT lead; each one points to the next.
   addClue(key, text) {
     if (this.clues[key]) return
-    if (this.leadOrder[this.leadIdx] !== key) return // not the active lead yet — ignore (no early/out-of-order clues)
+    if (this.leadOrder[this.leadIdx] !== key) { this.toast(this.lockHint(this.leadOrder[this.leadIdx])); return } // out of order — tell the player what's next instead of silently ignoring
     this.clues[key] = true
     this.leadIdx++
     this.state.civic = Phaser.Math.Clamp(this.state.civic + 5, 0, 100)
     this.state.score += 80; this.addXp(80)
     this.toast('Dovadă găsită: ' + text)
     this.syncHud()
+    this.mayorReact() // the villain visibly notices you closing in
     if (this.clueCount() >= 4) this.unlockFinale()
     else this.updateDovezBanner()
   }
 
+  // shown when the player tries to grab a dovadă out of order — points at the current lead
+  lockHint(active) {
+    return ({
+      gopnik: 'Întâi vorbește cu gopnicii, bratan. Fără ei n-ai cu ce începe.',
+      borea: 'Astâmpără-te. Borea Țigan trebuie să-ți spună de hârtii întâi.',
+      homeless: 'Babacul din parc știe mai multe. Du-te la el întâi.',
+      cop: 'Ai nevoie de un polițai care vorbește. Calcă pedala, lasă-i să te oprească.',
+    })[active] || 'Nu-i încă rândul ăstei dovezi.'
+  }
+
   leadHint(key) {
     return ({
-      gopnik: this.gopnikRaceWon ? 'Întoarce-te la gopnicii din curte (pe jos) — au ceva să-ți zică.' : 'Ia o mașină de pe bulevard, du-te la gopnicii din curte (vest) și câștigă cursa.',
-      borea: 'Du-te la Borea Țigan, în groapa din parc, și acceptă misiunea cu babanul.',
-      homeless: 'Caută omul din parc (Grădina Publică). Calmează-l cu 15 lei, apoi ascultă-l (E).',
-      cop: 'Urcă în mașină, condu repede pe bulevard (ține Shift) până te oprește poliția, apoi alege „Fugi".',
+      gopnik: this.gopnikRaceWon ? 'Întoarce-te pe jos la gopnicii din curte (vest) — au ceva să-ți zică.' : 'Ia o mașină de pe bulevard, câștigă cursa cu gopnicii (vest), apoi vorbește cu ei pe jos.',
+      borea: 'Adună hârtii de pe stradă, fă livrarea la Gară pentru Borea, apoi întoarce-te la el după bani.',
+      homeless: 'Liniștește omul din parc (15 lei ori la pământ), apoi ascultă-l (E).',
+      cop: 'Calcă pedala cu poliția pe coadă (ține Shift), lasă-i să te oprească, apoi alege „Fugi".',
     })[key] || ''
   }
 
@@ -867,14 +895,14 @@ export default class CentruScene extends Phaser.Scene {
 
   // the villain notices you closing in — colder/nervouser as the dovezi pile up
   mayorReact() {
+    // called from addClue: as dovezi pile up (1→3), the villain visibly gets nervous
     const r = [
-      'Ceon Eban (la telefon): da, cineva umblă prin hârtii. Mă ocup.',
-      'Ceon Eban: cine-i mahalagiul ăsta? Aflați. Repede.',
-      'Ceon Eban a dispărut de la panglică. Cortegiul a plecat grăbit spre est.',
-      'Ceon Eban nu mai răspunde la telefon. Doar respiră.',
+      'Ceon Eban: cineva umblă cu hârtii. Lucrăm la asta.',
+      'Cortegiul lui Ceon Eban a plecat grăbit spre est.',
+      'Ceon Eban a anulat toate întâlnirile pe azi.',
     ]
-    const i = Math.min(this.clueCount() - 1, r.length - 1)
-    if (i >= 0) this.time.delayedCall(2600, () => { if (!this.won) this.toast(r[i]) })
+    const i = this.clueCount() - 1
+    if (i >= 0 && i < r.length) this.time.delayedCall(2600, () => { if (!this.won) this.toast(r[i]) })
   }
 
   // escalating face-to-face with the mayor at the Primăria (before the finale)
@@ -889,12 +917,12 @@ export default class CentruScene extends Phaser.Scene {
   unlockFinale() {
     if (this.finaleReady) return
     this.finaleReady = true
-    this.registry.set('mission', `Finală: demască-l pe ${MAYOR} la Primărie (E).`)
-    this.toast('Ai toate dovezile! Mergi la Primărie.')
+    this.registry.set('mission', `Finală: du dovezile la Primărie și demască-l pe ${MAYOR} (E).`)
+    this.toast('Ai toate dovezile! Mergi la Primărie, în fața lumii.')
   }
 
   toast(msg) { this.registry.set('toast', { msg, id: this.time.now }) }
-  frozen() { return this.cop || this.shopOpen || this.exposeOpen || this.won || this.dialogOpen || this.menuPause || this.levelPause }
+  frozen() { return this.cop || this.shopOpen || this.exposeOpen || this.won || this.dialogOpen || this.menuPause || this.levelPause || this.unmaskFrozen }
 
   // paged dialogue: long lines are split into one sentence at a time; player advances with E.
   // optional `after` runs when the dialogue is dismissed (e.g. open Borea's shop after his greeting).
@@ -935,8 +963,12 @@ export default class CentruScene extends Phaser.Scene {
     this.state.lei += sn.lei; this.addXp(sn.xp)
     if (sn.kind === 'cred') this.addCred(10)
     else if (sn.kind === 'civic') this.addCivic(8)
+    let extra = ''
+    if (sn.flag === 'ramBoost') { this.flags.ramBoost = true; extra = ' · mașina ta izbește mai tare în urmărire' }
+    else if (sn.flag === 'bonusDosar') { this.flags.bonusDosar = true; extra = ' · ai un dosar ars cu semnătura lui' }
+    else if (sn.flag && sn.flag.startsWith('ally:')) { const a = sn.flag.slice(5); if (!this.recruitedAllies.includes(a)) this.recruitedAllies.push(a); extra = ' · vine cu tine la demascare' }
     const bonus = sn.kind === 'cred' ? ' · +stradă' : sn.kind === 'civic' ? ' · +civic' : ''
-    this.toast(`Misiune secundară făcută: +${sn.lei} lei${bonus}`)
+    this.toast(`Misiune secundară făcută: +${sn.lei} lei${bonus}${extra}`)
     this.syncHud()
   }
 
@@ -988,6 +1020,7 @@ export default class CentruScene extends Phaser.Scene {
         mission: s.mission, speedBoost: s.speedBoost, acteFalse: s.acteFalse, rankIdx: this.rankIdx,
         clues: this.clues, cluesEnabled: this.cluesEnabled, weaponUnlocked: this.weaponUnlocked,
         homelessFlipped: this._homelessFlipped, finaleReady: this.finaleReady,
+        flags: this.flags, recruitedAllies: this.recruitedAllies,
       }))
     } catch (e) { /* storage blocked */ }
   }
@@ -1004,6 +1037,8 @@ export default class CentruScene extends Phaser.Scene {
       this.cluesEnabled = !!d.cluesEnabled
       this._homelessFlipped = !!d.homelessFlipped
       this.finaleReady = !!d.finaleReady
+      if (d.flags) this.flags = { ...this.flags, ...d.flags }
+      if (Array.isArray(d.recruitedAllies)) this.recruitedAllies = d.recruitedAllies
       this.toast('Progres încărcat. Mergem!')
     } catch (e) { /* corrupt save */ }
   }
@@ -1011,7 +1046,7 @@ export default class CentruScene extends Phaser.Scene {
   menuKey(n) {
     if (this.cop) this.copChoice(n)
     else if (this.shopOpen) this.shopChoice(n)
-    else if (this.exposeOpen) this.exposeConfirm(n)
+    else if (this.exposeOpen) this.accuseChoice(n)
   }
 
   // ---- Borea Țigan — black market ---------------------------------------
@@ -1020,7 +1055,7 @@ export default class CentruScene extends Phaser.Scene {
     if (this.smuggleReturn) {
       this.smuggleReturn = false
       this.state.lei += 90; this.addCred(15); this.addXp(60)
-      if (this.cluesEnabled) this.addClue('borea', 'Borea le toarnă spre un „client din est": telefoane rusești')
+      if (this.cluesEnabled) this.addClue('borea', 'hârtiile tale pleacă spre est, la un client. Întreabă omul din parc.')
       else this.registry.set('mission', '')
       this.syncHud()
       this.openDialog('Borea Țigan', 'Băi, tu pe mine a sculat! Molodeț, ai dus babanu\' întreg, jostko. Uite banii, +90 lei. Un client din est tot întreabă de marfă, ceva cu telefoane rusești.', () => this.openShop())
@@ -1178,19 +1213,189 @@ export default class CentruScene extends Phaser.Scene {
     this.registry.set('mission', this._missionBak || ''); this.syncHud()
   }
 
-  // ---- finale: exposé + win ---------------------------------------------
-  openExpose() {
-    // the exposé plays out one beat at a time in the dialogue box, with callbacks, then you win
-    this.openDialog('Demascarea, în fața Primăriei',
-      'Scoți toate hârtiile pe masă, în fața lumii. Patru dovezi: o păpușă, telefoane care sună numa spre est, un beci, și un act semnat. Ceon Eban: astea-s falsuri, cetățeni, nu credeți un mahalagiu! Pensionara, de pe bancă: ți-am zis eu, maică, vorbea prea des la telefon. Omul din parc: ai să mă arăți la televizor? Ț-am spus că-s treaz. Și hârtiile pe care le-ai cărat la Borea? Erau chiar dosarele lui, trimise spre est. Lumea se întoarce spre el. Cortegiul nu mai vine. Îi iei locul.',
-      () => this.doWin())
+  // ---- finale: convergence → unmask → accusation → car chase → win ------
+  titlecard(text) { this.registry.set('titlecard', { text, id: this.time.now }) }
+
+  bobSprite(spr) {
+    if (!spr) return
+    this.tweens.add({ targets: spr, y: spr.y - 6, duration: 150, yoyo: true, repeat: 2, onUpdate: () => spr.setDepth(spr.y + 0.1) })
   }
 
-  exposeConfirm(n) {
-    if (n !== 1) return
+  spawnDust(x, y) {
+    const d = this.add.image(x, y, 'fx_hit').setAlpha(0.6).setDepth(99961)
+    this.tweens.add({ targets: d, alpha: 0, scale: 1.7, duration: 340, onComplete: () => d.destroy() })
+  }
+
+  // the player presses E at the Primăria with 4/4 dovezi → the town converges
+  startFinale() {
+    if (this.finaleActive) return
+    this.finaleActive = true
+    this.unmaskFrozen = true
+    if (this.state.driving) this.exitCar()
+    this.ion.setVelocity(0, 0)
+    this.registry.set('mission', '')
+    this.registry.set('prompt', '')
+    this.titlecard('DEMASCAREA')
+    this.cameras.main.stopFollow()
+    this.cameras.main.pan(this.mayorSpr.x, this.mayorSpr.y - 10, 700, 'Sine.easeInOut')
+    this.buildAccusers()
+    this.time.delayedCall(850, () => this.gatherCrowd())
+  }
+
+  buildAccusers() {
+    const mx = this.mayorSpr.x, my = this.mayorSpr.y
+    // a semicircle SOUTH of Eban (he stands at the Primăria curb). Arrival order = accusation order.
+    const ring = [
+      { tex: 'npc_zina', dx: -150, dy: 64, speaker: 'Pensionara', line: 'Io ți-am zis de la bun început. Primarul ăsta vorbește prea des la telefon... în rusă. Nu-i a bună, băiete.' },
+      { tex: 'npc_gopnik', dx: -78, dy: 92, speaker: 'Gopnicii', line: 'Bratan, mașina ceea neagră a lui merge napastoi la ambasada rusă. În fiecare seară. Am văzut cu ochii noștri, jostko.' },
+      { tex: 'npc_borea', dx: 6, dy: 100, speaker: 'Borea Țigan', line: 'Tu pe mine a sculat. Hârtiile ceelea pe care le-ai cărat tu la Gară? Erau chiar dosarele lui, Eban. Tu i-ai dus propriile hârtii spre stăpâni.' },
+      { tex: 'npc_homeless', dx: 90, dy: 92, speaker: 'Omul din parc', line: 'Matryoshka pe birou... telefon care sună noaptea... beci la primărie unde nu intră nimeni. Io vă spun de ani, da\' mă credeați nebun. Acu vedeți?' },
+      { tex: 'npc_cop', dx: 162, dy: 64, speaker: 'Sergent Căldare', line: 'Stop. Documentele. Tu cine ești, bre, să acuzi primarul în plină piață? Stai... asta-i semnătura lui pe toate hârtiile. Pe toate. Io... io n-am văzut nimic. Sunt cu oamenii. Davai, dați-vă la o parte.' },
+    ]
+    this.accusers = ring.map((a) => ({ tex: a.tex, speaker: a.speaker, line: a.line, x: mx + a.dx, y: my + a.dy, crowd: true }))
+    // SQ3 reward: the burned dosar adds a smoking-gun beat narrated by Ion
+    if (this.flags.bonusDosar) {
+      this.accusers.push({ speaker: this.playerName || 'Ion', line: 'Și mai am ceva. Un dosar pe jumate ars, scos din containeru\' primăriei. Semnătura lui pe el. Negru pe alb, oameni buni.', spr: this.mayorSpr, crowd: false })
+    }
+  }
+
+  gatherCrowd() {
+    const crowd = this.accusers.filter((a) => a.crowd)
+    crowd.forEach((a, i) => {
+      const startX = a.x + (a.x < this.mayorSpr.x ? -200 : 200)
+      const spr = this.add.image(startX, a.y + 210, a.tex).setOrigin(0.5, 1).setDepth(a.y)
+      a.spr = spr; this.crowdSprites.push(spr)
+      this.time.delayedCall(300 + i * 360, () => {
+        this.tweens.add({
+          targets: spr, x: a.x, y: a.y, duration: 540, ease: 'Quad.easeOut',
+          onUpdate: () => spr.setDepth(spr.y),
+          onComplete: () => { this.spawnDust(a.x, a.y); if (i === crowd.length - 1) this.time.delayedCall(450, () => this.unmaskBeat(0)) },
+        })
+      })
+    })
+    // recruited allies (SQ2/SQ5) swell the crowd as silent bystanders
+    this.recruitedAllies.forEach((ally, j) => {
+      const tex = ally === 'borea_testifies' ? 'npc_borea' : 'npc_zina'
+      const ax = this.mayorSpr.x + (j % 2 ? 200 : -200), ay = this.mayorSpr.y + 120 + j * 14
+      const spr = this.add.image(ax + (j % 2 ? 90 : -90), ay + 200, tex).setOrigin(0.5, 1).setDepth(ay)
+      this.crowdSprites.push(spr)
+      this.time.delayedCall(500 + j * 300, () => this.tweens.add({ targets: spr, x: ax, y: ay, duration: 560, ease: 'Quad.easeOut', onUpdate: () => spr.setDepth(spr.y) }))
+    })
+  }
+
+  // one accusation at a time; the player presses E to advance (agency, not a cutscene)
+  unmaskBeat(n) {
+    if (n >= this.accusers.length) { this.startAccusation(); return }
+    const a = this.accusers[n]
+    this.cameras.main.pan(a.spr.x, a.spr.y - 16, 420, 'Sine.easeInOut')
+    if (a.crowd) this.bobSprite(a.spr)
+    // Eban gets paler / smaller as the case lands
+    const g = Math.max(70, 210 - n * 32)
+    this.mayorSpr.setTint(Phaser.Display.Color.GetColor(255, g, g))
+    this.mayorSpr.setScale(Math.max(0.86, 1 - n * 0.02))
+    this.openDialog(a.speaker, a.line, () => this.unmaskBeat(n + 1))
+  }
+
+  // forced-choice accusation, reusing the existing modal (UiScene renders the 'finale' key)
+  startAccusation() {
+    this.cameras.main.pan(this.mayorSpr.x, this.mayorSpr.y - 10, 360, 'Sine.easeInOut')
+    this.exposeOpen = true
+    this.registry.set('finale', {
+      q: 'Scoți toate hârtiile pe masă, în fața lumii. Cine ține Chișinăul în beznă?',
+      opts: ['1 · Ceon Eban, omul Moscovei', '2 · Deputății, ca de obicei'],
+    })
+  }
+
+  accuseChoice(n) {
+    if (!this.exposeOpen) return
     this.exposeOpen = false
     this.registry.set('finale', null)
-    this.doWin()
+    if (n === 2) { // wrong: the crowd corrects you, pick again
+      this.toast('Borea: nu, bratan. Uită-te la semnătură. E Eban.')
+      this.time.delayedCall(950, () => this.startAccusation())
+      return
+    }
+    this.titlecard('DEMASCAT')
+    const echoes = ['Pensionara: Așa-i, am văzut și io.', 'Gopnicii: Confirm, bratan.', 'Borea Țigan: Io ți-am spus.', 'Omul din parc: În sfârșit mă crede cineva.']
+    if (this.recruitedAllies.length) echoes.push('Mulțimea: Hoțu\'! Spionu\'! Afară cu el!')
+    this.openDialog('În fața Primăriei', echoes.join(' '), () => this.villainFlee())
+  }
+
+  villainFlee() {
+    this.unmaskFrozen = false
+    this.mayorSpr.clearTint().setVisible(false)
+    this.toast('Ceon Eban: Cortegiul mă așteaptă. Paka, fraierilor!')
+    this.titlecard('PRINDE-L!')
+    // Eban's black government car peels onto the boulevard
+    const vx = this.mayorSpr.x, vy = BD_TOP + 30
+    this.villainCar = this.add.image(vx, vy, 'topcar_gwagon').setOrigin(0.5, 0.5).setTint(0x14141a).setDepth(vy)
+    this.villainCar.setRotation(Math.PI / 2)
+    this.fleePath = [
+      { x: 1760, y: ROAD_Y }, { x: 2300, y: ROAD_Y }, { x: 2520, y: 1300 },
+      { x: 1700, y: 1300 }, { x: 1000, y: ROAD_Y }, { x: 360, y: ROAD_Y },
+      { x: 360, y: 1300 }, { x: 1000, y: 1300 }, { x: 1360, y: ROAD_Y },
+    ]
+    this.fleeIdx = 0
+    this.baseVillainSpeed = 168
+    this.villainSpeed = this.baseVillainSpeed
+    this.escapeMeter = 100
+    this.chaseWon = false
+    this._chaseGo = false
+    this.spawnPlayerChaseCar()
+    this.registry.set('mission', 'Prinde-l pe Eban! Izbește-l (SPACE) când ești aproape.')
+    this.time.delayedCall(1300, () => { this._chaseGo = true }) // fair head-start telegraph
+  }
+
+  spawnPlayerChaseCar() {
+    const car = this.add.image(1080, BD_TOP + 30, 'topcar_cruiser').setOrigin(0.5, 0.5).setDepth(BD_TOP + 30)
+    car.setRotation(Math.PI / 2)
+    this.enterCars.push(car)
+    this.enterCar(car)
+    this.copIntro = false // no tutorial cop stop mid-chase
+  }
+
+  updateChase(d) {
+    const v = this.villainCar, car = this.car
+    if (!v || !car) return
+    if (this._chaseGo && !this.chaseWon) {
+      const wp = this.fleePath[this.fleeIdx]
+      const ang = Math.atan2(wp.y - v.y, wp.x - v.x)
+      const gap0 = Math.hypot(car.x - v.x, car.y - v.y)
+      let spd = this.villainSpeed
+      if (gap0 > 640) spd *= 0.78       // rubber-band so he never vanishes...
+      else if (gap0 < 150) spd *= 1.12  // ...but doesn't idle in your bumper either
+      v.x += Math.cos(ang) * spd * d
+      v.y += Math.sin(ang) * spd * d
+      v.rotation = ang + Math.PI / 2
+      v.setDepth(v.y)
+      if ((wp.x - v.x) ** 2 + (wp.y - v.y) ** 2 < 44 * 44) this.fleeIdx = (this.fleeIdx + 1) % this.fleePath.length
+    }
+    const gap = Math.hypot(car.x - v.x, car.y - v.y)
+    this.pursuitClose = gap < 120
+    if (this.pursuitClose && Phaser.Input.Keyboard.JustDown(this.keys.SPACE) && this.time.now > (this._ramCD || 0) && !this.chaseWon) {
+      this._ramCD = this.time.now + 420
+      this.escapeMeter = Math.max(0, this.escapeMeter - (this.flags.ramBoost ? 24 : 18))
+      this.spawnHitFx(v.x, v.y - 8); this.cameras.main.shake(150, 0.005)
+      this.villainSpeed = 70; this.time.delayedCall(520, () => { this.villainSpeed = this.baseVillainSpeed })
+      if (this.escapeMeter <= 0) { this.finishFinale(); return }
+      this.toast(`Izbitură! Eban se clatină. (${this.escapeMeter}%)`)
+    }
+    this.registry.set('chase', { escape: this.escapeMeter, close: this.pursuitClose, gap: Math.round(gap) })
+    this.registry.set('mapDyn', { px: car.x, py: car.y, tx: v.x, ty: v.y, zx: this.zina.x, zy: this.zina.y, dovezi: [{ x: v.x, y: v.y }] })
+  }
+
+  finishFinale() {
+    if (this.chaseWon) return
+    this.chaseWon = true
+    this.unmaskFrozen = true // stop the chase loop + freeze the world for the spin-out
+    this.registry.set('chase', null)
+    this.tweens.add({ targets: this.villainCar, angle: '+=230', duration: 620, ease: 'Cubic.easeOut' })
+    this.cameras.main.shake(260, 0.006)
+    this.toast('L-ai prins! Eban a ieșit de pe drum.')
+    this.titlecard('PRIMAR INTERIMAR DE CHIȘINĂU')
+    this.time.delayedCall(1200, () => {
+      this.openDialog('Sergent Căldare', 'Gata, dom\' primar. Cu propriile lui hârtii l-am prins. La răcoare, normalno.', () => this.doWin())
+    })
   }
 
   doWin() {
@@ -1207,6 +1412,7 @@ export default class CentruScene extends Phaser.Scene {
     if (this.dialogOpen) { this.advanceDialog(); return }
     if (this.shopOpen) { this.closeShop(); return }
     if (this.cop || this.exposeOpen || this.won) return
+    if (this.finaleActive) return // during the unmask + chase, E does nothing (no exiting the chase car)
     if (this.state.driving) {
       if (this.gopnik && !this.racing && !(this.gopnikRaceWon && !this.clues.gopnik) && (this.car.x - this.gopnik.x) ** 2 + (this.car.y - this.gopnik.y) ** 2 < 80 * 80) { this.startRace(); return }
       this.exitCar(); return
@@ -1223,19 +1429,19 @@ export default class CentruScene extends Phaser.Scene {
     else if (n.type === 'om-talk') {
       if (this.cluesEnabled && !this.clues.homeless) {
         this.openDialog('Omul din parc', 'Și aiurești wai, șii cu tine?! Ai să mă arăți la televizor? Matryoshka... telefonu\'... în beciu\' de la primărie... eu am văzut, băi băiete.')
-        this.addClue('homeless', 'matryoshka și un telefon rusesc în beciul primăriei')
+        this.addClue('homeless', 'matryoshka, telefon în rusă, beci la primărie. Întreabă un polițai.')
       } else {
         this.openDialog('Omul din parc', 'Și aiurești wai, șii cu tine?! Ai să mă arăți la televizor? ' + this.omLine())
       }
     }
     else if (n.type === 'borea') this.openBorea()
     else if (n.type === 'drop') this.deliverSmuggle()
-    else if (n.type === 'expose') this.openExpose()
+    else if (n.type === 'expose') this.startFinale()
     else if (n.type === 'mayor') this.openDialog('Ceon Eban', this.mayorLine())
     else if (n.type === 'gopnik') {
       if (this.cluesEnabled && this.leadOrder[this.leadIdx] === 'gopnik' && this.gopnikRaceWon && !this.clues.gopnik) {
         this.openDialog('Gopnicii', 'Băi, ai inimă, recunosc. Amu ascultă-ncoace, bratan, da\' ține-ți gura: cortegiul ăla negru merge mereu spre ambasada rusă, jostko. Noi vedem tot din curte, fiecare mașină care intră și iese. Cine-l încarcă? Borea, frate. El bagă marfa și o trimite spre est. Numa să nu zici că de la noi ai aflat, ori îți fărâm oasele amuș.')
-        this.addClue('gopnik', 'cortegiul negru merge spre ambasada rusă; Borea încarcă marfa, gopnicii văd tot din curte')
+        this.addClue('gopnik', 'mașina neagră a lui Eban merge napastoi la ambasada rusă. Mergi la Borea Țigan.')
       } else {
         this.openDialog('Gopnicii', 'Ia o mașină de pe bulevard și vino-ncoace, bratan, da\' iute, facem o cursă pe curte ori îți fărâm fasonu\'.')
       }
@@ -1379,7 +1585,7 @@ export default class CentruScene extends Phaser.Scene {
       // flee — gopnik respect makes it cleaner
       s.heat = (s.cred >= 60) ? 8 : 20; s.score += 40; s.cred = Phaser.Math.Clamp(s.cred + 6, 0, 100)
       this.toast(s.cred >= 60 ? 'Ai fugit — gopnicii te-au acoperit! +cred' : 'Ai fugit de poliție! +cred.')
-      if (this.cluesEnabled) this.addClue('cop', 'fuga de poliție arată că ceva e putred la primărie')
+      if (this.cluesEnabled) this.addClue('cop', 'polițaiul: ceva e putred la primărie. Ai tot — du-te la Primărie.')
     }
     this.cop = false
     this.copGrace = this.time.now + 6000 // no back-to-back stops
@@ -1542,7 +1748,7 @@ export default class CentruScene extends Phaser.Scene {
       else if (near.type === 'gopnik') prompt = 'E: vorbește cu gopnicii (vino cu mașina pt. cursă)'
       else if (near.type === 'drop') prompt = 'E: livrează babanul'
       else if (near.type === 'pothole') prompt = 'E: astupă gropa (+civic)'
-      else if (near.type === 'expose') prompt = `E: demască-l pe ${MAYOR}`
+      else if (near.type === 'expose') prompt = 'E ▸ Prezintă dovezile și demască-l'
       else if (near.type === 'mayor') prompt = 'E: vorbește cu Ceon Eban'
     }
     this.registry.set('prompt', prompt)
@@ -1619,8 +1825,14 @@ export default class CentruScene extends Phaser.Scene {
 
   update(t, dt) {
     this.updateTraffic(dt)
-    if (this.frozen()) { this.updateNameplate(); return } // frozen during a modal
     const d = dt / 1000
+    if (this.finaleActive && this.villainCar && !this.chaseWon && this.state.driving) { // the car chase: stripped-down loop
+      this.driveCar(d)
+      this.updateChase(d)
+      this.updateNameplate()
+      return
+    }
+    if (this.frozen()) { this.updateNameplate(); return } // frozen during a modal / the scripted unmask
     if (this.state.driving) this.driveCar(d); else this.walk(d)
     this.updatePickups()
     this.updateInteraction()
@@ -1641,6 +1853,8 @@ export default class CentruScene extends Phaser.Scene {
       else if (active === 'borea' && this.borea) dovezi.push({ x: this.borea.x, y: this.borea.y })
       else if (active === 'homeless' && this.homeless) dovezi.push({ x: this.homeless.spr.x, y: this.homeless.spr.y })
       else if (active === 'cop') dovezi.push({ x: 1310, y: ROAD_Y })
+    } else if (this.finaleReady && !this.won) {
+      dovezi.push({ x: 960, y: ROWS[1].y1 }) // the Primăria — go demask Eban
     }
     this.registry.set('mapDyn', {
       px: ex, py: ey,

@@ -115,6 +115,18 @@ export default class UiScene extends Phaser.Scene {
     this.winDim = this.add.rectangle(0, 0, W, H, 0x0a0b10, 0.93).setOrigin(0).setDepth(60).setVisible(false)
     this.winText = this.add.text(W / 2, H / 2, '', { fontFamily: F, fontSize: '16px', color: '#ebc372', align: 'center', lineSpacing: 8, wordWrap: { width: 540 } }).setOrigin(0.5).setDepth(61).setVisible(false)
 
+    // chase HUD (finale car chase) — Eban's escape meter + ram hint
+    this.chaseWrap = this.add.rectangle(W / 2, 58, 372, 46, 0x10121a, 0.92).setOrigin(0.5).setStrokeStyle(2, 0xcc3b30).setDepth(58).setVisible(false)
+    this.chaseLabel = this.add.text(W / 2, 42, 'EBAN FUGE SPRE AMBASADĂ', { fontFamily: F, fontSize: '11px', color: '#ff9a9a' }).setOrigin(0.5).setDepth(59).setVisible(false)
+    this.chaseBarBg = this.add.rectangle(W / 2 - 150, 60, 300, 10, 0x07080d, 0.95).setOrigin(0, 0.5).setDepth(59).setVisible(false)
+    this.chaseBarFill = this.add.rectangle(W / 2 - 148, 60, 296, 6, 0xcc3b30).setOrigin(0, 0.5).setDepth(60).setVisible(false)
+    this.chaseHint = this.add.text(W / 2, 74, '', { fontFamily: F, fontSize: '11px', color: '#ffd9a0' }).setOrigin(0.5).setDepth(59).setVisible(false)
+    this._chaseObjs = [this.chaseWrap, this.chaseLabel, this.chaseBarBg, this.chaseBarFill, this.chaseHint]
+
+    // finale title cards (DEMASCAREA / DEMASCAT / PRINDE-L! / PRIMAR INTERIMAR)
+    this.tcText = this.add.text(W / 2, H / 2 - 120, '', { fontFamily: F, fontSize: '34px', color: '#ffe34d', align: 'center', fontStyle: 'bold' }).setOrigin(0.5).setDepth(66).setStroke('#1a0e00', 7).setShadow(0, 4, '#000000', 0, false, true).setVisible(false).setAlpha(0)
+    this._tcId = null
+
     // minimap
     this.mapG = this.add.graphics().setDepth(50)
     this.mapLabel = this.add.text(0, 0, 'HARTĂ', { fontFamily: F, fontSize: '9px', color: '#aeb5c0' }).setOrigin(0, 1).setDepth(51)
@@ -376,13 +388,31 @@ export default class UiScene extends Phaser.Scene {
     this.crt.setVisible(this.registry.get('crt') !== false)
     this.drawMinimap()
 
+    // chase HUD — Eban's escape meter (ram it to empty to catch him)
+    const chase = this.registry.get('chase')
+    const chOn = !!chase
+    this._chaseObjs.forEach((o) => o.setVisible(chOn))
+    if (chOn) {
+      this.chaseBarFill.displayWidth = Math.max(0, 296 * (chase.escape / 100))
+      this.chaseHint.setText(chase.close ? '▮ SPACE — IZBEȘTE-L!' : 'Apropie-te de mașina neagră')
+      this.chaseHint.setColor(chase.close ? '#9effa0' : '#ffd9a0')
+    }
+
+    // finale title cards (fade in on a new id, then out)
+    const tc = this.registry.get('titlecard')
+    if (tc && tc.id !== this._tcId) { this._tcId = tc.id; this.tcText.setText(tc.text).setVisible(true).setAlpha(1); this._tcT = this.time.now }
+    if (this.tcText.alpha > 0 && this.time.now - (this._tcT || 0) > 1500) {
+      this.tcText.setAlpha(Math.max(0, this.tcText.alpha - 0.03))
+      if (this.tcText.alpha <= 0) this.tcText.setVisible(false)
+    }
+
     const win = this.registry.get('win')
     this.winDim.setVisible(!!win); this.winText.setVisible(!!win)
     if (win && this._winSig !== win.score) {
       this._winSig = win.score
       this.winDim.setSize(this.scale.width, this.scale.height)
       this.winText.setPosition(this.scale.width / 2, this.scale.height / 2)
-      this.winText.setText(`★ PRIMAR DE CHIȘINĂU ★\n\nL-ai demascat pe Primar. Orașul e al tău.\n\nScor final: ${win.score}    Lei: ${win.lei}\nRang: ${win.rank}\n\nCu ${win.lei} lei ai cumpărat\n${win.sqm} m² de apartament în Chișinău.\n\nFelicitări — ai ajuns nimeni-cineva.\n\nApasă R pentru a reîncepe.`)
+      this.winText.setText(`★ PRIMAR DE CHIȘINĂU ★\n\nCeon Eban e la răcoare. Cortegiul a rămas fără șofer.\nTu, un nimeni întors din Italia, l-ai prins pe spion cu propriile lui hârtii.\n\nAcu repari orașul pe care el l-a ținut în beznă.\n\nScor: ${win.score}    Lei: ${win.lei}    ${win.sqm} m²\nRang: PRIMAR DE CHIȘINĂU\n\nApasă R pentru a reîncepe.`)
     }
   }
 
