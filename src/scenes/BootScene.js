@@ -743,12 +743,12 @@ export default class BootScene extends Phaser.Scene {
       g.fillStyle(0xc9a23a, 1); g.fillRect(3, 3, 2, 2); g.fillRect(9, 3, 2, 2); g.fillRect(6, 5, 2, 2)
       g.fillStyle(0x2a2024, 1); g.fillRect(1, 1, 12, 1); g.fillRect(1, 8, 12, 1)
     })
-    // jeton de troleibuz — brass fare token (the collectible)
-    this.tex('c_jeton', 12, 12, (g) => {
-      g.fillStyle(0x8a5e1f, 1); g.fillCircle(6, 6, 5)        // brass rim
-      g.fillStyle(0xc8922f, 1); g.fillCircle(6, 6, 4)        // brass face
-      g.fillStyle(0xe6c46a, 1); g.fillRect(3, 2, 2, 1)       // shine
-      g.fillStyle(0x6f4a17, 1); g.fillCircle(6, 6, 1)        // center hole
+    // dosar / hârtie scursă de la primărie — the collectible (leaked paperwork)
+    this.tex('c_dosar', 12, 14, (g) => {
+      g.fillStyle(0xe8e4d6, 1); g.fillRect(1, 1, 10, 12)     // paper sheet
+      g.fillStyle(0xcfc9b6, 1); g.fillRect(8, 1, 3, 3)       // folded corner
+      g.fillStyle(0x6b7280, 1); g.fillRect(2, 4, 7, 1); g.fillRect(2, 6, 7, 1); g.fillRect(2, 8, 5, 1) // text lines
+      g.fillStyle(0xc0392b, 1); g.fillCircle(8, 10, 2)       // red stamp
     })
   }
 

@@ -4,9 +4,10 @@ const F = 'monospace'
 
 // the 5 playable types the owner asked for — professions only, no personal names
 export const TYPES = [
+  { key: 'patan', name: 'Patan de pe Raioncik', role: 'gopnik crescut în Ciocana', blurb: 'Crescut pe raioncik în Ciocana, pe covor bătut. Vorbește puțin, lovește tare.', perk: 'Lovești mult mai tare + respect pe stradă din start.' },
   { key: 'taxist', name: 'Taxistul', role: 'taxist', blurb: 'Logan vechi, dar știe fiecare groapă din Centru pe nume.', perk: 'Pornești cu mai mulți lei + bani din curse.' },
   { key: 'conductor', name: 'Conductorul', role: 'conductor pe ruta 11', blurb: 'Rupe biletul pe troleibuzul 22 cu autoritate.', perk: 'Lei pasivi încet + ție gratis troleibuzul.' },
-  { key: 'agent', name: 'Agentul Imobiliar', role: 'agent imobiliar', blurb: '„Studio cu amplasare reușită, euroreparat" = un balcon în Râșcani.', perk: 'Vinzi jetoane mai scump la Borea Țigan.' },
+  { key: 'agent', name: 'Agentul Imobiliar', role: 'agent imobiliar', blurb: '„Studio cu amplasare reușită, euroreparat" = un balcon în Râșcani.', perk: 'Fence-uiești hârtiile mai scump la Borea Țigan.' },
   { key: 'director', name: 'Directorul de Fabrică', role: 'director de fabrică', blurb: 'O fabrică de mobilă pe care n-o numește, BMW X6 cu numere din Lituania.', perk: 'Portmoneu mare la start.' },
   { key: 'ionel', name: 'Venit din Briceni', role: 'venit din Briceni', blurb: 'A venit cu un sac de plăcinte de la mama. Tot e scump aici.', perk: 'Mai mult HP + foame mai lentă.' },
 ]

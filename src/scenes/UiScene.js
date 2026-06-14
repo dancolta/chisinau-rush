@@ -196,6 +196,8 @@ export default class UiScene extends Phaser.Scene {
       const mark = txt(lx + 32, 160, 24, '#3a3d4c', 0.5, 0.5)
       this.cmCells.push({ box, mark })
     }
+    // running deduction (the case board's aha line)
+    this.cmDeduction = txt(-232, 190, 11, '#9ec0ff', 0, 0)
     // footer
     txt(0, 212, 11, '#aeb5c0', 0.5, 0, 'ESC — închide  ·  joc salvat automat')
   }
@@ -237,6 +239,7 @@ export default class UiScene extends Phaser.Scene {
       this.cmCells[i].mark.setText(got ? '✓' : '✕').setColor(got ? '#4caf50' : '#3a3d4c')
       this.cmCells[i].box.setFillStyle(got ? 0x14241a : 0x0c0d14).setStrokeStyle(1, got ? 0x4caf50 : 0x2a2c3a)
     }
+    if (this.cmDeduction) this.cmDeduction.setText(cm.deduction ? 'DEDUCȚIE: ' + cm.deduction : '')
   }
 
   update(_t, dt) {
