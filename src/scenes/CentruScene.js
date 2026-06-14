@@ -433,7 +433,7 @@ export default class CentruScene extends Phaser.Scene {
 
   swapWeapon() {
     if (this.frozen()) return
-    if (!this.weaponUnlocked.covor && !this.weaponUnlocked.baban) { this.toast('N-ai altă armă încă — avansează în rang pentru covor/baban.'); return }
+    if (!Object.values(this.weaponUnlocked).some(Boolean)) { this.toast('N-ai altă armă încă. Cumpără de la Borea ori avansează în rang.'); return }
     for (let k = 1; k <= this.weapons.length; k++) {
       const idx = (this.weaponIdx + k) % this.weapons.length
       const w = this.weapons[idx]
@@ -592,7 +592,7 @@ export default class CentruScene extends Phaser.Scene {
     this.sprintSpeed = 175
     this.potholeTime = 1.5
     this.bribeDiscount = false
-    this.weaponUnlocked = { covor: false, baban: false }
+    this.weaponUnlocked = { covor: false, baban: false, parbar: false, cart: false, spray: false, suflanta: false }
     this.ranks = [
       { t: 0, name: 'Plecat peste hotare', joke: 'Ai adus euro și un frigider în rate. Acasă-i mai bine, de la distanță.' },
       { t: 200, name: 'Băiat de cartier', joke: 'Te știe toată curtea. Și ăia cu care ai datorii.' },
@@ -610,9 +610,13 @@ export default class CentruScene extends Phaser.Scene {
     this.buildEnemies()
     this.buildPotholes()
     this.weapons = [
-      { key: 'fist', name: 'Pumni', dmg: 8, range: 28, knock: 90, heatCost: 0 },
-      { key: 'covor', name: 'Covor', dmg: 14, range: 36, knock: 150, heatCost: 6 },
-      { key: 'baban', name: 'Sticlă de baban', dmg: 11, range: 32, knock: 130, heatCost: 4 },
+      { key: 'fist', name: 'Pumni', dmg: 8, range: 28, knock: 90, heatCost: 0, price: 0 },
+      { key: 'covor', name: 'Covor', dmg: 14, range: 36, knock: 150, heatCost: 6, price: 40 },
+      { key: 'baban', name: 'Sticlă de baban', dmg: 11, range: 32, knock: 130, heatCost: 4, price: 30 },
+      { key: 'parbar', name: 'Parul de la gard', dmg: 16, range: 42, knock: 160, heatCost: 7, price: 60 },
+      { key: 'cart', name: 'Cărucior de Linella', dmg: 20, range: 30, knock: 240, heatCost: 9, price: 140 },
+      { key: 'spray', name: 'Spray cu piper', dmg: 18, range: 50, knock: 70, heatCost: 10, price: 160 },
+      { key: 'suflanta', name: 'Suflantă de frunze', dmg: 28, range: 64, knock: 320, heatCost: 16, price: 380 },
     ]
     this.weaponIdx = 0
     this.swingCD = 0
@@ -806,9 +810,12 @@ export default class CentruScene extends Phaser.Scene {
 
   onRankUp(i) {
     const r = this.ranks[i]
-    this.toast(`Nivel ${i + 1}: ${r.name}` + (r.joke ? '. ' + r.joke : ''))
-    if (i >= 2) { this.weaponUnlocked.covor = true; this.bribeDiscount = true }
-    if (i >= 4) { this.weaponUnlocked.baban = true; this.potholeTime = 0.9; this.sprintSpeed = 210 }
+    this.registry.set('levelup', { n: i + 1, name: r.name, joke: r.joke || '', id: this.time.now }) // full-screen announcement
+    let newWeapon = null
+    if (i >= 2) { if (!this.weaponUnlocked.covor) newWeapon = 'Covor'; this.weaponUnlocked.covor = true; this.weaponUnlocked.parbar = true; this.bribeDiscount = true }
+    if (i >= 4) { if (!this.weaponUnlocked.baban) newWeapon = 'Sticlă de baban'; this.weaponUnlocked.baban = true; this.potholeTime = 0.9; this.sprintSpeed = 210 }
+    if (i >= 5 && !this.weaponUnlocked.cart) { this.weaponUnlocked.cart = true; newWeapon = 'Cărucior de Linella' }
+    if (newWeapon) this.time.delayedCall(2400, () => { if (!this.won) this.toast(`Armă nouă deblocată: ${newWeapon}. Apasă Q.`) })
   }
 
   // chained investigation: a dovadă is only collectable when it's the CURRENT lead; each one points to the next.
@@ -820,7 +827,6 @@ export default class CentruScene extends Phaser.Scene {
     this.state.civic = Phaser.Math.Clamp(this.state.civic + 5, 0, 100)
     this.state.score += 80; this.addXp(80)
     this.toast('Dovadă găsită: ' + text)
-    this.mayorReact() // the mayor notices you closing in
     this.syncHud()
     if (this.clueCount() >= 4) this.unlockFinale()
     else this.updateDovezBanner()
@@ -828,10 +834,10 @@ export default class CentruScene extends Phaser.Scene {
 
   leadHint(key) {
     return ({
-      gopnik: 'Du-te la gopnicii din curte (vest). Ei văd fiecare mașină neagră care intră.',
-      borea: 'Mașina neagră o încarcă tot Borea. Du-te la el, în groapa din parc.',
-      homeless: 'Nebunul din parc a văzut ce-i în beciul primăriei. Caută-l și ascultă-l.',
-      cop: 'O hârtie e la un polițai care tremură. Provoacă un control și fă-l să cedeze.',
+      gopnik: 'Ia o mașină de pe bulevard, du-te la gopnicii din curte (vest) și câștigă cursa.',
+      borea: 'Du-te la Borea Țigan, în groapa din parc, și acceptă misiunea cu babanul.',
+      homeless: 'Caută omul din parc (Grădina Publică). Calmează-l cu 15 lei, apoi ascultă-l (E).',
+      cop: 'Urcă în mașină, condu repede pe bulevard (ține Shift) până te oprește poliția, apoi alege „Fugi".',
     })[key] || ''
   }
 
@@ -1007,14 +1013,15 @@ export default class CentruScene extends Phaser.Scene {
     }
     this.openDialog('Borea Țigan', 'Tu pe mine a sculat! Hai, zi, vinzi ori cumperi?', () => this.openShop())
   }
-  openShop() { this.shopOpen = true; this.renderShop() }
+  openShop() { this.shopOpen = true; this.shopMode = 'main'; this.renderShop() }
 
   renderShop() {
+    if (this.shopMode === 'arme') return this.renderArme()
     const s = this.state
     const opts = [
       `1 · Fence-uiește hârtiile (${s.satchel}) — ~${s.satchel * 12} lei`,
       '2 · Cumpără plăcintă (-15 lei, +35 HP)',
-      '3 · Cumpără biscuiți (-10 lei, +20 HP)',
+      '3 · Arme de la Borea »',
     ]
     if (!s.acteFalse) opts.push('4 · Acte false (-120 lei) — sari peste un control')
     if (!s.speedBoost) opts.push('5 · Tuning motor (-200 lei) — mașina zboară')
@@ -1023,9 +1030,20 @@ export default class CentruScene extends Phaser.Scene {
     this.registry.set('shop', { q: 'Borea Țigan: marfa-i curată, mai mult sau mai puțin. Ce iei?', opts })
   }
 
-  closeShop() { this.shopOpen = false; this.registry.set('shop', null) }
+  // weapons submenu — buy improvised arms with lei (the "inventory" you can wield via Q)
+  renderArme() {
+    this._armeList = this.weapons.filter((w) => w.key !== 'fist' && w.price > 0 && !this.weaponUnlocked[w.key]).slice(0, 5)
+    const opts = this._armeList.length
+      ? this._armeList.map((w, i) => `${i + 1} · ${w.name} (-${w.price} lei) · dmg ${w.dmg}`)
+      : ['(le ai deja pe toate)']
+    opts.push('6 · ‹ Înapoi')
+    this.registry.set('shop', { q: 'Borea Țigan: arme curate, fără numere de serie. Care-ți trebuie?', opts })
+  }
+
+  closeShop() { this.shopOpen = false; this.shopMode = 'main'; this.registry.set('shop', null) }
 
   shopChoice(n) {
+    if (this.shopMode === 'arme') return this.armeChoice(n)
     const s = this.state
     if (n === 1) {
       if (s.satchel > 0) { const g = Math.round(s.satchel * (10 + Math.random() * 4) * (this.sellMarkup || 1)); s.lei += g; this.toast(`Borea ia hârtiile pentru clientul din est: +${g} lei`); s.satchel = 0; this.addXp(20) }
@@ -1033,7 +1051,7 @@ export default class CentruScene extends Phaser.Scene {
     } else if (n === 2) {
       if (s.lei >= 15) { s.lei -= 15; s.hp = Math.min(s.maxHp, s.hp + 35); this.toast('Plăcintă caldă! +35 HP') } else this.toast('N-ai 15 lei.')
     } else if (n === 3) {
-      if (s.lei >= 10) { s.lei -= 10; s.hp = Math.min(s.maxHp, s.hp + 20); this.toast('Biscuiți! +20 HP') } else this.toast('N-ai 10 lei.')
+      this.shopMode = 'arme'; this.renderShop(); return
     } else if (n === 4) {
       if (!s.acteFalse) { if (s.lei >= 120) { s.lei -= 120; s.acteFalse = true; this.toast('Acte false. Nu le arăta pe bulevard.') } else this.toast('N-ai 120 lei.') }
     } else if (n === 5) {
@@ -1042,6 +1060,17 @@ export default class CentruScene extends Phaser.Scene {
       if (!s.smuggling && !this.smuggleReturn && this.cluesEnabled && this.leadOrder[this.leadIdx] === 'borea') { this.closeShop(); this.startSmuggle(); this.syncHud(); return }
     }
     this.syncHud()
+    this.renderShop()
+  }
+
+  armeChoice(n) {
+    if (n === 6) { this.shopMode = 'main'; this.renderShop(); return }
+    const w = this._armeList && this._armeList[n - 1]
+    if (!w || this.weaponUnlocked[w.key]) { this.renderShop(); return }
+    if (this.state.lei >= w.price) {
+      this.state.lei -= w.price; this.weaponUnlocked[w.key] = true; this.weaponIdx = this.weapons.indexOf(w)
+      this.toast(`Ai luat: ${w.name}! Apasă Q s-o scoți.`); this.syncHud()
+    } else this.toast(`N-ai ${w.price} lei.`)
     this.renderShop()
   }
 
@@ -1501,6 +1530,8 @@ export default class CentruScene extends Phaser.Scene {
       this.copTimer += d
       if (!this.cop && this.copIntro && !this.racing && this.copTimer > 1.8) {
         this.copIntro = false; this.copTimer = 0; this.startCopStop() // guaranteed tutorial stop on first drive
+      } else if (!this.cop && !this.racing && this.cluesEnabled && this.leadOrder[this.leadIdx] === 'cop' && this.moving === 2 && s.heat > 40 && this.copTimer > 2) {
+        this.copTimer = 0; this.startCopStop() // chasing the cop dovadă: flooring it brings the stop readily
       } else if (!this.cop && s.heat > 68 && this.copTimer > 2 && this.time.now > (this.copGrace || 0)) {
         this.copTimer = 0
         if (Math.random() < (s.heat - 68) / 60) this.startCopStop()
@@ -1516,11 +1547,11 @@ export default class CentruScene extends Phaser.Scene {
   updateSurvival(d) {
     const s = this.state
     if (this.passiveLei) { this._passiveAcc += this.passiveLei * d; if (this._passiveAcc >= 1) { const a = Math.floor(this._passiveAcc); s.lei += a; this._passiveAcc -= a; this.syncHud() } }
-    s.hp = Math.max(0, s.hp - 0.32 * d) // gentle hunger (~5 min from full)
-    // low-HP disclaimer: flash + warn once when crossing 25
-    const low = s.hp <= 25
+    s.hp = Math.max(0, s.hp - 0.24 * d) // gentle hunger (~7 min from full) — HP drops because you get hungry; eating refills it
+    // red-screen hunger warning kicks in under 20 HP
+    const low = s.hp <= 20
     this.registry.set('lowhp', low)
-    if (low && !this._lowWarned) { this._lowWarned = true; this.toast('⚠ Ți-e foame! Mănâncă urgent (kebab/cvas/magazin) altfel leșini.') }
+    if (low && !this._lowWarned) { this._lowWarned = true; this.toast('⚠ Ți-e foame! Mănâncă la un kebab/magazin (cvas-ul e gratis) altfel leșini.') }
     if (!low) this._lowWarned = false
     if (s.hp <= 0) {
       if (s.driving) this.exitCar()

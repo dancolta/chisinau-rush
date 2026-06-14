@@ -47,19 +47,18 @@ export default class UiScene extends Phaser.Scene {
     const mV = meter(110, 'CIVIC', 0x2f6fb0, '#9ec0ff'); this.civicFill = mV.fill; this.civicText = mV.val
 
     // ===== RIGHT cluster — ECONOMY plate (LEI / SCOR / RANK / XP / DOVEZI) =====
-    this.econPlate = this.add.rectangle(W - 218, 44, 212, 108, 0x0b0c14, 0.86).setOrigin(0).setStrokeStyle(1, 0x000000, 0.55).setName('statpanel')
-    this.econInner = this.add.rectangle(W - 218, 44, 212, 108, 0x000000, 0).setOrigin(0).setStrokeStyle(1, 0xebc372, 0.22)
+    this.econPlate = this.add.rectangle(W - 218, 44, 212, 120, 0x0b0c14, 0.86).setOrigin(0).setStrokeStyle(1, 0x000000, 0.55).setName('statpanel')
+    this.econInner = this.add.rectangle(W - 218, 44, 212, 120, 0x000000, 0).setOrigin(0).setStrokeStyle(1, 0xebc372, 0.22)
     this.leiKick = this.add.text(W - 210, 50, 'LEI', { fontFamily: F, fontSize: '10px', color: '#aeb5c0' }).setOrigin(0, 0).setStroke('#07080d', 3)
     this.leiText = this.add.text(W - 12, 48, '', { fontFamily: F, fontSize: '24px', color: '#ffd24a' }).setOrigin(1, 0).setStroke('#07080d', 4)
     this.scoreKick = this.add.text(W - 210, 84, 'SCOR', { fontFamily: F, fontSize: '10px', color: '#aeb5c0' }).setOrigin(0, 0).setStroke('#07080d', 3)
     this.scoreText = this.add.text(W - 12, 80, '', { fontFamily: F, fontSize: '18px', color: '#ffffff' }).setOrigin(1, 0).setStroke('#07080d', 4)
-    this.rankText = this.add.text(W - 12, 106, '', { fontFamily: F, fontSize: '13px', color: '#ebc372' }).setOrigin(1, 0).setStroke('#07080d', 3)
-    this.xpTrack = this.add.rectangle(W - 210, 126, 196, 8, 0x07080d, 0.9).setOrigin(0)
-    this.xpFill = this.add.rectangle(W - 208, 127, 192, 6, 0xebc372).setOrigin(0)
-    this.xpText = this.add.text(W - 12, 121, '', { fontFamily: F, fontSize: '9px', color: '#d7dce4' }).setOrigin(1, 0).setStroke('#07080d', 3)
-    this.clueKick = this.add.text(W - 210, 138, 'DOVEZI', { fontFamily: F, fontSize: '10px', color: '#9ec0ff' }).setOrigin(0, 0).setStroke('#07080d', 3)
+    this.rankText = this.add.text(W - 12, 104, '', { fontFamily: F, fontSize: '13px', color: '#ebc372' }).setOrigin(1, 0).setStroke('#07080d', 3)
+    this.xpTrack = this.add.rectangle(W - 210, 124, 196, 7, 0x07080d, 0.9).setOrigin(0)
+    this.xpFill = this.add.rectangle(W - 208, 125, 192, 5, 0xebc372).setOrigin(0)
+    this.clueKick = this.add.text(W - 210, 140, 'DOVEZI', { fontFamily: F, fontSize: '10px', color: '#9ec0ff' }).setOrigin(0, 0).setStroke('#07080d', 3)
     this.cluePips = []
-    for (let i = 0; i < 4; i++) this.cluePips.push(this.add.rectangle(W - 59 + i * 12, 139, 9, 9, 0x2a3242).setOrigin(0).setStrokeStyle(1, 0x000000, 0.5))
+    for (let i = 0; i < 4; i++) this.cluePips.push(this.add.rectangle(W - 59 + i * 12, 141, 9, 9, 0x2a3242).setOrigin(0).setStrokeStyle(1, 0x000000, 0.5))
 
     // mission banner / objective list (clear gap below the vitals plate which ends at y130)
     this.missionText = this.add.text(8, 144, '', { fontFamily: F, fontSize: '12px', color: '#ebc372', backgroundColor: '#10121aEE', padding: { x: 8, y: 6 }, lineSpacing: 5, align: 'left' }).setOrigin(0, 0)
@@ -71,7 +70,7 @@ export default class UiScene extends Phaser.Scene {
     this.promptText = this.add.text(W / 2, H - 116, '', { fontFamily: F, fontSize: '12px', color: '#ffffff', backgroundColor: '#1b2f1bEE', padding: { x: 8, y: 4 } }).setOrigin(0.5).setAlpha(0)
 
     // toast
-    this.toastText = this.add.text(W / 2, 128, '', { fontFamily: F, fontSize: '12px', color: '#fff6d6', backgroundColor: '#10121aDD', padding: { x: 8, y: 4 } }).setOrigin(0.5).setAlpha(0)
+    this.toastText = this.add.text(W / 2, H - 158, '', { fontFamily: F, fontSize: '13px', color: '#fff6d6', backgroundColor: '#10121aEE', padding: { x: 9, y: 5 }, align: 'center' }).setOrigin(0.5).setAlpha(0).setDepth(57)
     this.toastId = null
 
     // landmark nameplate
@@ -99,6 +98,18 @@ export default class UiScene extends Phaser.Scene {
     // character / pause menu (Esc) — zoned character-sheet, own depth band above everything
     this.buildCharMenu(W, H)
 
+    // hunger red-screen warning (pulsing vignette + message when HP is critically low)
+    this.hungerVeil = this.add.rectangle(0, 0, W, H, 0xcc1010, 0).setOrigin(0).setDepth(56).setVisible(false)
+    this.hungerText = this.add.text(W / 2, 64, '', { fontFamily: F, fontSize: '15px', color: '#ffe0e0', backgroundColor: '#5a1010F0', padding: { x: 10, y: 6 } }).setOrigin(0.5).setDepth(57).setVisible(false)
+
+    // level-up full-screen announcement (shown briefly on each rank-up, then fades; does not freeze)
+    this.luDim = this.add.rectangle(0, 0, W, H, 0x0b0c14, 1).setOrigin(0).setDepth(64).setVisible(false)
+    this.luKick = this.add.text(W / 2, H / 2 - 64, 'NIVEL NOU', { fontFamily: F, fontSize: '14px', color: '#aeb5c0' }).setOrigin(0.5).setDepth(65).setVisible(false)
+    this.luTitle = this.add.text(W / 2, H / 2 - 30, '', { fontFamily: F, fontSize: '42px', color: '#ebc372' }).setOrigin(0.5).setDepth(65).setVisible(false).setStroke('#0b0c14', 6)
+    this.luRank = this.add.text(W / 2, H / 2 + 22, '', { fontFamily: F, fontSize: '22px', color: '#ffffff' }).setOrigin(0.5).setDepth(65).setVisible(false).setStroke('#0b0c14', 5)
+    this.luJoke = this.add.text(W / 2, H / 2 + 58, '', { fontFamily: F, fontSize: '14px', color: '#cdd2dc', wordWrap: { width: W * 0.7 }, align: 'center' }).setOrigin(0.5).setDepth(65).setVisible(false).setStroke('#0b0c14', 4)
+    this._luT = 0; this._luId = null
+
     // win overlay
     this.winDim = this.add.rectangle(0, 0, W, H, 0x0a0b10, 0.93).setOrigin(0).setDepth(60).setVisible(false)
     this.winText = this.add.text(W / 2, H / 2, '', { fontFamily: F, fontSize: '16px', color: '#ebc372', align: 'center', lineSpacing: 8, wordWrap: { width: 540 } }).setOrigin(0.5).setDepth(61).setVisible(false)
@@ -119,17 +130,20 @@ export default class UiScene extends Phaser.Scene {
     this.leiKick.setX(W - 210); this.leiText.setX(W - 12)
     this.scoreKick.setX(W - 210); this.scoreText.setX(W - 12)
     this.rankText.setX(W - 12)
-    this.xpTrack.setX(W - 210); this.xpFill.setX(W - 208); this.xpText.setX(W - 12)
+    this.xpTrack.setX(W - 210); this.xpFill.setX(W - 208)
     this.clueKick.setX(W - 210)
     for (let i = 0; i < 4; i++) this.cluePips[i].setX(W - 59 + i * 12)
     this.promptText.setPosition(W / 2, H - 116)
-    this.toastText.setX(W / 2)
+    this.toastText.setPosition(W / 2, H - 158)
     this.np.setPosition(W / 2, H - 44)
     this.dlgBox.setPosition(W / 2, H - 70); this.dlgName.setPosition(W / 2 - 268, H - 104); this.dlgText.setPosition(W / 2 - 268, H - 84); this.dlgHint.setPosition(W / 2 + 256, H - 36)
     this.crt.setSize(W, H)
     this.copDim.setSize(W, H)
     this.copBox.setPosition(W / 2, H / 2); this.copQ.setPosition(W / 2, H / 2 - 52); this.copOpts.setPosition(W / 2, H / 2 + 6)
     this.cmDim.setSize(W, H); this.layoutCharMenu(W / 2, H / 2)
+    this.hungerVeil.setSize(W, H); this.hungerText.setX(W / 2)
+    this.luDim.setSize(W, H)
+    this.luKick.setPosition(W / 2, H / 2 - 64); this.luTitle.setPosition(W / 2, H / 2 - 30); this.luRank.setPosition(W / 2, H / 2 + 22); this.luJoke.setPosition(W / 2, H / 2 + 58)
   }
 
   fmt(n) { return String(Math.round(n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') }
@@ -173,10 +187,10 @@ export default class UiScene extends Phaser.Scene {
       const fill = rect(-231, barY, 318, 12, 0x4caf50, 1, 0, 0.5)
       this.cmBars[key] = { val, fill }
     }
-    makeBar('hp', -120, 'HP', '#ffffff')
-    makeBar('heat', -86, 'POLIȚIE', '#ffffff')
-    makeBar('cred', -38, 'STRADĂ', '#e7ebf2')
-    makeBar('civic', -4, 'CIVIC', '#e7ebf2')
+    makeBar('hp', -122, 'HP', '#ffffff')
+    makeBar('heat', -84, 'POLIȚIE', '#ffffff')
+    makeBar('cred', -46, 'STRADĂ', '#e7ebf2')
+    makeBar('civic', -8, 'CIVIC', '#e7ebf2')
     this.cmBars.civic.fill.fillColor = 0x2f6fb0 // civic = blue identity
     // wallet
     txt(-232, 22, 11, '#aeb5c0', 0, 0, 'LEI')
@@ -268,7 +282,6 @@ export default class UiScene extends Phaser.Scene {
       this.rankText.setText(hud.rank || '')
       const xpR = hud.xpNext > hud.xpCur ? (hud.xp - hud.xpCur) / (hud.xpNext - hud.xpCur) : 1
       this.xpFill.displayWidth = Math.max(0, Math.min(192, 192 * xpR))
-      this.xpText.setText(hud.xpNext > hud.xpCur ? `${hud.xp}/${hud.xpNext} XP` : 'MAX')
       for (let i = 0; i < 4; i++) this.cluePips[i].fillColor = i < (hud.clues || 0) ? 0x9ec0ff : 0x2a3242
       this.weaponText.setText(hud.weapon ? `Armă: ${hud.weapon}  (Q schimbă · SPACE lovește)` : '')
       this.weaponText.setPosition(8, this.scale.height - 10)
@@ -336,6 +349,30 @@ export default class UiScene extends Phaser.Scene {
     if (cmOn !== this._cmOn) { this._cmOn = cmOn; this.cmDim.setVisible(cmOn); this.cmObjs.forEach((e) => e.setVisible(cmOn)) }
     if (cmOn && cm !== this._cm) { this._cm = cm; this.renderCharMenu(cm) }
     else if (!cmOn) { this._cm = null }
+
+    // hunger red-screen when critically low HP
+    const lowhp = this.registry.get('lowhp')
+    if (lowhp) {
+      this.hungerVeil.setVisible(true).setAlpha(0.15 + 0.14 * (Math.sin(this.time.now / 220) + 1) / 2)
+      this.hungerText.setVisible(true).setText('⚠ Ți-e FOAME! Mănâncă (kebab/cvas/magazin) sau leșini')
+    } else if (this.hungerVeil.visible) { this.hungerVeil.setVisible(false); this.hungerText.setVisible(false) }
+
+    // level-up announcement (full screen, ~2.2s, then fades)
+    const lu = this.registry.get('levelup')
+    if (lu && lu.id !== this._luId) {
+      this._luId = lu.id; this._luT = this.time.now
+      this.luTitle.setText('NIVEL ' + lu.n); this.luRank.setText(lu.name); this.luJoke.setText(lu.joke || '')
+      ;[this.luDim, this.luKick, this.luTitle, this.luRank, this.luJoke].forEach((o) => o.setVisible(true).setAlpha(1))
+      this.luDim.setAlpha(0.82)
+    }
+    if (this._luT) {
+      const el = this.time.now - this._luT
+      if (el > 2200) {
+        const a = Math.max(0, 1 - (el - 2200) / 500)
+        this.luDim.setAlpha(0.82 * a);[this.luKick, this.luTitle, this.luRank, this.luJoke].forEach((o) => o.setAlpha(a))
+        if (a <= 0) { this._luT = 0;[this.luDim, this.luKick, this.luTitle, this.luRank, this.luJoke].forEach((o) => o.setVisible(false)) }
+      }
+    }
 
     this.crt.setVisible(this.registry.get('crt') !== false)
     this.drawMinimap()
