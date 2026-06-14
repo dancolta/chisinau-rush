@@ -62,7 +62,7 @@ export default class UiScene extends Phaser.Scene {
     this.xpText = this.add.text(W - 12, 121, '', { fontFamily: F, fontSize: '9px', color: '#d7dce4' }).setOrigin(1, 0).setStroke('#07080d', 3)
     this.clueKick = this.add.text(W - 210, 138, 'DOVEZI', { fontFamily: F, fontSize: '10px', color: '#9ec0ff' }).setOrigin(0, 0).setStroke('#07080d', 3)
     this.cluePips = []
-    for (let i = 0; i < 5; i++) this.cluePips.push(this.add.rectangle(W - 71 + i * 12, 139, 9, 9, 0x2a3242).setOrigin(0).setStrokeStyle(1, 0x000000, 0.5))
+    for (let i = 0; i < 4; i++) this.cluePips.push(this.add.rectangle(W - 59 + i * 12, 139, 9, 9, 0x2a3242).setOrigin(0).setStrokeStyle(1, 0x000000, 0.5))
 
     // mission banner / objective list (clear gap below the vitals plate which ends at y130)
     this.missionText = this.add.text(8, 144, '', { fontFamily: F, fontSize: '12px', color: '#ebc372', backgroundColor: '#10121aEE', padding: { x: 8, y: 6 }, lineSpacing: 5, align: 'left' }).setOrigin(0, 0)
@@ -124,7 +124,7 @@ export default class UiScene extends Phaser.Scene {
     this.rankText.setX(W - 12)
     this.xpTrack.setX(W - 210); this.xpFill.setX(W - 208); this.xpText.setX(W - 12)
     this.clueKick.setX(W - 210)
-    for (let i = 0; i < 5; i++) this.cluePips[i].setX(W - 71 + i * 12)
+    for (let i = 0; i < 4; i++) this.cluePips[i].setX(W - 59 + i * 12)
     this.promptText.setPosition(W / 2, H - 116)
     this.toastText.setX(W / 2)
     this.np.setPosition(W / 2, H - 44)
@@ -193,8 +193,8 @@ export default class UiScene extends Phaser.Scene {
     txt(-232, 112, 11, '#aeb5c0', 0, 0, 'DOVEZI')
     this.cmClueCount = txt(-150, 110, 14, '#ebc372', 0, 0)
     this.cmCells = []
-    for (let i = 0; i < 5; i++) {
-      const lx = -192 + i * 80
+    for (let i = 0; i < 4; i++) {
+      const lx = -152 + i * 80
       const box = rect(lx, 160, 64, 52, 0x0c0d14, 1, 0, 0.5, 0x2a2c3a, 1)
       const mark = txt(lx + 32, 160, 24, '#3a3d4c', 0.5, 0.5)
       this.cmCells.push({ box, mark })
@@ -234,8 +234,8 @@ export default class UiScene extends Phaser.Scene {
     this.cmLei.setText(this.fmt(cm.lei)); this.cmScore.setText(this.fmt(cm.score))
     this.cmWeapon.setText(cm.weapon || '—')
     // evidence grid
-    this.cmClueCount.setText(`${cm.clueCount || 0} / 5`)
-    for (let i = 0; i < 5; i++) {
+    this.cmClueCount.setText(`${cm.clueCount || 0} / 4`)
+    for (let i = 0; i < 4; i++) {
       const got = i < (cm.clueCount || 0)
       this.cmCells[i].mark.setText(got ? '✓' : '✕').setColor(got ? '#4caf50' : '#3a3d4c')
       this.cmCells[i].box.setFillStyle(got ? 0x14241a : 0x0c0d14).setStrokeStyle(1, got ? 0x4caf50 : 0x2a2c3a)
@@ -269,7 +269,7 @@ export default class UiScene extends Phaser.Scene {
       const xpR = hud.xpNext > hud.xpCur ? (hud.xp - hud.xpCur) / (hud.xpNext - hud.xpCur) : 1
       this.xpFill.displayWidth = Math.max(0, Math.min(192, 192 * xpR))
       this.xpText.setText(hud.xpNext > hud.xpCur ? `${hud.xp}/${hud.xpNext} XP` : 'MAX')
-      for (let i = 0; i < 5; i++) this.cluePips[i].fillColor = i < (hud.clues || 0) ? 0x9ec0ff : 0x2a3242
+      for (let i = 0; i < 4; i++) this.cluePips[i].fillColor = i < (hud.clues || 0) ? 0x9ec0ff : 0x2a3242
       this.weaponText.setText(hud.weapon ? `Armă: ${hud.weapon}  (Q schimbă · SPACE lovește)` : '')
       this.weaponText.setPosition(8, this.scale.height - 10)
     }
@@ -424,6 +424,14 @@ export default class UiScene extends Phaser.Scene {
     if (dyn.tx != null) { // mission target, pulsing
       const r = 2 + (Math.sin(this.time.now / 200) + 1) * 1.6
       g.fillStyle(0xcc3b30, 1); g.fillCircle(x0 + dyn.tx * sx, y0 + dyn.ty * sy, r)
+    }
+    // dovezi pins (uncollected evidence) — pulsing gold, always visible during the investigation
+    if (dyn.dovezi && dyn.dovezi.length) {
+      const r = 2 + (Math.sin(this.time.now / 240) + 1) * 1.4
+      dyn.dovezi.forEach((p) => {
+        g.fillStyle(0xebc372, 1); g.fillCircle(x0 + p.x * sx, y0 + p.y * sy, r)
+        g.lineStyle(1, 0x10121a, 0.9); g.strokeCircle(x0 + p.x * sx, y0 + p.y * sy, r)
+      })
     }
     g.fillStyle(0x4caf50, 1); g.fillCircle(x0 + dyn.px * sx, y0 + dyn.py * sy, 3) // player
     g.lineStyle(1, 0xffffff, 0.85); g.strokeCircle(x0 + dyn.px * sx, y0 + dyn.py * sy, 3)

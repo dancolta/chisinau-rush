@@ -743,6 +743,13 @@ export default class BootScene extends Phaser.Scene {
       g.fillStyle(0xc9a23a, 1); g.fillRect(3, 3, 2, 2); g.fillRect(9, 3, 2, 2); g.fillRect(6, 5, 2, 2)
       g.fillStyle(0x2a2024, 1); g.fillRect(1, 1, 12, 1); g.fillRect(1, 8, 12, 1)
     })
+    // jeton de troleibuz — brass fare token (the collectible)
+    this.tex('c_jeton', 12, 12, (g) => {
+      g.fillStyle(0x8a5e1f, 1); g.fillCircle(6, 6, 5)        // brass rim
+      g.fillStyle(0xc8922f, 1); g.fillCircle(6, 6, 4)        // brass face
+      g.fillStyle(0xe6c46a, 1); g.fillRect(3, 2, 2, 1)       // shine
+      g.fillStyle(0x6f4a17, 1); g.fillCircle(6, 6, 1)        // center hole
+    })
   }
 
   makeMarker() {

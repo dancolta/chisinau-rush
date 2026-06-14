@@ -6,7 +6,7 @@ const F = 'monospace'
 export const TYPES = [
   { key: 'taxist', name: 'Taxistul', role: 'taxist', blurb: 'Logan vechi, dar știe fiecare groapă din Centru pe nume.', perk: 'Pornești cu mai mulți lei + bani din curse.' },
   { key: 'conductor', name: 'Conductorul', role: 'conductor pe ruta 11', blurb: 'Rupe biletul pe troleibuzul 22 cu autoritate.', perk: 'Lei pasivi încet + ție gratis troleibuzul.' },
-  { key: 'agent', name: 'Agentul Imobiliar', role: 'agent imobiliar', blurb: '„Studio cu amplasare reușită, euroreparat" = un balcon în Râșcani.', perk: 'Vinzi amintiri mai scump la Borea.' },
+  { key: 'agent', name: 'Agentul Imobiliar', role: 'agent imobiliar', blurb: '„Studio cu amplasare reușită, euroreparat" = un balcon în Râșcani.', perk: 'Vinzi jetoane mai scump la Borea Țigan.' },
   { key: 'director', name: 'Directorul de Fabrică', role: 'director de fabrică', blurb: 'O fabrică de mobilă pe care n-o numește, BMW X6 cu numere din Lituania.', perk: 'Portmoneu mare la start.' },
   { key: 'ionel', name: 'Venit din Briceni', role: 'venit din Briceni', blurb: 'A venit cu un sac de plăcinte de la mama. Tot e scump aici.', perk: 'Mai mult HP + foame mai lentă.' },
 ]
@@ -14,12 +14,22 @@ export const TYPES = [
 export default class CreateScene extends Phaser.Scene {
   constructor() { super('Create') }
 
+  preload() {
+    if (!this.textures.exists('titleart')) this.load.image('titleart', 'title-art.jpg')
+  }
+
   create() {
     const W = this.scale.width, H = this.scale.height
-    this.add.rectangle(0, 0, W, H, 0x12131c).setOrigin(0)
-    this.add.tileSprite(0, 0, W, H, 'scan').setOrigin(0).setAlpha(0.14)
-    this.add.text(W / 2, 40, 'CHIȘINĂU RUSH', { fontFamily: F, fontSize: '34px', color: '#ebc372' }).setOrigin(0.5)
-    this.add.text(W / 2, 76, 'Cum te cheamă și cine ești, frate?', { fontFamily: F, fontSize: '14px', color: '#aeb5c0' }).setOrigin(0.5)
+    this.add.rectangle(0, 0, W, H, 0x0b0c14, 1).setOrigin(0)
+    // pixel-art hero backdrop (Gemini) — cover-fit, dimmed so the UI stays readable
+    if (this.textures.exists('titleart')) {
+      const bg = this.add.image(W / 2, H / 2, 'titleart').setOrigin(0.5)
+      bg.setScale(Math.max(W / bg.width, H / bg.height))
+      this.add.rectangle(0, 0, W, H, 0x0b0c14, 0.62).setOrigin(0)
+    }
+    this.add.tileSprite(0, 0, W, H, 'scan').setOrigin(0).setAlpha(0.1)
+    this.add.text(W / 2, 40, 'CHIȘINĂU RUSH', { fontFamily: F, fontSize: '34px', color: '#ebc372' }).setOrigin(0.5).setStroke('#0b0c14', 6)
+    this.add.text(W / 2, 76, 'Cum te cheamă și cine ești, frate?', { fontFamily: F, fontSize: '14px', color: '#cdd2dc' }).setOrigin(0.5).setStroke('#0b0c14', 4)
 
     // name field (starts EMPTY — type your own)
     this.pname = ''
