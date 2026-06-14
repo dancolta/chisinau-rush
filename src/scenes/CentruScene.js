@@ -700,12 +700,12 @@ export default class CentruScene extends Phaser.Scene {
       ['npc_c7', 1380, 1122, 'Deputatul', 'Stimați alegători, anul ăsta reparăm toate gropile, vă garantez.'],
       ['npc_c0', 2120, 1122, 'Revenit din Italia', 'Allora, băieți, în Italia altă viață. Da\' acasă-i acasă, torn fundația.'],
       ['npc_c4', 2560, 1300, 'Plăcintăreasa de la Gară', 'Mănâncă, slăbănogule, ia o plăcintă cât îi caldă, de la mine cadou.'],
-      ['npc_c2', 2300, 1300, 'Schimbătorul Valutar', 'Euro, dolar, ruble? Cel mai bun curs la mine, frate, hai în colț.'],
+      ['npc_c2', 2300, 1300, 'Schimbătorul Valutar', 'Euro, dolar, ruble? Cel mai bun curs la mine, bratan, hai în colț.'],
       ['npc_c5', 1660, 1180, 'Conductorul de Troleibuz', 'Biletul, vă rog. N-aveți? Coborâți la următoarea, aici nu-i taxi gratis.'],
       ['npc_c3', 2100, 690, 'Șoferul de Evacuator', 'Ai parcat pe trotuar, băiete? Hai-hai, ți-o ridic acuma.'],
       ['npc_c4', 1080, 1122, 'Doamna Doctor', 'Ce te doare? Tensiunea de la nervi. Ia trei zile concediu și gata, că n-am ce-ți face.'],
       ['npc_c0', 300, 690, 'Marfagiul de la Piață', 'Roșii de Costești, castraveți, două kile la preț de una! Hai, că închid.'],
-      ['npc_c7', 1920, 1480, 'Mecanicul din Garaj', 'Băi frate, motorul de Logan? Îi pun turbină, faci drift pe Dacia.'],
+      ['npc_c7', 1920, 1480, 'Mecanicul din Garaj', 'Băi bratu, motorul de Logan? Îi pun turbină, faci drift pe Dacia.'],
       ['npc_c1', 1620, 1480, 'Blogherița', 'Salutare, gașcă! Azi vă arăt cel mai aesthetic kofe din Chișinău, link în bio.'],
       ['npc_c6', 1480, 1180, 'Viticultorul', 'Gustă vinul, ăsta-i de Cricova, nu apă chioară. Da\' primarul ăla ascunde ceva.'],
       ['npc_c2', 560, 690, 'Directorul de Fabrică', 'Hai să discutăm, băiete. O fabrică de mobilă, nu contează care. Numerar, da?'],
@@ -732,7 +732,7 @@ export default class CentruScene extends Phaser.Scene {
       ['npc_c0', 2160, 1470, 'Vânzătoarea de Pește', 'Caras proaspăt azi, crap, scrumbie, miroase a râu, nu a frigider. Ia-l pe ăsta, ți-l curăț pe loc, ție-ți dau și icrele cadou. Hai, că pe la prânz rămân doar oase.', 20, 20, 'lei'],
       ['npc_c2', 2060, 1320, 'Cântăritorul de la Piață', 'Cântarul meu e cinstit, băiete, nu ca al lui de colo cu magnet sub talger. Dacă te-a tras careva în piață, vino la mine, recântăresc gratis, de principiu.', 10, 30, 'civic'],
       ['npc_c7', 1960, 1200, 'Acordeonistul din Pasaj', 'O melodie pentru tine, băiete, ceva de suflet ori ceva de joc? Lumea trece grăbită și uită că are urechi. Lasă un leu în pălărie, nu pentru mine, pentru muzică.', 15, 20, 'lei'],
-      ['npc_gopnik', 200, 1500, 'Gopnicii din Buiucani', 'Frate, aici tu nu treci așa. Întâi arăți ce poți, apoi vorbim. Ai o siga?', 8, 20, 'cred'],
+      ['npc_gopnik', 200, 1500, 'Gopnicii din Buiucani', 'Bratan, aici tu nu treci așa. Întâi arăți ce poți, apoi vorbim. Ai o siga?', 8, 20, 'cred'],
       ['npc_gopnik', 1080, 1460, 'Gopnicii din Botanica', 'Bratan, stai jos, mănâncă semechki, da nu scuipa pe curtea mea. Cine ți-o dat voie să parchezi aici?', 8, 20, 'cred'],
       ['npc_gopnik', 2540, 820, 'Gopnicii din Ciocana', 'Siga, fraer, drumu ăsta îi al nostru. Vrei să treci la Borea? Plătești tribut ori faci o cursă, davai.', 8, 20, 'cred'],
       ['npc_gopnik', 2360, 1460, 'Gopnicii din Râșcani', 'Ce te uiți, bratan? În piață umblă lume cu bani, noi doar ne uităm. Tu ești cu noi ori contra?', 8, 20, 'cred'],
@@ -967,7 +967,7 @@ export default class CentruScene extends Phaser.Scene {
     const s = this.state
     if (n === 1) {
       if (s.satchel > 0) { const g = Math.round(s.satchel * (10 + Math.random() * 4) * (this.sellMarkup || 1)); s.lei += g; this.toast(`Vândut ${s.satchel} jetoane: +${g} lei`); s.satchel = 0; this.addXp(20) }
-      else this.toast('N-ai ce vinde, frate.')
+      else this.toast('N-ai ce vinde, bratu.')
     } else if (n === 2) {
       if (s.lei >= 15) { s.lei -= 15; s.hp = Math.min(s.maxHp, s.hp + 35); this.toast('Plăcintă caldă! +35 HP') } else this.toast('N-ai 15 lei.')
     } else if (n === 3) {
@@ -1032,7 +1032,7 @@ export default class CentruScene extends Phaser.Scene {
     this.racing = true; this.raceCp = 0; this.raceT = 0
     this.raceRings.forEach((r) => r.setVisible(true))
     this._missionBak = this.registry.get('mission')
-    this.toast('GO! Treci prin inele, frate!')
+    this.toast('GO! Treci prin inele, bratan!')
   }
 
   updateRace(d) {
@@ -1046,14 +1046,14 @@ export default class CentruScene extends Phaser.Scene {
       this.toast(`Punct! ${this.raceCp}/${this.raceRings.length}`)
     }
     this.registry.set('mission', `Cursă: ${this.raceCp}/${this.raceRings.length} inele · ${Math.max(0, Math.ceil(this.raceLimit - this.raceT))}s`)
-    if (this.raceT > this.raceLimit) this.failRace('Prea lent, frate.')
+    if (this.raceT > this.raceLimit) this.failRace('Prea lent, bratu.')
   }
 
   winRace() {
     this.racing = false; this.raceRings.forEach((r) => r.setVisible(false))
     const stake = 120 + (this._raceWins || 0) * 20 + (this.leiPerRideBonus || 0); this._raceWins = (this._raceWins || 0) + 1
     this.state.lei += stake; this.state.score += 80; this.addCred(40); this.addXp(80)
-    this.toast(`Respect, frate! +${stake} lei`)
+    this.toast(`Respect, bratan! +${stake} lei`)
     this.registry.set('mission', this._missionBak || '')
     if (this.cluesEnabled) this.addClue('gopnik', 'cortegiul negru merge mereu spre ambasada rusă; gopnicii văd tot din curte')
     this.syncHud()

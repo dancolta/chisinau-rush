@@ -29,7 +29,7 @@ export default class CreateScene extends Phaser.Scene {
     }
     this.add.tileSprite(0, 0, W, H, 'scan').setOrigin(0).setAlpha(0.1)
     this.add.text(W / 2, 40, 'CHIȘINĂU RUSH', { fontFamily: F, fontSize: '34px', color: '#ebc372' }).setOrigin(0.5).setStroke('#0b0c14', 6)
-    this.add.text(W / 2, 76, 'Cum te cheamă și cine ești, frate?', { fontFamily: F, fontSize: '14px', color: '#cdd2dc' }).setOrigin(0.5).setStroke('#0b0c14', 4)
+    this.add.text(W / 2, 76, 'Cum te cheamă și cine ești, bratu?', { fontFamily: F, fontSize: '14px', color: '#cdd2dc' }).setOrigin(0.5).setStroke('#0b0c14', 4)
 
     // name field (starts EMPTY — type your own)
     this.pname = ''
@@ -58,16 +58,18 @@ export default class CreateScene extends Phaser.Scene {
     })
     this.select(0)
 
-    // play button
-    this.playBtn = this.add.rectangle(W / 2, H - 44, 220, 40, 0x2f7d3a).setStrokeStyle(2, 0x4caf50).setInteractive({ useHandCursor: true })
-    this.add.text(W / 2, H - 44, '▶  JOACĂ', { fontFamily: F, fontSize: '18px', color: '#ffffff' }).setOrigin(0.5)
-    this.playBtn.on('pointerdown', () => this.confirm())
+    // bottom menu: JOC NOU (always) + CONTINUĂ (only if a save exists in localStorage)
+    this._hasSave = !!localStorage.getItem('cr-save')
+    this._confirmNew = false
+    const newX = this._hasSave ? W / 2 - 130 : W / 2
+    this.playBtn = this.add.rectangle(newX, H - 44, 230, 42, 0x2f7d3a).setStrokeStyle(2, 0x4caf50).setInteractive({ useHandCursor: true })
+    this.playLabel = this.add.text(newX, H - 44, '▶  JOC NOU', { fontFamily: F, fontSize: '18px', color: '#ffffff' }).setOrigin(0.5)
+    this.playBtn.on('pointerdown', () => this.tryNew())
 
-    // Continuă (if a save exists)
-    if (localStorage.getItem('cr-save')) {
-      const cont = this.add.rectangle(W / 2 + 250, H - 44, 150, 40, 0x1c2440).setStrokeStyle(2, 0x2f5bb0).setInteractive({ useHandCursor: true })
-      this.add.text(W / 2 + 250, H - 44, 'Continuă', { fontFamily: F, fontSize: '15px', color: '#9ec0ff' }).setOrigin(0.5)
-      cont.on('pointerdown', () => { this.start(true) })
+    if (this._hasSave) {
+      const cont = this.add.rectangle(W / 2 + 130, H - 44, 230, 42, 0x1c2440).setStrokeStyle(2, 0x2f5bb0).setInteractive({ useHandCursor: true })
+      this.add.text(W / 2 + 130, H - 44, '▶  CONTINUĂ', { fontFamily: F, fontSize: '18px', color: '#9ec0ff' }).setOrigin(0.5)
+      cont.on('pointerdown', () => this.start(true))
     }
 
     this.scale.on('resize', () => this.scene.restart())
@@ -78,11 +80,26 @@ export default class CreateScene extends Phaser.Scene {
     this.cards.forEach((c, j) => c.setStrokeStyle(2, j === i ? 0xebc372 : 0x2c323b).setFillStyle(j === i ? 0x232838 : 0x181a24))
   }
 
-  confirm() { this.start(false) }
+  // new game — confirm once before wiping an existing save
+  tryNew() {
+    if (this._hasSave && !this._confirmNew) {
+      this._confirmNew = true
+      this.playLabel.setText('⚠ SIGUR? pierzi salvarea').setFontSize(13)
+      this.playBtn.setFillStyle(0x8a3030).setStrokeStyle(2, 0xcc3b30)
+      return
+    }
+    this.start(false)
+  }
+
+  confirm() { this.tryNew() }
 
   start(continueSave) {
-    const t = TYPES[this.sel]
-    const player = { name: (this.pname || 'Ion').trim() || 'Ion', type: t.key, typeName: t.name }
+    let player = null
+    if (continueSave) { try { player = JSON.parse(localStorage.getItem('cr-player')) } catch (e) {} } // resume the saved character
+    if (!player || !player.type) {
+      const t = TYPES[this.sel]
+      player = { name: (this.pname || 'Ion').trim() || 'Ion', type: t.key, typeName: t.name }
+    }
     try { localStorage.setItem('cr-player', JSON.stringify(player)) } catch (e) {}
     this.registry.set('player', player)
     this.registry.set('continueSave', !!continueSave)
