@@ -1845,16 +1845,19 @@ export default class CentruScene extends Phaser.Scene {
     this.updateNameplate()
     const ex = this.state.driving ? this.car.x : this.ion.x
     const ey = this.state.driving ? this.car.y : this.ion.y
-    // dovezi pins: the uncollected evidence sources, always visible on the map during the investigation
+    // main-mission pins: every uncollected dovadă is marked on the map (the active lead pulses brighter)
     const dovezi = []
     if (this.cluesEnabled && !this.finaleReady) {
-      const active = this.leadOrder[this.leadIdx] // only the current lead is pinned — a focused trail
-      if (active === 'gopnik' && this.gopnik) dovezi.push({ x: this.gopnik.x, y: this.gopnik.y })
-      else if (active === 'borea' && this.borea) dovezi.push({ x: this.borea.x, y: this.borea.y })
-      else if (active === 'homeless' && this.homeless) dovezi.push({ x: this.homeless.spr.x, y: this.homeless.spr.y })
-      else if (active === 'cop') dovezi.push({ x: 1310, y: ROAD_Y })
+      const active = this.leadOrder[this.leadIdx]
+      const coord = {
+        gopnik: this.gopnik ? { x: this.gopnik.x, y: this.gopnik.y } : null,
+        borea: this.borea ? { x: this.borea.x, y: this.borea.y } : null,
+        homeless: this.homeless ? { x: this.homeless.spr.x, y: this.homeless.spr.y } : null,
+        cop: { x: 1310, y: ROAD_Y },
+      }
+      this.leadOrder.forEach((k) => { if (!this.clues[k] && coord[k]) dovezi.push({ ...coord[k], active: k === active }) })
     } else if (this.finaleReady && !this.won) {
-      dovezi.push({ x: 960, y: ROWS[1].y1 }) // the Primăria — go demask Eban
+      dovezi.push({ x: 960, y: ROWS[1].y1, active: true }) // the Primăria — go demask Eban
     }
     this.registry.set('mapDyn', {
       px: ex, py: ey,

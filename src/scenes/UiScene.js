@@ -60,8 +60,10 @@ export default class UiScene extends Phaser.Scene {
     this.cluePips = []
     for (let i = 0; i < 4; i++) this.cluePips.push(this.add.rectangle(W - 59 + i * 12, 141, 9, 9, 0x2a3242).setOrigin(0).setStrokeStyle(1, 0x000000, 0.5))
 
-    // mission banner / objective list (clear gap below the vitals plate which ends at y130)
-    this.missionText = this.add.text(8, 144, '', { fontFamily: F, fontSize: '12px', color: '#ebc372', backgroundColor: '#10121aEE', padding: { x: 8, y: 6 }, lineSpacing: 5, align: 'left' }).setOrigin(0, 0)
+    // mission banner / objective list — prominent objective panel (bold, bright-green accent + border)
+    this.missionBg = this.add.rectangle(6, 142, 240, 30, 0x0c1a12, 0.97).setOrigin(0, 0).setStrokeStyle(2, 0x5fd06a).setVisible(false)
+    this.missionKick = this.add.text(14, 148, 'MISIUNE', { fontFamily: F, fontSize: '10px', color: '#5fd06a', fontStyle: 'bold' }).setOrigin(0, 0).setVisible(false)
+    this.missionText = this.add.text(14, 162, '', { fontFamily: F, fontSize: '13px', color: '#eafff0', fontStyle: 'bold', lineSpacing: 6, align: 'left' }).setOrigin(0, 0).setStroke('#06120b', 3)
 
     // weapon chip (bottom-left)
     this.weaponText = this.add.text(8, 0, '', { fontFamily: F, fontSize: '10px', color: '#d7dce4', backgroundColor: '#10121aBB', padding: { x: 5, y: 3 } }).setOrigin(0, 1)
@@ -301,7 +303,13 @@ export default class UiScene extends Phaser.Scene {
     }
 
     const mission = this.registry.get('mission')
-    if (mission !== this._mission) { this._mission = mission; this.missionText.setText(mission ? '★ ' + mission : '') }
+    if (mission !== this._mission) {
+      this._mission = mission
+      const on = !!mission
+      this.missionText.setText(mission || '')
+      this.missionBg.setVisible(on); this.missionKick.setVisible(on)
+      if (on) this.missionBg.setSize(Math.max(240, this.missionText.width + 16), this.missionText.height + 36)
+    }
 
     const prompt = this.registry.get('prompt')
     // hide the interaction prompt while any overlay is up, so it never overlaps the dialogue box
@@ -491,12 +499,18 @@ export default class UiScene extends Phaser.Scene {
       const r = 2 + (Math.sin(this.time.now / 200) + 1) * 1.6
       g.fillStyle(0xcc3b30, 1); g.fillCircle(x0 + dyn.tx * sx, y0 + dyn.ty * sy, r)
     }
-    // dovezi pins (uncollected evidence) — pulsing gold, always visible during the investigation
+    // main-mission pins (uncollected dovezi) — all marked; the active lead pulses brighter
     if (dyn.dovezi && dyn.dovezi.length) {
-      const r = 2 + (Math.sin(this.time.now / 240) + 1) * 1.4
+      const pulse = 2 + (Math.sin(this.time.now / 240) + 1) * 1.6
       dyn.dovezi.forEach((p) => {
-        g.fillStyle(0xebc372, 1); g.fillCircle(x0 + p.x * sx, y0 + p.y * sy, r)
-        g.lineStyle(1, 0x10121a, 0.9); g.strokeCircle(x0 + p.x * sx, y0 + p.y * sy, r)
+        const cx = x0 + p.x * sx, cy = y0 + p.y * sy
+        if (p.active) {
+          g.fillStyle(0xffd24a, 1); g.fillCircle(cx, cy, pulse)
+          g.lineStyle(1.5, 0xfff2c0, 1); g.strokeCircle(cx, cy, pulse)
+        } else {
+          g.fillStyle(0x8a7a3a, 0.95); g.fillCircle(cx, cy, 2.4)
+          g.lineStyle(1, 0x10121a, 0.9); g.strokeCircle(cx, cy, 2.4)
+        }
       })
     }
     g.fillStyle(0x4caf50, 1); g.fillCircle(x0 + dyn.px * sx, y0 + dyn.py * sy, 3) // player
