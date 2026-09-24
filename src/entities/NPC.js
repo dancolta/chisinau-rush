@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { Character } from './Character.js'
 import { FILTER } from '../physics/Physics.js'
-import { CURB_H, onRoad } from '../world/CityLayout.js'
+import { onRoad } from '../world/CityLayout.js'
 
 const CAP_HALF = 0.55, CAP_R = 0.32
 

@@ -1,4 +1,4 @@
-import { H_ROADS, V_ROADS, BLOCKS, CURB_H, LANE_W, GRID, WORLD } from './CityLayout.js'
+import { H_ROADS, V_ROADS, BLOCKS, CURB_H, LANE_W, WORLD } from './CityLayout.js'
 import { CHUNK } from './Batches.js'
 import { FILTER } from '../physics/Physics.js'
 

@@ -4,6 +4,7 @@ import { Ring, Pickup, VisionCone, RouteDriver, ChaseDriver, SetPiece, Potholes,
 import { SPEAKERS, HOMES } from './cast.js'
 import { MISSIONS } from './missions.js'
 import { ACTIVITIES, Activities } from './activities.js'
+import { StreetEvents } from './events.js'
 import { CURB_H } from '../world/CityLayout.js'
 import { fmt } from '../ui/UI.js'
 
@@ -116,6 +117,21 @@ class MissionContext {
     const target = typeof pos === 'string' ? this.places[pos] : pos
     if (text) this.objective(text, { sub })
     this.marker(target, label)
+    // tell the player when they're in the wrong mode for this step (on foot / by car)
+    let hint = null
+    if (inVehicle === false) { this.onFootWanted = true; hint = this.every(() => this.sub(this.player.vehicle ? 'Coboară din mașină ({y}[E]{/y}) și mergi pe jos.' : sub)) }
+    if (inVehicle === true) { this.carWanted = true; hint = this.every(() => this.sub(!this.car ? 'Ai nevoie de o mașină: urcă în una ({y}[E]{/y}).' : sub)) }
+    // a specific car is needed: if the player leaves it, the waypoint points back to it
+    if (vehicle) {
+      let inIt = null
+      hint = this.every(() => {
+        const now = this.player.vehicle === vehicle
+        if (now === inIt) return
+        inIt = now
+        if (now) { this.marker(target, label); this.sub(sub) }
+        else { this.marker(vehicle.pos, vehicle.def.name); this.sub(`Urcă înapoi în ${vehicle.def.name} ({y}[E]{/y}).`) }
+      })
+    }
     await this.until(() => {
       const p = this.player
       if (inVehicle === true && (!p.vehicle || p.passenger)) return false
@@ -125,6 +141,7 @@ class MissionContext {
       if (stop && p.vehicle && Math.abs(p.vehicle.speed) > 1.5) return false
       return Math.hypot(q.x - target.x, q.z - target.z) < r
     })
+    if (hint) { this.untrack(hint); this.onFootWanted = this.carWanted = false }
     this.marker(null)
   }
 
@@ -417,6 +434,7 @@ export class Story {
     this.giverId = null
     this.potholes = new Potholes(game)
     this.acts = new Activities(game, this)
+    this.events = new StreetEvents(game, this)
   }
 
   get done() { return this.game.progress.story.done }
@@ -552,6 +570,7 @@ export class Story {
     let ok = false
     try {
       if (def.intro) { await g.ui.chapter(def.intro[0], def.intro[1], def.intro[2], 3.6); ctx.check() }
+      else if (!def.activity && !def.silentStart) g.ui.missionBanner(def.chapterName ? def.chapterName.toUpperCase() : 'MISIUNE', def.title)
       await def.script(ctx)
       ok = !ctx.failed
     } catch (e) {
@@ -684,6 +703,7 @@ export class Story {
     this.updateLeavers(dt)
     this.potholes.update(dt)
     this.acts.update(dt)
+    this.events.update(dt)
     const tags = []
     if (this.giverId && this.cast[this.giverId] && !this.active) tags.push({ npc: this.cast[this.giverId], icon: '!' })
     g.ui.setTags(tags)

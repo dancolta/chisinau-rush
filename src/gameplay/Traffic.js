@@ -163,6 +163,7 @@ class TrolleyDriver {
     }
     const obs = tr.obstacleAhead(v, 14)
     if (obs) target = Math.min(target, Math.max(0, (obs.d - 7) * 0.6))
+    if (this.stalled) target = 0   // poles off the wire (a street event)
     const sp = v.speed
     if (target < 0.3 && sp < 0.6) { v.throttle = 0; v.handbrake = true }
     else { v.handbrake = false; const e = target - sp; v.throttle = e > 0 ? Math.min(1, e * 0.4 + 0.1) : Math.max(-1, e * 0.3) }
@@ -172,6 +173,8 @@ class TrolleyDriver {
 }
 
 // ---------------------------------------------------------------------------
+export { TrolleyDriver }
+
 export class Traffic {
   constructor(game) {
     this.game = game

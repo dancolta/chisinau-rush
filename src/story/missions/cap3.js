@@ -137,6 +137,7 @@ export const rapirea = {
       ...mid.slice(0, cut > 0 ? cut : mid.length),
       { x: -238, z: -141.75, speed: 8, r: 4 }, { x: -240, z: -150, speed: 6, r: 4 }, { x: -240, z: -157, speed: 3, r: 2.5 },
     ]
+    g.vehicles.clearSpot(-240, -150, 12)
     const gw = m.vehicle('gwagon', -58.25, 205, Math.PI, { color: 0x0c0c0e })
     gw.locked = true
     gw.health = 100

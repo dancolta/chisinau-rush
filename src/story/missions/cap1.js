@@ -55,6 +55,7 @@ export const sosire = {
       { x: -44, z: 268.25, speed: 9 }, { x: -52, z: 266.8, speed: 7, r: 4 }, { x: -56.8, z: 262, speed: 7, r: 4 },
       { x: -58.25, z: 252, speed: 11 }, { x: -58.25, z: 204, speed: 11 }, { x: -56.5, z: 191, speed: 5, r: 4 }, { x: -55.25, z: 182, speed: 2.2, r: 2.5 },
     ]
+    g.vehicles.clearSpot(-55.25, 182, 9)
     const drv = m.driver(taxi, route, { speed: 14.5 })
     m.objective('Stai comod. Nea Grișa te duce acasă.', { sub: 'Mouse / [Z][X]: te uiți la oraș' })
     const G = { name: 'Nea Grișa', voice: { pitch: 0.9, type: 'male' }, spec: CAST.taxist }
@@ -196,7 +197,7 @@ export const jiguli = {
     m.data.jig = jig
     await m.cutscene(async () => {
       g.fx?.dust(jig.pos.x, 0.5, jig.pos.z, 20)
-      m.hold({ from: [-27, 2.6, 247], look: [-36, 1.0, 240.6], dur: 60 })
+      m.hold({ from: [-45.8, 1.9, 243.4], look: [-36, 0.9, 240.4], dur: 60 })
       await m.talk('player', 'Jiguliul lui Vasile. Doi ani n-a pornit. Hai, bătrâne, nu mă face de râs.', 3.6)
     })
     m.objective('Urcă în Jiguli ({y}[E]{/y}).')
@@ -475,9 +476,10 @@ export const eban = {
       ...mid.slice(0, cut > 0 ? cut : mid.length),
       { x: 358, z: -138.25, speed: 6, r: 4 }, { x: 361, z: -146, speed: 4, r: 3 }, { x: 361, z: -158, speed: 3, r: 2.5 },
     ]
+    g.vehicles.clearSpot(361, -150, 10)
     const escRoute = route.map((q) => ({ ...q }))
     await m.wait(0.5)
-    const dEsc = m.driver(esc, [{ x: 11, z: RZ + 20, speed: 7 }, ...escRoute.slice(1)], { speed: 13.5 })
+    m.driver(esc, [{ x: 11, z: RZ + 20, speed: 7 }, ...escRoute.slice(1)], { speed: 13.5 })
     esc.siren = true
     await m.wait(0.8)
     const dGw = m.driver(gw, route, { speed: 13 })
@@ -502,7 +504,6 @@ export const eban = {
     })
     await m.until(() => dGw.done || dist(gw.pos, route[route.length - 1]) < 4)
     m.untrack(tail)
-    void dEsc
     m.sub('')
     // ---- at the embassy -------------------------------------------------------------------------
     m.objective('Oprește lângă gardul ambasadei și privește.', { sub: '' })

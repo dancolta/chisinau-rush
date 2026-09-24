@@ -14,7 +14,8 @@ const shots = opt('shots', '')
 const every = +opt('every', '30')
 const W = +opt('w', '640'), H = +opt('h', '360')
 
-const server = await createServer({ server: { port: 5198, strictPort: false, host: '127.0.0.1' }, logLevel: 'error' })
+// fs.strict off: lets the tool run from a snapshot copy whose node_modules is a symlink
+const server = await createServer({ server: { port: 5198, strictPort: false, host: '127.0.0.1', fs: { strict: false } }, logLevel: 'error' })
 await server.listen()
 const base = `http://127.0.0.1:${server.config.server.port}/`
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--autoplay-policy=no-user-gesture-required'] })

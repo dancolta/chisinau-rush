@@ -276,3 +276,20 @@ html.touch .prompt { bottom: 230px; }
 .skip-hint.hidden { display: none; }
 html.touch .skip-hint span { display: none; }
 .tbtn.skipb { position: absolute; right: 22px; bottom: calc(11vh + 40px); z-index: 42; width: 54px; height: 54px; font-size: 20px; }
+
+/* controls table + confirm dialog */
+table.ctl { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.ctl th { text-align: left; font-family: var(--display); font-size: 12px; letter-spacing: 1px; color: var(--gold); padding: 6px 8px; font-weight: 400; }
+table.ctl td { padding: 7px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #e5dccb; }
+table.ctl td b { color: #fff; }
+.confirm { position: absolute; inset: 0; z-index: 90; display: grid; place-items: center; background: rgba(8,6,12,0.7); backdrop-filter: blur(4px); pointer-events: auto; }
+.confirm .box { width: min(420px, 90vw); background: #16121d; border: 1px solid rgba(255,207,74,0.4); border-radius: 16px; padding: 22px 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+.confirm h3 { margin: 0 0 8px; font-family: var(--title); font-size: 32px; letter-spacing: 1px; color: var(--gold); font-weight: 400; }
+.confirm p { margin: 0 0 18px; color: #e5dccb; line-height: 1.5; }
+.confirm .row { display: flex; gap: 10px; }
+
+.mbanner { position: absolute; left: 50%; top: 13%; transform: translateX(-50%); z-index: 39; text-align: center; pointer-events: none; animation: bannerin 0.5s cubic-bezier(.2,1.4,.5,1); }
+.mbanner .k { font-family: var(--display); font-size: 12px; letter-spacing: 5px; color: var(--muted); text-shadow: 0 1px 3px #000; }
+.mbanner .t { font-family: var(--title); font-size: clamp(30px, 4vw, 52px); color: #fff; letter-spacing: 2px; -webkit-text-stroke: 1.5px #000; text-shadow: 0 4px 0 #000; }
+.mbanner.out { opacity: 0; transform: translate(-50%, -10px); transition: all 0.6s ease; }
+@keyframes bannerin { from { opacity: 0; transform: translate(-50%, 16px) scale(0.9); } }

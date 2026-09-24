@@ -226,6 +226,14 @@ export class UI {
     setTimeout(() => f.remove(), ms + 60)
   }
 
+  // slim "MISIUNE · title" banner when a mission starts
+  missionBanner(kicker, title) {
+    const b = el('div', 'mbanner', `<div class="k">${kicker}</div><div class="t">${title}</div>`)
+    this.top.appendChild(b)
+    this.game.audio?.sfx('notify', { bus: 'ui', vol: 0.8 })
+    setTimeout(() => { b.classList.add('out'); setTimeout(() => b.remove(), 600) }, 2600)
+  }
+
   overlay(text, secs = 2.5) {
     const o = el('div', 'overlay-msg', `<div class="h">${text}</div>`)
     this.top.appendChild(o)

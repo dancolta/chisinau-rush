@@ -87,10 +87,13 @@ export const borea = {
     m.objective('Du lada la {y}dubița de la Gară{/y}.', { sub: 'Borea și-a lăsat Jiguliul verde peste drum.' })
     m.marker(drop, 'Dubița')
     let hits = 0
+    let lastHit = 0
     const off = g.events.on('player:crash', (e) => {
-      if (e.force < 26) return
+      if (e.force < 30 || m.t - lastHit < 1.2) return
+      lastHit = m.t
       hits++
-      if (hits === 1) m.notify('{r}Lada a crăpat!{/r} Încă o bușitură și s-a zis cu ea.', 3, 'red')
+      if (hits === 1) m.notify('{r}Lada a crăpat!{/r} Mai ai două bușituri până se sparge.', 3, 'red')
+      else if (hits === 2) m.notify('{r}Lada abia se mai ține!{/r} Încă una și s-a zis cu ea.', 3, 'red')
       else m.fail('Ai spart lada. Borea o să te caute. Cu tot neamul.')
     })
     m.track({ dispose: off })
@@ -272,7 +275,7 @@ export const sergentul = {
     if (standing.length) {
       for (const n of standing.slice(0, 2)) m.story.removeNpc(n)
       jig.locked = false
-      m.chaser(jig, () => ({ x: pol.pos.x, z: pol.pos.z }), { speed: 23 })
+      m.chaser(jig, () => ({ x: pol.pos.x, z: pol.pos.z }), { speed: 20 })
       m.notify('{r}Gopnicii sar în Jiguli și vin după tine!{/r}', 3, 'red')
     }
     const cal = m.story.cast.caldare
@@ -281,7 +284,7 @@ export const sergentul = {
     m.marker(dest, 'Căldare')
     m.every(() => {
       m.sub(`Starea mașinii: ${pol.health > 60 ? '{g}' : pol.health > 40 ? '{y}' : '{r}'}${Math.round(pol.health)}%{/${pol.health > 60 ? 'g' : pol.health > 40 ? 'y' : 'r'}}`)
-      if (pol.health < 30) m.fail('Ai făcut mașina praf. Căldare pleacă la Ocnița.')
+      if (pol.health < 22) m.fail('Ai făcut mașina praf. Căldare pleacă la Ocnița.')
     })
     await m.until(() => p.vehicle === pol && dist(pol.pos, dest) < 14 && Math.abs(pol.speed) < 1.5)
     m.marker(null)

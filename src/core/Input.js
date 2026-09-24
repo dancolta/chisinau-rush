@@ -27,6 +27,7 @@ const KEYMAP = {
   choice4: ['Digit4', 'Numpad4'],
   retry: ['KeyR'],
   job: ['KeyT', 'TouchJob'],
+  photo: ['KeyO'],
   camLeft: ['KeyZ'],
   camRight: ['KeyX'],
   radio: ['KeyR'],

@@ -258,7 +258,6 @@ export class Activities {
       if (this.taxiHint !== v) { this.taxiHint = v; g.ui.tip('Apasă {y}[T]{/y} ca să începi tura de taxi.', 6) }
       if (g.input.pressed('job')) s.run(TAXI_SHIFT)
     } else if (!v) this.taxiHint = 0
-    void dt
   }
 
   blips() {

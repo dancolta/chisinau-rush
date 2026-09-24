@@ -61,9 +61,17 @@ export async function taxiFare(m, { taxi = null, spec = null, name = 'Clientul',
   const npc = m.spawn(null, spec || randomCivilian(Math.random), from.x, from.z, { name, voice, ry: from.ry ?? 0 })
   npc.lookAtPlayer = true
   const inTaxi = () => { const v = m.car; return !!v && (!taxi || v === taxi) && !v.broken }
-  let offT = 0
+  let offT = 0, phase = 'pickup', was = null
   const watch = m.every((dt) => {
-    if (!inTaxi() && !g.cutscene) { offT += dt; if (offT > patience) m.fail('Ai lăsat taxiul. Clientul a plecat supărat.') } else offT = 0
+    const inside = inTaxi()
+    if (!inside && !g.cutscene) { offT += dt; if (offT > patience) m.fail('Ai lăsat taxiul. Clientul a plecat supărat.') } else offT = 0
+    // out of the cab: point back to it; back in: point to the fare
+    if (taxi && inside !== was) {
+      was = inside
+      if (!inside) { m.marker(taxi.pos, 'Taxiul'); m.sub('Întoarce-te în taxi ({y}[E]{/y}), clientul așteaptă!') }
+      else if (phase === 'pickup') { m.marker({ x: from.x, z: from.z }, name); m.sub('Oprește lângă el cu taxiul.') }
+      else { m.marker(to, toLabel); m.sub('Bacșiș dacă ajungi repede și fără bușituri.') }
+    }
   })
   m.objective(`Ia clientul: {y}${name}{/y}.`, { sub: 'Oprește lângă el cu taxiul.' })
   m.marker({ x: from.x, z: from.z }, name)
@@ -88,6 +96,7 @@ export async function taxiFare(m, { taxi = null, spec = null, name = 'Clientul',
     if (crashLines && Math.random() < 0.7) m.task(() => m.talk(sp, pickOne(crashLines), 2.4))
   })
   m.track({ dispose: off })
+  phase = 'ride'
   m.objective(`Du clientul la {y}${toLabel}{/y}.`, { sub: 'Bacșiș dacă ajungi repede și fără bușituri.' })
   m.marker(to, toLabel)
   m.task(async () => { await m.wait(2.5); for (const l of lines) { await m.talk(sp, l); await m.wait(2.2) } })

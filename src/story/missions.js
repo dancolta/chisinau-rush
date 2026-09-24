@@ -3,6 +3,7 @@ import { cursa, borea, profetul, sergentul } from './missions/cap2.js'
 import { beciul, rapirea } from './missions/cap3.js'
 import { mitingul, cortegiul, alegeri } from './missions/cap4.js'
 import { TAXI_SHIFT, STREET_RACE, PIZZA } from './activities.js'
+import { STREET_EVENTS } from './events.js'
 
 // The whole story, in order. Activities are repeatable side jobs run through the same mission runner.
 export const MISSIONS = [
@@ -11,4 +12,5 @@ export const MISSIONS = [
   beciul, rapirea,
   mitingul, cortegiul, alegeri,
   TAXI_SHIFT, STREET_RACE, PIZZA,
+  ...STREET_EVENTS,
 ]

@@ -142,6 +142,15 @@ export class Game {
     requestAnimationFrame(loop)
   }
 
+  // photo mode: no HUD, no prompts, just the city (O to toggle)
+  setPhotoMode(on) {
+    this.photoMode = on
+    this.ui.showHud(!on)
+    this.ui.top.style.visibility = on ? 'hidden' : ''
+    if (this.touch) this.touch.root.style.visibility = on ? 'hidden' : ''
+    if (!on) this.ui.notify('Mod foto oprit.', 1.2)
+  }
+
   // brief freeze on heavy hits: sells the impact
   hitstop(ms) { this.hitstopT = Math.max(this.hitstopT, ms / 1000) }
 
@@ -182,7 +191,7 @@ export class Game {
     if (!this.paused) this.renderer.tod.update(scaled)
     this.renderer.applyTimeOfDay()
     this.renderer.updateEnvironment()
-    if (this.world.poolMesh) this.world.poolMesh.material.opacity = SHARED.uNight.value * 0.55
+    if (this.world.poolMesh) this.world.poolMesh.material.opacity = SHARED.uNight.value * 0.3
     this.renderer.render(dt)
     this.input.endFrame()
   }
@@ -190,6 +199,8 @@ export class Game {
   handleGlobalInput() {
     const i = this.input
     if (this.state !== 'play') return
+    if (this.photoMode && (i.pressed('photo') || i.pressed('pause'))) { this.setPhotoMode(false); return }
+    if (i.pressed('photo') && !this.paused && !this.ui.modalOpen && !this.cutscene) { this.setPhotoMode(true); return }
     if (i.pressed('pause') && !this.cutscene) {
       if (this.paused || !this.ui.modalOpen) this.menus.togglePause()
     } else if (i.pressed('map') && !this.paused && !this.ui.modalOpen && !this.cutscene) {

@@ -79,6 +79,9 @@ export class Debug {
     const pk = a.tracked.find((o) => o.kind && o.baseY !== undefined)
     if (pk) { if (p.vehicle) g.vehicles.exit(true); p.teleport(pk.x, g.physics.groundHeight(pk.x, pk.z, 3), pk.z); this.note('pickup ' + pk.kind); return 'pickup' }
     const mk = g.ui.marker
+    if (g.police.level > 0) { g.police.clear(); this.note('lose cops'); return 'cops' }
+    if (a.onFootWanted && p.vehicle && !p.passenger) { g.vehicles.exit(true); this.note('get out'); return 'exit' }
+    if (a.carWanted && !p.vehicle) { const v = g.vehicles.nearestEnterable(p.pos.x, p.pos.z, 60) || g.vehicles.spawn('logan', p.pos.x + 3, p.pos.z, 0); g.vehicles.enter(v); this.note('need car'); return 'enter' }
     // shopping objectives: use the nearest shop/kiosk to the marker
     if (mk && /Cumpără/.test(obj)) {
       let best = null, bd = 8
@@ -126,6 +129,7 @@ export class Debug {
     const g = this.game
     // start the next story mission when idle
     if (!g.story.active && g.state === 'play' && !g.ui.modalOpen && !g.cutscene) {
+      if (this.noStory) return
       const m = g.story.nextMission()
       if (m) {
         const q = g.story.giverPos(m)

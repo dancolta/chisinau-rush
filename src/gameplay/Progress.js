@@ -96,9 +96,12 @@ export class Progress {
 
   update(dt) {
     // hunger drains slowly; an empty stomach slowly eats HP
-    const rate = (this.perk.hunger || 1) / 540
+    const rate = (this.perk.hunger || 1) / 960
+    const before = this.hunger
     this.hunger = Math.max(0, this.hunger - dt * rate)
-    if (this.hunger <= 0) this.hurt(dt * 0.6)
+    if (before >= 0.2 && this.hunger < 0.2) this.game.ui?.notify('🍞 Ți-e foame. Un chioșc, o plăcintă, o șaurma… ceva.', 4, 'gold')
+    if (before >= 0.06 && this.hunger < 0.06) this.game.ui?.notify('{r}Mori de foame!{/r} Mănâncă ceva până nu leșini.', 4, 'red')
+    if (this.hunger <= 0) this.hurt(dt * 0.35)
     else if (this.hunger > 0.5 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + dt * 0.35)
     if (this.perk.passive) {
       this.passiveAcc += dt * this.perk.passive

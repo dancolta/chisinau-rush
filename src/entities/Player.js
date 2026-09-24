@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { Character, angleDiff } from './Character.js'
+import { Character } from './Character.js'
 import { FILTER } from '../physics/Physics.js'
 import { CURB_H } from '../world/CityLayout.js'
 import { WEAPONS, makeWeaponMesh } from '../data/weapons.js'

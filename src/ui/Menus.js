@@ -46,8 +46,8 @@ export class Menus {
     const btns = m.querySelector('.mm-btns')
     const add = (label, cls, fn) => { const b = el('button', 'btn ' + cls, label); b.onclick = () => { g.audio?.resume(); g.audio?.sfx('confirm', { bus: 'ui' }); fn() }; b.onmouseenter = () => g.audio?.sfx('hover', { bus: 'ui', vol: 0.4 }); btns.appendChild(b); return b }
     if (save) add('▶  Continuă', 'primary', () => g.director.continueGame(save))
-    add(save ? '＋  Joc nou' : '▶  Joc nou', save ? '' : 'primary', () => {
-      if (save && !confirm('Începi un joc nou? Salvarea curentă se pierde.')) return
+    add(save ? '＋  Joc nou' : '▶  Joc nou', save ? '' : 'primary', async () => {
+      if (save && !(await this.confirm('Începi un joc nou?', 'Salvarea curentă se pierde. Tanti Zina o să uite tot. Și ea uită greu.'))) return
       this.showCreate()
     })
     add('⚙  Setări', '', () => this.showSettingsOnly())
@@ -56,6 +56,16 @@ export class Menus {
     this.startFlyover()
     g.audio?.music('menu')
     g.audio?.ambience('city')
+  }
+
+  confirm(title, text) {
+    return new Promise((res) => {
+      const d = el('div', 'confirm', `<div class="box"><h3>${title}</h3><p>${text}</p><div class="row"><button class="btn danger yes">Da</button><button class="btn primary no">Nu</button></div></div>`)
+      this.layer.appendChild(d)
+      const done = (v) => { d.remove(); this.game.audio?.sfx(v ? 'confirm' : 'back', { bus: 'ui' }); res(v) }
+      d.querySelector('.yes').onclick = () => done(true)
+      d.querySelector('.no').onclick = () => done(false)
+    })
   }
 
   startFlyover() {
@@ -135,7 +145,7 @@ export class Menus {
     g.audio?.duck(0.35, 0.3)
     const m = el('div', 'pause', `
       <div class="top"><h1>PAUZĂ</h1><div class="tabs">
-        <button data-t="map">Hartă</button><button data-t="missions">Misiuni</button><button data-t="char">Personaj</button><button data-t="settings">Setări</button></div></div>
+        <button data-t="map">Hartă</button><button data-t="missions">Misiuni</button><button data-t="char">Personaj</button><button data-t="controls">Controale</button><button data-t="settings">Setări</button></div></div>
       <div class="body"></div>
       <div class="foot"><button class="btn primary resume">▶ Continuă</button><button class="btn save">💾 Salvează</button><button class="btn danger quit">Meniu principal</button></div>`)
     this.layer.appendChild(m)
@@ -148,6 +158,7 @@ export class Menus {
       if (t === 'map') this.renderMap(body)
       else if (t === 'missions') this.renderMissions(body)
       else if (t === 'char') this.renderChar(body)
+      else if (t === 'controls') this.renderControls(body)
       else this.renderSettings(body)
       g.audio?.sfx('click', { bus: 'ui' })
     }
@@ -267,6 +278,28 @@ export class Menus {
     }
     col2.appendChild(el('div', '', '<div style="font-family:var(--display);color:var(--gold);margin:16px 0 10px">RANGURI</div>'))
     RANKS.forEach((r, i) => col2.appendChild(el('div', 'stat-row', `<span style="color:${i <= pr.rankIdx ? '#fff' : '#6a655c'}">${i + 1}. ${r.name}</span><span>${r.xp} XP</span>`)))
+  }
+
+  renderControls(body) {
+    const rows = [
+      ['Mers / condus', 'W A S D · săgeți', 'stick stânga · RT/LT', 'joystick stânga'],
+      ['Fugi / nitro', 'Shift', 'B', '» / 🔥'],
+      ['Lovește', 'Click · J · K', 'X', '👊'],
+      ['Sari / frână de mână', 'Space', 'A', '⤒ / ⤓'],
+      ['Acțiune, urcă/coboară, vorbește', 'E', 'Y', 'E'],
+      ['Schimbă arma', 'Q', 'LB', 'Q'],
+      ['Rotește camera', 'click dreapta + mouse · Z/X', 'stick dreapta', 'trage în dreapta'],
+      ['Zoom', 'rotița', '', ''],
+      ['Claxon', 'H', 'R3', '📯'],
+      ['Privește înapoi (în mașină)', 'C', 'R3', ''],
+      ['Tura de taxi (în taxi)', 'T', '', 'T'],
+      ['Hartă / pauză', 'M / Esc', 'Back / Start', '🗺 / ❚❚'],
+      ['Sari peste scenă', 'ține Space', 'ține A', 'ține ⏭'],
+      ['Reîncearcă misiunea', 'R', '', ''],
+      ['Mod foto (fără HUD)', 'O', '', ''],
+    ]
+    const col = el('div', 'col'); col.style.flex = '1'; body.appendChild(col)
+    col.innerHTML = `<table class="ctl"><tr><th></th><th>Tastatură / mouse</th><th>Gamepad</th><th>Touch</th></tr>${rows.map((r) => `<tr><td>${r[0]}</td><td><b>${r[1]}</b></td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</table>`
   }
 
   renderSettings(body) {
