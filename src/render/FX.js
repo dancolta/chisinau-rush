@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { RES } from './Materials.js'
+import { RES, SHARED } from './Materials.js'
 
 // Lightweight particle system (one THREE.Points per texture) + skid mark ribbons.
 const MAX = 1400
@@ -23,6 +23,8 @@ void main() {
 `
 const frag = /* glsl */ `
 uniform sampler2D map;
+uniform float uNight;
+uniform float uNightDim;
 varying float vAlpha;
 varying vec3 vTint;
 varying float vRot;
@@ -31,14 +33,15 @@ void main() {
   float s = sin(vRot), co = cos(vRot);
   vec2 uv = vec2(c.x * co - c.y * s, c.x * s + c.y * co) + 0.5;
   vec4 t = texture2D(map, uv);
-  gl_FragColor = vec4(vTint * t.rgb, t.a * vAlpha);
+  // smoke and dust aren't lit, so dim them at night instead of letting them glow grey
+  gl_FragColor = vec4(vTint * t.rgb * (1.0 - uNightDim * uNight), t.a * vAlpha);
   if (gl_FragColor.a < 0.01) discard;
   #include <colorspace_fragment>
 }
 `
 
 class Emitter {
-  constructor(scene, texture, blending) {
+  constructor(scene, texture, blending, nightDim = 0) {
     this.n = MAX
     this.pos = new Float32Array(MAX * 3)
     this.vel = new Float32Array(MAX * 3)
@@ -62,7 +65,7 @@ class Emitter {
     this.aTint = new THREE.BufferAttribute(this.tint, 3).setUsage(THREE.DynamicDrawUsage)
     this.aRot = new THREE.BufferAttribute(this.rot, 1).setUsage(THREE.DynamicDrawUsage)
     g.setAttribute('position', this.aPos); g.setAttribute('size', this.aSize); g.setAttribute('alpha', this.aAlpha); g.setAttribute('tint', this.aTint); g.setAttribute('rot', this.aRot)
-    const m = new THREE.ShaderMaterial({ uniforms: { map: { value: texture }, uRes: RES }, vertexShader: vert, fragmentShader: frag, transparent: true, depthWrite: false, blending })
+    const m = new THREE.ShaderMaterial({ uniforms: { map: { value: texture }, uRes: RES, uNight: SHARED.uNight, uNightDim: { value: nightDim } }, vertexShader: vert, fragmentShader: frag, transparent: true, depthWrite: false, blending })
     this.points = new THREE.Points(g, m)
     this.points.frustumCulled = false
     this.points.renderOrder = 5
@@ -157,7 +160,7 @@ export class FX {
   constructor(game) {
     this.game = game
     const tex = game.assets.textures
-    this.soft = new Emitter(game.scene, tex.smoke, THREE.NormalBlending)
+    this.soft = new Emitter(game.scene, tex.smoke, THREE.NormalBlending, 0.6)
     this.glow = new Emitter(game.scene, tex.particle, THREE.AdditiveBlending)
     this.skids = new Skids(game.scene)
     this.t = 0

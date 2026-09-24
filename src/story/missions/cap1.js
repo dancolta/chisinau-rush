@@ -70,7 +70,7 @@ export const sosire = {
     m.skippable = true
     await m.until(() => drv.done || dist(taxi.pos, route[route.length - 1]) < 3.2 || m.skipFlag, { timeout: 150, onTimeout: 'Taxiul s-a rătăcit.' })
     m.skippable = false
-    if (m.skipFlag) ride.stop()
+    ride.stop()
     if (m.skipFlag) {
       m.skipFlag = false
       g.ui.subtitle(null)
