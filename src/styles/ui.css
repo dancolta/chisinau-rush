@@ -235,8 +235,44 @@
 .credits h1 { font-family: var(--title); font-size: clamp(56px, 8vw, 110px); color: var(--gold); -webkit-text-stroke: 2px #2a1200; text-shadow: 0 7px 0 #6a2412; margin: 0 0 40px; letter-spacing: 2px; }
 .credits h3 { font-family: var(--display); font-size: 15px; letter-spacing: 5px; color: var(--muted); margin: 46px 0 10px; font-weight: 400; }
 .credits p { font-size: 20px; color: #fff; margin: 6px 0; text-shadow: 0 2px 6px #000; }
-.credits .skip { position: absolute; right: 24px; bottom: 18px; font-size: 12px; color: rgba(255,255,255,0.55); }
+.credits .skip { position: absolute; right: 24px; bottom: 18px; font-size: 12px; color: rgba(255,255,255,0.55); pointer-events: auto; cursor: pointer; padding: 8px; }
 .credits.out { opacity: 0; transition: opacity 0.9s ease; }
 
 .flash { position: absolute; inset: 0; z-index: 57; opacity: 0.85; pointer-events: none; }
 .cine .marker, .cine .npc-tag { display: none !important; }
+
+/* ---- touch controls (phones / tablets) ---- */
+.touch-ui { position: absolute; inset: 0; pointer-events: none; z-index: 20; }
+.tstick { position: absolute; width: 132px; height: 132px; margin: -66px 0 0 -66px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.08), rgba(255,255,255,0.03)); border: 2px solid rgba(255,255,255,0.22); opacity: 0; transition: opacity 0.15s; }
+.tstick.on { opacity: 1; }
+.tstick .knob { position: absolute; left: 50%; top: 50%; width: 58px; height: 58px; border-radius: 50%; background: rgba(255,207,74,0.85); box-shadow: 0 4px 14px rgba(0,0,0,0.5); transform: translate(-50%, -50%); }
+.tbtns { position: absolute; right: 18px; bottom: 18px; width: 230px; height: 200px; }
+.tbtn { position: absolute; pointer-events: auto; width: 64px; height: 64px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); background: rgba(14,11,20,0.55); color: #fff; font: 700 22px var(--body); display: grid; place-items: center; touch-action: none; -webkit-user-select: none; user-select: none; backdrop-filter: blur(3px); }
+.tbtn small { position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.7); white-space: nowrap; text-shadow: 0 1px 2px #000; }
+.tbtn.on { background: rgba(255,207,74,0.55); border-color: var(--gold); transform: scale(0.94); }
+.tbtn.big { width: 84px; height: 84px; font-size: 32px; }
+.tbtn.a { right: 0; bottom: 18px; }
+.tbtn.j { right: 96px; bottom: 0; }
+.tbtn.e { right: 10px; bottom: 122px; background: rgba(255,207,74,0.35); }
+.tbtn.s { right: 100px; bottom: 92px; }
+.tbtn.q { right: 168px; bottom: 36px; width: 54px; height: 54px; font-size: 18px; }
+.ttop { position: absolute; top: 30px; right: 50%; transform: translateX(50%); display: flex; gap: 10px; }
+.ttop .tbtn { position: relative; width: 44px; height: 44px; font-size: 16px; }
+.trotate { position: fixed; inset: 0; z-index: 200; background: #0e0b14; color: #fff; display: grid; place-content: center; text-align: center; font: 600 18px var(--body); }
+.trotate div { font-size: 64px; margin-bottom: 12px; animation: bob 1.2s infinite; }
+html.touch .hud-bl { transform: scale(0.8); transform-origin: bottom left; }
+html.touch .hud-br { right: 250px; bottom: 10px; transform: scale(0.8); transform-origin: bottom right; }
+@media (max-height: 520px) {
+  html.touch .hud-bl { transform: scale(0.6); }
+  html.touch .hud-tl { transform: scale(0.85); transform-origin: top left; }
+  html.touch .hud-tr { transform: scale(0.85); transform-origin: top right; }
+  html.touch .tbtns { transform: scale(0.9); transform-origin: bottom right; }
+}
+html.touch .help-keys { display: none; }
+html.touch .prompt { bottom: 230px; }
+.skip-hint { position: absolute; right: 26px; bottom: calc(11vh + 14px); z-index: 41; display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: rgba(255,255,255,0.75); text-shadow: 0 1px 3px #000; pointer-events: none; }
+.skip-hint i { width: 18px; height: 18px; border-radius: 50%; background: conic-gradient(var(--gold) calc(var(--k, 0) * 360deg), rgba(255,255,255,0.18) 0); }
+.skip-hint b { font-family: var(--display); color: #fff; }
+.skip-hint.hidden { display: none; }
+html.touch .skip-hint span { display: none; }
+.tbtn.skipb { position: absolute; right: 22px; bottom: calc(11vh + 40px); z-index: 42; width: 54px; height: 54px; font-size: 20px; }

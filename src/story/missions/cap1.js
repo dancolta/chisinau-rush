@@ -72,7 +72,20 @@ export const sosire = {
       await m.wait(1)
       await m.talk(G, 'Lucrează. Ca mine la sală. Din 2004.')
     })
-    await m.until(() => drv.done || dist(taxi.pos, route[route.length - 1]) < 3.2, { timeout: 150, onTimeout: 'Taxiul s-a rătăcit.' })
+    m.skippable = true
+    await m.until(() => drv.done || dist(taxi.pos, route[route.length - 1]) < 3.2 || m.skipFlag, { timeout: 150, onTimeout: 'Taxiul s-a rătăcit.' })
+    m.skippable = false
+    if (m.skipFlag) {
+      m.skipFlag = false
+      g.ui.subtitle(null)
+      await m.fade(1, 400)
+      const end = route[route.length - 1]
+      drv.done = true
+      taxi.teleport(end.x, g.physics.groundHeight(end.x, end.z, 3) + 0.3, end.z, Math.PI)
+      g.cameraRig.target.copy(taxi.pos); g.cameraRig.snap()
+      await m.wait(0.3)
+      await m.fade(0, 500)
+    }
     taxi.throttle = 0; taxi.handbrake = true
     await m.wait(0.6)
     await m.talk(G, 'Gata, Botanica. Blocul 7. Salut-o pe Tanti Zina, că ea știe tot ce mișcă în cartier.', 3.6)

@@ -233,8 +233,14 @@ export class Menus {
       col.appendChild(el('div', 'mission-item ' + cls, `<div class="mt">${m.done ? '✔ ' : m.current ? '► ' : m.locked ? '🔒 ' : '• '}${m.title}</div><div class="md">${fmt(m.locked ? 'Se deblochează mai târziu.' : m.desc)}</div>`))
     }
     const col2 = el('div', 'col'); col2.style.flex = '1'; body.appendChild(col2)
-    col2.appendChild(el('div', '', '<div style="font-family:var(--display);color:var(--gold);margin-bottom:10px">ACTIVITĂȚI</div>'))
-    for (const a of g.story.activities()) col2.appendChild(el('div', 'mission-item', `<div class="mt">${a.title}</div><div class="md">${fmt(a.desc)}</div>`))
+    const ev = g.story.evidence()
+    col2.appendChild(el('div', '', `<div style="font-family:var(--display);color:var(--gold);margin-bottom:10px">DOVEZI · ${ev.length}/6</div>`))
+    if (!ev.length) col2.appendChild(el('div', 'mission-item', '<div class="md">Încă nimic. Orașul vorbește, trebuie doar să asculți.</div>'))
+    for (const e of ev) col2.appendChild(el('div', 'mission-item evidence-item', `<div class="mt">📁 ${fmt(e.title)}</div><div class="md">${fmt(e.text)}</div>`))
+    col2.appendChild(el('div', '', '<div style="font-family:var(--display);color:var(--gold);margin:16px 0 10px">ACTIVITĂȚI</div>'))
+    const acts = g.story.activities()
+    if (!acts.length) col2.appendChild(el('div', 'mission-item', '<div class="md">Se deblochează pe parcursul poveștii: taxi, curse, livrări, gropi, dosare.</div>'))
+    for (const a of acts) col2.appendChild(el('div', 'mission-item', `<div class="mt">${a.title}</div><div class="md">${fmt(a.desc)}</div>`))
   }
 
   renderChar(body) {

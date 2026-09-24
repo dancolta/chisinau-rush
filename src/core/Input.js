@@ -7,16 +7,16 @@ const KEYMAP = {
   down: ['KeyS', 'ArrowDown'],
   left: ['KeyA', 'ArrowLeft'],
   right: ['KeyD', 'ArrowRight'],
-  sprint: ['ShiftLeft', 'ShiftRight'],
-  jump: ['Space'],
-  handbrake: ['Space'],
-  attack: ['KeyJ', 'KeyK', 'Mouse0'],
-  interact: ['KeyE', 'KeyF'],
-  swap: ['KeyQ'],
-  horn: ['KeyH'],
+  sprint: ['ShiftLeft', 'ShiftRight', 'TouchSprint'],
+  jump: ['Space', 'TouchJump'],
+  handbrake: ['Space', 'TouchJump'],
+  attack: ['KeyJ', 'KeyK', 'Mouse0', 'TouchAttack'],
+  interact: ['KeyE', 'KeyF', 'TouchE'],
+  swap: ['KeyQ', 'TouchSwap'],
+  horn: ['KeyH', 'TouchHorn'],
   lookBack: ['KeyC'],
-  map: ['KeyM'],
-  pause: ['Escape', 'KeyP'],
+  map: ['KeyM', 'TouchMap'],
+  pause: ['Escape', 'KeyP', 'TouchPause'],
   log: ['Tab'],
   skip: ['Enter', 'Space', 'KeyE'],
   confirm: ['Enter', 'KeyE', 'Space'],
@@ -26,7 +26,7 @@ const KEYMAP = {
   choice3: ['Digit3', 'Numpad3'],
   choice4: ['Digit4', 'Numpad4'],
   retry: ['KeyR'],
-  job: ['KeyT'],
+  job: ['KeyT', 'TouchJob'],
   camLeft: ['KeyZ'],
   camRight: ['KeyX'],
   radio: ['KeyR'],
@@ -60,6 +60,8 @@ export class Input {
     this.lastDevice = 'kb'
     this.enabled = true
     this.typing = false
+    this.virtual = { x: 0, y: 0, mag: 0 } // on-screen joystick
+    this.touchCam = false
 
     const isTypingTarget = (t) => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
 
@@ -142,6 +144,7 @@ export class Input {
     if (this.act('up')) y += 1
     if (this.act('down')) y -= 1
     x += this.padAxes[0]; y -= this.padAxes[1]
+    x += this.virtual.x; y += this.virtual.y
     const l = Math.hypot(x, y)
     if (l > 1) { x /= l; y /= l }
     return { x, y }
@@ -151,6 +154,7 @@ export class Input {
   throttle() {
     if (!this.enabled) return 0
     let t = (this.act('up') ? 1 : 0) - (this.act('down') ? 1 : 0)
+    if (Math.abs(this.virtual.y) > 0.15) t = Math.max(-1, Math.min(1, this.virtual.y * 1.4))
     const p = this.pad
     if (p) {
       const rt = p.buttons[7] ? p.buttons[7].value : 0
@@ -164,6 +168,7 @@ export class Input {
     if (!this.enabled) return 0
     let s = (this.act('right') ? 1 : 0) - (this.act('left') ? 1 : 0)
     if (Math.abs(this.padAxes[0]) > 0) s = this.padAxes[0]
+    if (Math.abs(this.virtual.x) > 0.12) s = Math.max(-1, Math.min(1, this.virtual.x * 1.3))
     return s
   }
 
@@ -175,5 +180,5 @@ export class Input {
     this.mouse.dx = 0; this.mouse.dy = 0; this.mouse.wheel = 0
   }
 
-  clear() { this.down.clear(); this.pressedSet.clear(); this.releasedSet.clear() }
+  clear() { this.down.clear(); this.pressedSet.clear(); this.releasedSet.clear(); this.virtual.x = this.virtual.y = 0 }
 }

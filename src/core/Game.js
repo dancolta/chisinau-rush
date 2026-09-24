@@ -27,6 +27,7 @@ import { Portraits } from '../ui/Portraits.js'
 import { Story } from '../story/Story.js'
 import { AudioEngine } from '../audio/Audio.js'
 import { Debug } from './Debug.js'
+import { Touch, isTouchDevice } from '../ui/Touch.js'
 
 const STEP = 1 / 60
 if (import.meta.env.DEV) { window.THREE = THREE; window.__CR = { Character, CAST } }
@@ -90,6 +91,7 @@ export class Game {
     this.story = new Story(this)
     this.director = new Director(this)
     this.menus = new Menus(this, this.ui)
+    if (isTouchDevice() || location.search.includes('touch')) this.touch = new Touch(this)
     if (import.meta.env.DEV && location.search.includes('lineup')) this.debugLineup()
     if (import.meta.env.DEV) this.debug = new Debug(this)
     this.cameraRig.target.copy(this.player.pos)
@@ -231,7 +233,7 @@ export class Game {
       this.safe('fx', () => { this.fx.update(dt); this.vehicleFX(dt) })
       this.debug?.update(rawDt)
     }
-    this.safe('ui', () => this.ui.update(rawDt))
+    this.safe('ui', () => { this.ui.update(rawDt); this.touch?.update() })
     if (this.audio) this.safe('audio', () => {
       this.audio.updateVehicles?.(this.vehicles.list, this.player?.vehicle || null)
       this.audio.update?.(rawDt, this.camera)

@@ -47,8 +47,11 @@ class MissionContext {
   }
   cancel(reason = '') { this.fail(new MissionFail(reason, { cancel: true })); throw this.failed }
 
+  // hold [Space] during a cutscene (or a skippable ride) to fast-forward it
+  get skipping() { return this.skipFlag && (this.game.cutscene || this.skippable) }
+
   // ---- timing -------------------------------------------------------------------------
-  wait(sec) { this.check(); return new Promise((res, rej) => this.waiters.push({ t: sec, res, rej })) }
+  wait(sec) { this.check(); if (this.skipping) return Promise.resolve(); return new Promise((res, rej) => this.waiters.push({ t: sec, res, rej })) }
   until(cond, { timeout = null, onTimeout = 'Ai rămas fără timp.' } = {}) {
     this.check()
     if (cond()) return Promise.resolve()
@@ -139,7 +142,8 @@ class MissionContext {
   async say(who, lines, opts = {}) {
     this.check()
     const sp = this.speaker(who)
-    const L = (Array.isArray(lines) ? lines : [lines]).map((l) => (typeof l === 'string' ? l : { who: this.speaker(l.who), text: l.text }))
+    let L = (Array.isArray(lines) ? lines : [lines]).map((l) => (typeof l === 'string' ? l : { who: this.speaker(l.who), text: l.text }))
+    if (this.skipping) { if (!opts.choices) return null; L = L.slice(-1) }
     const npc = this.npcFor(who)
     const p = this.player
     if (npc && !opts.noTalk && !npc.char.ko && npc.char.visible) {
@@ -156,6 +160,7 @@ class MissionContext {
   // non-modal line (subtitle + voice blip + bubble), then waits roughly the reading time
   async talk(who, text, secs = null) {
     this.check()
+    if (this.skipping) return
     const sp = this.speaker(who)
     const s = secs ?? clamp(1.4 + text.length * 0.05, 2.2, 6.5)
     this.ui.subtitle(sp.name, text, s)
@@ -239,6 +244,7 @@ class MissionContext {
   // walk an NPC somewhere; resolves on arrival (teleports if it gets stuck)
   walk(npc, x, z, { run = false, face = null, timeout = null } = {}) {
     this.check()
+    if (this.skipping) { npc.teleport(x, this.game.physics.groundHeight(x, z, 3), z, face ?? npc.char.heading); npc.state = 'idle'; npc.path = []; return Promise.resolve() }
     return new Promise((res, rej) => {
       const d = dist(npc.pos, { x, z })
       let done = false
@@ -251,6 +257,7 @@ class MissionContext {
   playerWalk(x, z, speed = 2.2) {
     this.check()
     const p = this.player
+    if (this.skipping) { p.scripted = null; p.teleport(x, this.game.physics.groundHeight(x, z, 3), z); return Promise.resolve() }
     return new Promise((res, rej) => {
       let done = false
       p.scripted = { x, z, speed, onArrive: () => { done = true; res() } }
@@ -337,7 +344,7 @@ class MissionContext {
   adoptVehicle(v) { if (!v) return v; v.keep = true; this.track({ ref: v, dispose: () => { if (this.game.player.vehicle !== v && !v.leaving && this.game.vehicles.list.includes(v)) this.game.vehicles.remove(v) } }); return v }
 
   // ---- cinematics ----------------------------------------------------------------------------
-  shot(opts) { this.check(); return new Promise((res) => this.game.cameraRig.shot({ ...opts, onEnd: res })) }
+  shot(opts) { this.check(); if (this.skipping) return Promise.resolve(); return new Promise((res) => this.game.cameraRig.shot({ ...opts, onEnd: res })) }
   hold(opts) { this.game.cameraRig.shot({ dur: 9999, ...opts }) }
   fade(to, ms = 600) { return this.ui.fade(to, ms) }
   tod(h) { this.game.renderer.tod.set(h); this.game.renderer.applyTimeOfDay(); this.game.renderer.updateEnvironment(true) }
@@ -357,6 +364,8 @@ class MissionContext {
     if (p.vehicle && !p.passenger) { p.vehicle.throttle = 0; p.vehicle.handbrake = true }
     try { await fn() }
     finally {
+      this.skipFlag = false
+      this.ui.skipHint(false)
       this.ui.letterbox(false)
       this.ui.subtitle(null)
       g.cutscene = false
@@ -653,7 +662,15 @@ export class Story {
     const g = this.game
     for (const n of this.npcs) n.update(dt)
     if (g.state !== 'play') return
-    if (this.active) this.active.tick(dt)
+    if (this.active) {
+      const a = this.active
+      if ((g.cutscene || a.skippable) && !g.ui.modalOpen && !a.skipFlag) {
+        this.skipHold = g.input.act('skip') || g.input.act('jump') ? (this.skipHold || 0) + dt : 0
+        g.ui.skipHint(true, this.skipHold / 0.6)
+        if (this.skipHold > 0.6) { a.skipFlag = true; this.skipHold = 0; g.ui.skipHint(false); a.waiters.filter((w) => w.t !== undefined).forEach((w) => { w.t = 0 }) }
+      } else if (!g.cutscene && !a.skippable) g.ui.skipHint(false)
+      a.tick(dt)
+    }
     if (this.autoStart && (!this.active || this.active.def.activity) && !this.starting && !g.ui.modalOpen && !g.cutscene) {
       const a = this.autoStart
       const d = dist(this.P(), this.giverPos(a.m))

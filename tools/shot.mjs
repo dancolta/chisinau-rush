@@ -21,7 +21,8 @@ const base = url || `http://127.0.0.1:${server.config.server.port}/`
 const browser = await chromium.launch({
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--autoplay-policy=no-user-gesture-required'],
 })
-const page = await browser.newPage({ viewport: { width: W, height: H } })
+const touch = args.includes('--touch')
+const page = await browser.newPage({ viewport: { width: W, height: H }, ...(touch ? { hasTouch: true, isMobile: true, deviceScaleFactor: 2 } : {}) })
 const logs = []
 page.on('console', (m) => { const t = m.type(); if (t === 'error' || t === 'warning' || t === 'log') logs.push(`[${t}] ${m.text()}`) })
 page.on('pageerror', (e) => logs.push('[pageerror] ' + e.message + '\n' + (e.stack || '')))

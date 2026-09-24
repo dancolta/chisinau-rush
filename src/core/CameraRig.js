@@ -77,7 +77,7 @@ export class CameraRig {
     const car = p.vehicle
     // ---- user orbit controls -----------------------------------------------------
     const sens = game.settings.camSensitivity ?? 1
-    if (input.key('Mouse2') || input.key('Mouse1')) { this.yaw -= input.mouse.dx * 0.0055 * sens; this.userYawT = 2.5 }
+    if (input.key('Mouse2') || input.key('Mouse1') || input.touchCam) { this.yaw -= input.mouse.dx * 0.0055 * sens; if (input.mouse.dx) this.userYawT = 2.5 }
     const look = input.lookAxes()
     if (Math.abs(look.x) > 0) { this.yaw -= look.x * 2.4 * rawDt * sens; this.userYawT = 2.5 }
     if (input.act('camLeft')) { this.yaw += 1.8 * rawDt; this.userYawT = 2.5 }

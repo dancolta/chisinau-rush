@@ -187,7 +187,7 @@ export class UI {
       let done = false
       const close = () => { if (done) return; done = true; window.removeEventListener('keydown', onKey, true); c.classList.add('out'); this.modalOpen = false; this.game.input.clear(); setTimeout(() => { c.remove(); res() }, 450) }
       const onKey = (e) => { if (['KeyE', 'Space', 'Enter', 'Escape'].includes(e.code)) { e.preventDefault(); e.stopPropagation(); close() } }
-      setTimeout(() => { window.addEventListener('keydown', onKey, true); c.addEventListener('mousedown', close) }, 900)
+      setTimeout(() => { window.addEventListener('keydown', onKey, true); c.addEventListener('mousedown', close); c.addEventListener('touchstart', close) }, 900)
       setTimeout(close, this.game.autoTalk ? 500 : secs * 1000 + 6000)
     })
   }
@@ -214,7 +214,7 @@ export class UI {
       let done = false
       const close = () => { if (done) return; done = true; window.removeEventListener('keydown', onKey, true); c.classList.add('out'); setTimeout(() => { c.remove(); res() }, 900) }
       const onKey = (e) => { if (['KeyE', 'Escape', 'Enter'].includes(e.code)) { e.preventDefault(); e.stopPropagation(); close() } }
-      setTimeout(() => window.addEventListener('keydown', onKey, true), 1500)
+      setTimeout(() => { window.addEventListener('keydown', onKey, true); c.querySelector('.skip').addEventListener('click', close) }, 1500)
       setTimeout(close, this.game.autoTalk ? 1200 : secs * 1000)
     })
   }
@@ -230,6 +230,13 @@ export class UI {
     const o = el('div', 'overlay-msg', `<div class="h">${text}</div>`)
     this.top.appendChild(o)
     return new Promise((res) => setTimeout(() => { o.remove(); res() }, secs * 1000))
+  }
+
+  // "hold to skip" ring shown during cutscenes
+  skipHint(on, k = 0) {
+    if (!this.skipEl) { this.skipEl = el('div', 'skip-hint hidden', '<i></i><span>Ține <b>␣</b> ca să sari</span>'); this.top.appendChild(this.skipEl) }
+    this.skipEl.classList.toggle('hidden', !on)
+    if (on) this.skipEl.firstChild.style.setProperty('--k', Math.min(1, k))
   }
 
   letterbox(on) { this.lbEl.classList.toggle('on', on); this.hud.style.opacity = on ? '0' : '1'; this.world.classList.toggle('cine', on) }
@@ -341,23 +348,27 @@ export class UI {
       let n = 0, finished = false
       const stopVoice = voice && this.game.audio ? this.game.audio.voiceStart(voice, plain) : null
       const box = textEl.parentElement
-      const cleanup = () => { clearInterval(iv); window.removeEventListener('keydown', onKey, true); box.removeEventListener('mousedown', onClick); if (stopVoice) stopVoice() }
+      const cleanup = () => { clearInterval(iv); window.removeEventListener('keydown', onKey, true); box.removeEventListener('mousedown', onClick); window.removeEventListener('touchstart', onTouch, true); if (stopVoice) stopVoice() }
       const finish = () => { if (finished) return; finished = true; cleanup(); textEl.innerHTML = html; resolve() }
       const iv = setInterval(() => { n += 2; if (n >= total) finish(); else textEl.innerHTML = fmt(partialText(text, n)) }, 28)
       if (this.game.autoTalk) setTimeout(finish, 60)
       const onKey = (e) => { if (['KeyE', 'Space', 'Enter'].includes(e.code)) { e.preventDefault(); e.stopPropagation(); finish() } }
       const onClick = (e) => { e.stopPropagation(); finish() }
+      const onTouch = () => finish()
       window.addEventListener('keydown', onKey, true)
       box.addEventListener('mousedown', onClick)
+      window.addEventListener('touchstart', onTouch, true)
     })
   }
 
   waitAdvance() {
     return new Promise((resolve) => {
-      const done = () => { window.removeEventListener('keydown', onKey, true); window.removeEventListener('mousedown', onClick, true); clearInterval(pad); this.game.audio?.sfx('typewriter', { bus: 'ui', vol: 0.5 }); resolve() }
+      let over = false
+      const done = () => { if (over) return; over = true; window.removeEventListener('keydown', onKey, true); window.removeEventListener('mousedown', onClick, true); window.removeEventListener('touchstart', onTouch, true); clearInterval(pad); this.game.audio?.sfx('typewriter', { bus: 'ui', vol: 0.5 }); resolve() }
       const onKey = (e) => { if (['KeyE', 'Space', 'Enter'].includes(e.code)) { e.preventDefault(); e.stopPropagation(); done() } }
       const onClick = (e) => { if (e.button === 0) { e.stopPropagation(); done() } }
-      setTimeout(() => { window.addEventListener('keydown', onKey, true); window.addEventListener('mousedown', onClick, true) }, 120)
+      const onTouch = () => done()
+      setTimeout(() => { window.addEventListener('keydown', onKey, true); window.addEventListener('mousedown', onClick, true); window.addEventListener('touchstart', onTouch, true) }, 160)
       const pad = setInterval(() => { this.game.input.pollGamepad(); if (this.game.input.pressed('confirm')) done() }, 50)
       if (this.game.autoTalk) setTimeout(done, 140)
     })
