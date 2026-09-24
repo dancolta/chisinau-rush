@@ -292,8 +292,9 @@ export const sergentul = {
       g.vehicles.exit(true)
       pol.locked = true
       const c2 = m.story.cast.caldare
-      if (c2) { await m.walk(c2, pol.pos.x + Math.cos(pol.heading) * 1.8, pol.pos.z - Math.sin(pol.heading) * 1.8, { timeout: 6 }); m.face(c2, pol.pos.x, pol.pos.z) }
-      if (c2) m.hold({ from: [c2.pos.x + 3.5, 2.1, c2.pos.z - 3.4], look: [c2.pos.x, 1.2, c2.pos.z], dur: 60 })
+      const cx = pol.pos.x + Math.cos(pol.heading) * 1.8, cz = pol.pos.z - Math.sin(pol.heading) * 1.8
+      m.hold({ from: [cx + 3.5, 2.1, cz - 3.4], look: [cx, 1.2, cz], dur: 60 })
+      if (c2) { await m.walk(c2, cx, cz, { timeout: 6 }); m.face(c2, pol.pos.x, pol.pos.z) }
       await m.say('caldare', [
         pol.health > 85 ? 'Mașina mea! Frumoasa mea! Nici o zgârietură. Tu ești om serios.' : 'Mașina mea! …Ce-i cu zgârietura asta? Lasă. Zic că-i de la grindină.',
         'Hai să vedem matrioșca asta.',

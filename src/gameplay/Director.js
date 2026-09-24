@@ -1,4 +1,4 @@
-import { Progress } from './Progress.js'
+import { Progress, RANKS } from './Progress.js'
 import { CAST } from '../data/outfits.js'
 import { CURB_H } from '../world/CityLayout.js'
 
@@ -167,6 +167,9 @@ export class Director {
 
   rankUp(r, idx) {
     const g = this.game
+    // hold the banner until the cutscene is over (the last rank is the epilogue's own moment)
+    if ((g.cutscene || g.ui.modalOpen) && idx < RANKS.length - 1) { this.pendingRank = [r, idx]; return }
+    this.pendingRank = null
     g.audio?.sting('levelup')
     g.ui.bigMessage(`RANG NOU: ${r.name.toUpperCase()}`, r.joke, { secs: 4 })
     g.fx?.confetti(g.player.pos.x, g.player.pos.y + 2, g.player.pos.z, 40)
@@ -190,6 +193,7 @@ export class Director {
     const g = this.game
     if (g.state !== 'play') return
     this.updateMusic(dt)
+    if (this.pendingRank && !g.cutscene && !g.ui.modalOpen) this.rankUp(...this.pendingRank)
     g.progress.update(dt)
     // distance driven
     const v = g.player.vehicle

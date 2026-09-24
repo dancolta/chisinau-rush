@@ -16,6 +16,7 @@ import { WEAPONS } from '../data/weapons.js'
 import { Vehicles } from '../gameplay/Vehicles.js'
 import { Traffic } from '../gameplay/Traffic.js'
 import { Pedestrians } from '../gameplay/Pedestrians.js'
+import { Ambient } from '../gameplay/Ambient.js'
 import { Police } from '../gameplay/Police.js'
 import { Combat } from '../gameplay/Combat.js'
 import { Progress } from '../gameplay/Progress.js'
@@ -28,6 +29,7 @@ import { Story } from '../story/Story.js'
 import { AudioEngine } from '../audio/Audio.js'
 import { Debug } from './Debug.js'
 import { Touch, isTouchDevice } from '../ui/Touch.js'
+import { Weather } from '../render/Weather.js'
 
 const STEP = 1 / 60
 if (import.meta.env.DEV) { window.THREE = THREE; window.__CR = { Character, CAST } }
@@ -75,6 +77,7 @@ export class Game {
     await this.world.build((p, l) => progress(0.6 + p * 0.3, l ? 'Construim: ' + l + '…' : undefined))
     progress(0.92, 'Oameni, mașini, polițiști…')
     this.fx = new FX(this)
+    this.weather = this.renderer.weather = new Weather(this)
     this.progress = new Progress(this)
     this.ui = new UI(this)
     this.portraits = new Portraits(this)
@@ -84,6 +87,7 @@ export class Game {
     this.vehicles = new Vehicles(this)
     this.traffic = new Traffic(this)
     this.peds = new Pedestrians(this)
+    this.ambient = new Ambient(this)
     this.police = new Police(this)
     this.combat = new Combat(this)
     this.interaction = new Interaction(this)
@@ -223,7 +227,7 @@ export class Game {
     this.safe('police', () => this.police.fixedUpdate(h))
     this.safe('story', () => this.story.fixedUpdate(h))
     this.safe('vehicles', () => this.vehicles.fixedUpdate(h))
-    this.safe('peds', () => this.peds.fixedUpdate(h))
+    this.safe('peds', () => { this.peds.fixedUpdate(h); this.ambient.fixedUpdate(h) })
     this.physics.step()
     this.safe('postPhysics', () => this.vehicles.postPhysics(h))
   }
@@ -236,12 +240,12 @@ export class Game {
       this.safe('world', () => this.world.update(dt))
       this.safe('traffic', () => this.traffic.update(dt))
       this.safe('vehicles', () => this.vehicles.update(dt))
-      this.safe('peds', () => this.peds.update(dt))
+      this.safe('peds', () => { this.peds.update(dt); this.ambient.update(dt) })
       if (playing) this.safe('police', () => this.police.update(dt))
       this.safe('story', () => this.story.update(dt))
       if (playing) this.safe('interaction', () => this.interaction.update(dt))
       if (playing) this.safe('director', () => this.director.update(dt))
-      this.safe('fx', () => { this.fx.update(dt); this.vehicleFX(dt) })
+      this.safe('fx', () => { this.fx.update(dt); this.vehicleFX(dt); this.weather.update(dt) })
       this.debug?.update(rawDt)
     }
     this.safe('ui', () => { this.ui.update(rawDt); this.touch?.update() })
@@ -278,7 +282,7 @@ export class Game {
       }
       if (puff && v.health < 45) {
         const k = v.broken ? 1 : (45 - v.health) / 45
-        if (Math.random() < 0.1 + k * 0.3) fx.smoke(v.pos.x + fx0 * v.def.dims[2] * 0.7, v.pos.y + v.def.dims[1] * 1.6, v.pos.z + fz0 * v.def.dims[2] * 0.7, v.broken ? 0.14 : 0.35, 0.45 + k * 0.45)
+        if (Math.random() < 0.08 + k * 0.16) fx.smoke(v.pos.x + fx0 * v.def.dims[2] * 0.7, v.pos.y + v.def.dims[1] * 1.6, v.pos.z + fz0 * v.def.dims[2] * 0.7, v.broken ? 0.12 : 0.3, 0.4 + k * 0.25)
       }
     }
   }

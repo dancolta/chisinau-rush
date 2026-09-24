@@ -155,6 +155,7 @@ export class Pedestrians {
         }
       }
       for (const n of this.list) test(n, false)
+      if (game.ambient) for (const n of game.ambient.npcs) test(n, false)
       if (game.story?.npcs) for (const n of game.story.npcs) if (n.hittable) test(n, false)
       const p = game.player
       if (p && !p.vehicle && v.driver !== 'player') test(p, true)

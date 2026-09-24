@@ -298,6 +298,26 @@ export class AudioEngine {
     }
   }
 
+  // steady rain bed for the weather system; amount 0..1
+  rain(amount = 0) {
+    if (!this.ctx || !this.buses || !this.kit) return
+    try {
+      const ctx = this.ctx, now = ctx.currentTime
+      if (!this.rainNode && amount > 0.01) {
+        const src = this.kit.noiseSrc('pink', now, 1e6)
+        const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 700
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 6500
+        const g = ctx.createGain(); g.gain.value = 0
+        src.connect(hp); hp.connect(lp); lp.connect(g); g.connect(this.buses.amb)
+        this.rainNode = { src, g }
+      }
+      if (this.rainNode && Math.abs((this.rainAmt ?? -1) - amount) > 0.01) {
+        this.rainAmt = amount
+        this.rainNode.g.gain.setTargetAtTime(Math.min(1, amount) * 0.3, now, 0.8)
+      }
+    } catch (e) { warn('rain', e) }
+  }
+
   // ---- one-shots ---------------------------------------------------------------------------
   sfx(name, opts) {
     if (!this.running || typeof name !== 'string') return

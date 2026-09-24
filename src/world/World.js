@@ -170,6 +170,7 @@ export class World {
     const atlasTex = this.assets.textures.atlas
     const M = this.materials
     const surf = this.surfaceMaterials()
+    this.surf = surf
     const markings = M.vcol({ roughness: 0.7, emissive: false, key: 'markings' })
     markings.polygonOffset = true; markings.polygonOffsetFactor = -2; markings.polygonOffsetUnits = -2
     const mats = {

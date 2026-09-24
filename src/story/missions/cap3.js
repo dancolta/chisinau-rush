@@ -190,12 +190,26 @@ export const rapirea = {
     g.audio?.sting('fight_win')
     await m.wait(1)
     await m.cutscene(async () => {
+      // stage the reunion on open ground, away from wrecks and their smoke
+      await m.fade(1, 350)
       if (p.vehicle) g.vehicles.exit(true)
+      const s = m.stageSpot(p.pos.x, p.pos.z, { r: 6 })
+      const za = Math.atan2(zina.pos.x - s.x, zina.pos.z - s.z)
+      m.teleport(s.x, s.z, za)
       zina.state = 'idle'
       zina.char.anim.set('idle')
-      await m.walk(zina, p.pos.x + 1.4, p.pos.z + 0.8, { timeout: 5 })
+      zina.teleport(s.x + Math.sin(za) * 4.5, g.physics.groundHeight(s.x + Math.sin(za) * 4.5, s.z + Math.cos(za) * 4.5, 3), s.z + Math.cos(za) * 4.5, za + Math.PI)
+      const zx = s.x + Math.sin(za) * 1.3, zz = s.z + Math.cos(za) * 1.3
+      const vi = allies[0]
+      if (vi && !vi.char.ko) {
+        const vx = s.x - Math.cos(za) * 1.9 + Math.sin(za) * 0.4, vz = s.z + Math.sin(za) * 1.9 + Math.cos(za) * 0.4
+        vi.state = 'idle'
+        vi.teleport(vx, g.physics.groundHeight(vx, vz, 3), vz, za)
+      }
+      m.hold({ ...m.clearView((s.x + zx) / 2, (s.z + zz) / 2, { dist: 4.6, lookY: 1.2, prefer: za + Math.PI / 2 }), dur: 60 })
+      await m.fade(0, 450)
+      await m.walk(zina, zx, zz, { timeout: 5 })
       m.face(zina, p.pos.x, p.pos.z)
-      m.hold({ from: [zina.pos.x + 3.6, 1.9, zina.pos.z + 3.2], look: [zina.pos.x, 1.1, zina.pos.z], dur: 60 })
       await m.say('zina', [
         'Maică, știam că vii! Ăștia m-au întrebat ce-am văzut. Le-am zis că văd prost. Ha! Văd tot.',
         { who: 'vitea', text: 'Nimeni nu se atinge de babele din curtea noastră, bratan. Nimeni.' },

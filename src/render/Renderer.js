@@ -172,8 +172,9 @@ export class Renderer {
     this.sun.color.copy(t.lightColor); this.sun.intensity = t.lightIntensity
     this.renderer.setClearColor(s.fog)
     SHARED.uNight.value = s.lamps
-    if (this.toneMap) this.renderer.toneMappingExposure = s.exposure
-    else this.renderer.toneMappingExposure = s.exposure
+    this.renderer.toneMappingExposure = s.exposure
+    this.scene.fog.far = 900
+    this.weather?.apply(this)
   }
 
   // keep the shadow frustum centred on the action, snapped to texels to avoid shimmer

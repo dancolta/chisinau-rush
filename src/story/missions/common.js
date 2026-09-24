@@ -99,8 +99,9 @@ export async function taxiFare(m, { taxi = null, spec = null, name = 'Clientul',
   phase = 'ride'
   m.objective(`Du clientul la {y}${toLabel}{/y}.`, { sub: 'Bacșiș dacă ajungi repede și fără bușituri.' })
   m.marker(to, toLabel)
-  m.task(async () => { await m.wait(2.5); for (const l of lines) { await m.talk(sp, l); await m.wait(2.2) } })
+  const chat = m.chatter(lines.map((l, i) => [i ? 2.2 : 2.5, sp, l]))
   await m.until(() => inTaxi() && Math.abs(m.car.speed) < 1.6 && dist(m.car.pos, to) < 13)
+  chat.stop()
   m.marker(null)
   v = m.car
   const secs = m.t - t0

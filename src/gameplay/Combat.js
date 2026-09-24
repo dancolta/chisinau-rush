@@ -13,6 +13,7 @@ export class Combat {
     const g = this.game
     const out = []
     if (g.peds) out.push(...g.peds.list)
+    if (g.ambient) out.push(...g.ambient.npcs)
     if (g.police) out.push(...g.police.officers)
     if (g.story?.npcs) out.push(...g.story.npcs.filter((n) => n.hittable && !n.riding))
     return out

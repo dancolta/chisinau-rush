@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { RES } from './Materials.js'
 
 // Lightweight particle system (one THREE.Points per texture) + skid mark ribbons.
 const MAX = 1400
@@ -8,13 +9,15 @@ attribute float size;
 attribute float alpha;
 attribute vec3 tint;
 attribute float rot;
+uniform vec2 uRes;
 varying float vAlpha;
 varying vec3 vTint;
 varying float vRot;
 void main() {
   vAlpha = alpha; vTint = tint; vRot = rot;
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
-  gl_PointSize = size * (620.0 / -mv.z);
+  // size is a world-space diameter: true perspective at any resolution / pixel ratio
+  gl_PointSize = size * projectionMatrix[1][1] * uRes.y * 0.5 / -mv.z;
   gl_Position = projectionMatrix * mv;
 }
 `
@@ -59,7 +62,7 @@ class Emitter {
     this.aTint = new THREE.BufferAttribute(this.tint, 3).setUsage(THREE.DynamicDrawUsage)
     this.aRot = new THREE.BufferAttribute(this.rot, 1).setUsage(THREE.DynamicDrawUsage)
     g.setAttribute('position', this.aPos); g.setAttribute('size', this.aSize); g.setAttribute('alpha', this.aAlpha); g.setAttribute('tint', this.aTint); g.setAttribute('rot', this.aRot)
-    const m = new THREE.ShaderMaterial({ uniforms: { map: { value: texture } }, vertexShader: vert, fragmentShader: frag, transparent: true, depthWrite: false, blending })
+    const m = new THREE.ShaderMaterial({ uniforms: { map: { value: texture }, uRes: RES }, vertexShader: vert, fragmentShader: frag, transparent: true, depthWrite: false, blending })
     this.points = new THREE.Points(g, m)
     this.points.frustumCulled = false
     this.points.renderOrder = 5

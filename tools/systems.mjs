@@ -115,12 +115,14 @@ r = await ev(async () => {
   const g = window.__game
   const d = g.traffic.drivers.find((x) => x.v && !x.v.def.trolley)
   if (!d) return { skip: true }
-  const peds0 = g.peds.list.length
+  const before = new Set(g.peds.list)
+  const at = { x: d.v.pos.x, z: d.v.pos.z }
   g.vehicles.enter(d.v)
   await new Promise((r) => setTimeout(r, 300))
   const ok = g.player.vehicle === d.v
   g.vehicles.exit(true)
-  return { ok, ejected: g.peds.list.length > peds0 }
+  // the yanked driver is a new pedestrian right next to the car
+  return { ok, ejected: g.peds.list.some((n) => !before.has(n) && Math.hypot(n.pos.x - at.x, n.pos.z - at.z) < 8) }
 })
 check('carjacking an AI car', r.skip || (r.ok && r.ejected), JSON.stringify(r))
 

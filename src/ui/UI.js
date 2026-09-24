@@ -267,8 +267,23 @@ export class UI {
 
   refillTicker() {
     const pr = this.game.progress
-    const items = [...NEWS].sort(() => Math.random() - 0.5).slice(0, 7)
+    const items = [...NEWS].sort(() => Math.random() - 0.5).slice(0, 6)
     if (pr) items.push(`Un oarecare „${pr.rank.name}" face ordine prin Centru. Primăria nu comentează`)
+    // the news follows the story
+    const done = pr?.story?.done || []
+    const STORY_NEWS = {
+      eban: 'Primarul Ceon Eban a inaugurat reparația gropii cu numărul o mie. Groapa a fost vopsită',
+      cursa: 'Curse ilegale în Botanica: locatarii se plâng de zgomot, gopnicii de concurență',
+      borea: 'Lăzi cu „vin" confiscate la Gară. Vinul avea ștampila Primăriei',
+      sergentul: 'Mașina de serviciu a sergentului Căldare, găsită „întâmplător" în Râșcani',
+      beciul: 'Luminile din beciul Primăriei ard toată noaptea. Primăria: „lucrăm la asta"',
+      rapirea: 'Scandal la Circ: o pensionară din Botanica a bătut, cu ajutor, patru bodyguarzi',
+      mitingul: 'ULTIMA ORĂ: Primarul Eban, demascat în PMAN în fața a mii de oameni',
+      cortegiul: 'Ceon Eban, reținut după o urmărire spectaculoasă. A căzut în groapa pe care n-a astupat-o',
+      alegeri: `Noul primar, ${pr?.name || 'Ion'}, promite drumuri fără gropi. Lumea a mai auzit, dar speră`,
+    }
+    for (const [id, line] of Object.entries(STORY_NEWS)) if (done.includes(id)) items.unshift(line)
+    items.splice(9)
     this.tickerRun.textContent = '◆ ' + items.join('   ◆   ') + '   ◆'
     this.tickerX = window.innerWidth
   }

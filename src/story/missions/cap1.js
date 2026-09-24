@@ -27,7 +27,7 @@ export const sosire = {
       p.char.setVisible(false)
       p.teleport(321, 0.3, 311.6, Math.PI)
       train.arrive(298.3, 9)
-      g.cameraRig.shot({ from: [291, 1.9, 311.2], to: [289, 2.3, 310.4], lookFrom: [390, 2.4, 314], lookTo: [300, 2.2, 314.6], dur: 9, ease: 'inout' })
+      g.cameraRig.shot({ from: [292, 2.3, 309.6], to: [288, 2.8, 308.2], lookFrom: [392, 2.2, 314], lookTo: [312, 2.0, 314.2], dur: 9, ease: 'inout' })
       await m.wait(9.3)
       p.char.setVisible(true)
       g.audio?.sfx('door', { vol: 0.7 })
@@ -59,23 +59,18 @@ export const sosire = {
     const drv = m.driver(taxi, route, { speed: 14.5 })
     m.objective('Stai comod. Nea Grișa te duce acasă.', { sub: 'Mouse / [Z][X]: te uiți la oraș' })
     const G = { name: 'Nea Grișa', voice: { pitch: 0.9, type: 'male' }, spec: CAST.taxist }
-    m.task(async () => {
-      await m.wait(2)
-      await m.talk(G, 'Șapte ani, zici? S-o schimbat multe. Gropile s-au mărit. Prețurile la fel.')
-      await m.wait(1.2)
-      await m.talk(G, 'Primarul nostru, Ceon Eban… omul taie panglici cum taie alții semințe. Ieri o inaugurat un stâlp.')
-      await m.wait(1.2)
-      await m.talk(G, 'Și vorbește la telefon. Mereu. Tot în rusă. Zice că-i cu „investitorii".')
-      await m.wait(1.5)
-      await m.talk(G, 'Ține-te! Groapa asta o știu de pe vremea lui Snegur!', 2.6)
-      await m.wait(1.2)
-      await m.talk({ name: 'Radio Chișinău' }, '„…primarul Ceon Eban a declarat că gropile vor fi astupate până în 2040. «Lucrăm la asta», a precizat edilul."', 5.2)
-      await m.wait(1)
-      await m.talk(G, 'Lucrează. Ca mine la sală. Din 2004.')
-    })
+    const ride = m.chatter([
+      [2, G, 'Șapte ani, zici? S-o schimbat multe. Gropile s-au mărit. Prețurile la fel.'],
+      [1.2, G, 'Primarul nostru, Ceon Eban… omul taie panglici cum taie alții semințe. Ieri o inaugurat un stâlp.'],
+      [1.2, G, 'Și vorbește la telefon. Mereu. Tot în rusă. Zice că-i cu „investitorii".'],
+      [1.5, G, 'Ține-te! Groapa asta o știu de pe vremea lui Snegur!', 2.6],
+      [1.2, { name: 'Radio Chișinău' }, '„…primarul Ceon Eban a declarat că gropile vor fi astupate până în 2040. «Lucrăm la asta», a precizat edilul."', 5.2],
+      [1, G, 'Lucrează. Ca mine la sală. Din 2004.'],
+    ])
     m.skippable = true
     await m.until(() => drv.done || dist(taxi.pos, route[route.length - 1]) < 3.2 || m.skipFlag, { timeout: 150, onTimeout: 'Taxiul s-a rătăcit.' })
     m.skippable = false
+    if (m.skipFlag) ride.stop()
     if (m.skipFlag) {
       m.skipFlag = false
       g.ui.subtitle(null)
@@ -192,6 +187,7 @@ export const jiguli = {
   next: 'auto',
   async script(m) {
     const g = m.game, p = m.player
+    g.vehicles.clearSpot(-44, 242, 7)
     const jig = m.vehicle('jiguli', -36, 240.6, -Math.PI / 2, { color: 0xd8c9a0, persist: true })
     jig.stalled = true
     m.data.jig = jig
@@ -316,8 +312,9 @@ export const jiguli = {
     await m.cutscene(async () => {
       g.vehicles.exit(true)
       const v = m.story.cast.vova
-      if (v) { await m.walk(v, p.pos.x + 1.6, p.pos.z + 1.2, { timeout: 5 }); m.face(v, p.pos.x, p.pos.z); m.face(p.char, v.pos.x, v.pos.z) }
-      if (v) m.hold({ from: [v.pos.x - 3.5, 2.0, v.pos.z + 3.2], look: [v.pos.x, 1.2, v.pos.z - 0.6], dur: 60 })
+      const mx = p.pos.x + 1.6, mz = p.pos.z + 1.2
+      m.hold({ from: [mx - 4.2, 2.1, mz + 3.6], look: [mx - 0.6, 1.2, mz - 0.4], dur: 60 })
+      if (v) { await m.walk(v, mx, mz, { timeout: 5 }); m.face(v, p.pos.x, p.pos.z); m.face(p.char, v.pos.x, v.pos.z) }
       await m.say('vova', [
         'Ooo! Jiguliul lui Vasile! Ăsta-i tanc, bratan, nu mașină. L-a condus și Brejnev, cred.',
         'Îl fac ca nou. Ca nou-nou nu, da\' ca vechi-bun.',
@@ -497,13 +494,14 @@ export const eban = {
       else if (d > 95 && said !== 2) { said = 2; m.task(() => m.talk(L, 'Nu-l pierde! Calcă!', 2)) }
       else if (d > 25 && d < 80) said = 0
     })
-    m.task(async () => {
-      await m.wait(8); await m.talk(L, 'Știi câte mașini are primăria? Nici eu. Nu-s în niciun registru.', 4)
-      await m.wait(10); await m.talk(L, 'Am scris despre el de trei ori. De trei ori mi-au închis site-ul. „Probleme tehnice."', 4.4)
-      await m.wait(10); await m.talk(L, 'Spre Ismail… spre ambasadă. Știam eu.', 3)
-    })
+    const tailTalk = m.chatter([
+      [8, L, 'Știi câte mașini are primăria? Nici eu. Nu-s în niciun registru.', 4],
+      [10, L, 'Am scris despre el de trei ori. De trei ori mi-au închis site-ul. „Probleme tehnice."', 4.4],
+      [10, L, 'Spre Ismail… spre ambasadă. Știam eu.', 3],
+    ])
     await m.until(() => dGw.done || dist(gw.pos, route[route.length - 1]) < 4)
     m.untrack(tail)
+    tailTalk.stop()
     m.sub('')
     // ---- at the embassy -------------------------------------------------------------------------
     m.objective('Oprește lângă gardul ambasadei și privește.', { sub: '' })

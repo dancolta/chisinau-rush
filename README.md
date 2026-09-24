@@ -30,6 +30,7 @@ npm run build      # static build in dist/ (deployable anywhere, e.g. GitHub Pag
 | Map / pause | `M` / `Esc` | Back / Start | 🗺 / ❚❚ |
 | Skip cutscene | hold `Space` | hold A | hold ⏭ |
 | Retry a failed mission | `R` | | |
+| Photo mode | `O` | | |
 
 ## The story
 
@@ -48,9 +49,11 @@ Every clue you find becomes an **evidence card** (6 in total) that you bring to 
 
 Taxi shifts (`T` in any taxi), street races for money with Vitea, Andy's Pizza deliveries, filling potholes (hold `E`), 30 lost dossiers to collect and sell to Borea, Borea's shop (weapons, fake papers, nitro), Vova's garage (repairs, a free taxi). Seven ranks from *Plecat peste hotare* to *Primar de Chișinău*.
 
+The city also throws things at you between missions: a trolleybus that lost its poles, a granny whose shopping bags need carrying home, a purse snatcher to chase down.
+
 ### Systems
 
-Open city with ~40 landmarks (PMAN, Casa Guvernului, Arcul de Triumf, Catedrala, Primăria, Opera, Circul, Gara, Piața Centrală…), day/night cycle, traffic with lights and trolleybuses, pedestrians who flee or fight back, wanted levels with foot and car pursuits, busted (bribe / sweet-talk / run) and fainting flows, melee combat with combos and six improvised weapons, carjacking, car damage, skid marks and smoke, save and continue.
+Open city with ~40 landmarks (PMAN, Casa Guvernului, Arcul de Triumf, Catedrala, Primăria, Opera, Circul, Gara, Piața Centrală…), day/night cycle, rain showers with wet asphalt, street life (weddings at the Arc, market vendors, bench grannies, card players in the park), traffic with lights and trolleybuses, pedestrians who flee or fight back, wanted levels with foot and car pursuits, busted (bribe / sweet-talk / run) and fainting flows, melee combat with combos and six improvised weapons, carjacking, car damage, skid marks and smoke, photo mode, save and continue. Plays on phones too (on-screen stick and buttons).
 
 ## Tech
 
@@ -66,6 +69,7 @@ Open city with ~40 landmarks (PMAN, Casa Guvernului, Arcul de Triumf, Catedrala,
 node tools/play.mjs --from rapirea --turbo 6     # automated story playthrough (headless Chromium)
 node tools/systems.mjs                          # side systems checks (busted, shop, taxi, save…)
 node tools/shot.mjs --out shot.png --eval "…"   # screenshots
+node tools/gallery.mjs --missions eban,mitingul    # capture every cutscene of the given missions
 ```
 
 `?turbo=4` speeds up the simulation in dev builds; `?touch` forces touch controls on desktop.

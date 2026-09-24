@@ -95,7 +95,7 @@ export const mitingul = {
         'Io… io sunt cu oamenii. Davai, dați-vă la o parte.',
       ])
       eban.char.mesh.scale.multiplyScalar(0.96)
-      g.cameraRig.shot({ from: [X - 2.2, 1.7, Z + 5.5], look: [X, 1.5, Z], dur: 6, ease: 'out' })
+      g.cameraRig.shot({ from: [X - 3.1, 1.85, Z + 7.4], look: [X + 0.4, 1.45, Z], dur: 6, ease: 'out' })
       await m.talk('player', 'Și dosarul uitat în taxiul meu: „Proiectul Beznă". Semnat de mâna lui. Negru pe alb, oameni buni.', 4.4)
       // the question
       g.cameraRig.shot({ from: [X + 6, 3, Z + 14], look: [X, 1.2, Z + 3], dur: 20, ease: 'inout' })
@@ -206,13 +206,14 @@ export const cortegiul = {
       }
     })
     m.objective('{r}Oprește-l pe Eban!{/r} Izbește G-Wagonul până cedează.')
-    m.task(async () => {
-      await m.wait(10); await m.talk('eban', '(la telefon) Vasili Petrovici! Mă urmăresc! Trimiteți pe cineva!', 3.4)
-      await m.wait(14); await m.talk({ name: 'Radio poliție' }, '„Toate echipajele: G-Wagon negru, primarul la volan. Nu, nu glumesc."', 4)
-      await m.wait(16); await m.talk('eban', 'Voi nu înțelegeți! Eu… eu lucram la asta!', 2.8)
-    })
+    const radio = m.chatter([
+      [10, 'eban', '(la telefon) Vasili Petrovici! Mă urmăresc! Trimiteți pe cineva!', 3.4],
+      [14, { name: 'Radio poliție' }, '„Toate echipajele: G-Wagon negru, primarul la volan. Nu, nu glumesc."', 4],
+      [16, 'eban', 'Voi nu înțelegeți! Eu… eu lucram la asta!', 2.8],
+    ])
     await m.until(() => gw.health <= 12 || gw.broken)
     m.untrack(chase)
+    radio.stop()
     drv.done = true
     gw.broken = true
     g.audio?.sting('takedown')
@@ -235,7 +236,6 @@ export const cortegiul = {
     mine.teleport(C.x + 17, 0.5, C.z - 1.5, -Math.PI / 2)
     mine.siren = true
     m.teleport(C.x + 11, C.z - 3.5, -Math.PI / 2)
-    m.every(() => { if (Math.random() < 0.07) g.fx?.smoke(C.x - 1.4, 0.8, C.z, 0.28, 0.55) })
     await m.wait(0.4)
     await m.fade(0, 700)
     await m.cutscene(async () => {
@@ -248,7 +248,7 @@ export const cortegiul = {
       const c2 = m.spawn('caldare2', 'caldare', C.x + 24, C.z - 12, { voice: { pitch: 0.8, type: 'gruff' } })
       const c3 = m.spawn(null, 'cop', C.x + 26, C.z - 10)
       c2.speed = 2.2
-      g.cameraRig.shot({ from: [C.x + 5, 2.1, C.z - 7.5], look: [C.x + 2, 1.2, C.z - 2.5], dur: 12, ease: 'out' })
+      g.cameraRig.shot({ from: [C.x + 7.5, 2.0, C.z + 4.5], look: [C.x + 2, 1.1, C.z - 2.5], dur: 12, ease: 'out' })
       m.walk(c3, C.x + 3.8, C.z - 3.8, { run: true }).catch(() => {})
       await m.walk(c2, C.x + 3, C.z - 2.8, { run: true, timeout: 7 })
       m.face(c2, e.pos.x, e.pos.z)
@@ -261,10 +261,11 @@ export const cortegiul = {
       const l2 = m.spawn('lilia2', 'jurnalista', C.x + 8, C.z - 6, { voice: { pitch: 1.2, type: 'female' } })
       m.face(l2, C.x, C.z)
       l2.char.anim.set('talk')
-      g.cameraRig.shot({ from: [C.x + 10.5, 1.9, C.z - 4], look: [l2.pos.x, 1.5, l2.pos.z], dur: 7, ease: 'out' })
+      g.cameraRig.shot({ from: [C.x + 5.6, 1.65, C.z - 3.4], to: [C.x + 6, 1.65, C.z - 3.7], look: [l2.pos.x, 1.5, l2.pos.z], dur: 7, ease: 'out' })
       await m.talk({ ...m.speaker('lilia') }, 'Și asta a fost, dragi telespectatori. Groapa pe care a promis-o zece ani… l-a înghițit.', 4.4)
-      g.cameraRig.shot({ from: [p.pos.x - 2.4, 1.8, p.pos.z - 2.2], look: [p.pos.x, 1.45, p.pos.z], dur: 4, ease: 'out' })
+      const pd = Math.atan2(C.x - p.pos.x, C.z - p.pos.z)
       m.face(p.char, C.x, C.z)
+      g.cameraRig.shot({ from: [p.pos.x + Math.sin(pd) * 2.4 - Math.cos(pd) * 0.9, 1.7, p.pos.z + Math.cos(pd) * 2.4 + Math.sin(pd) * 0.9], look: [p.pos.x, 1.5, p.pos.z], dur: 4, ease: 'out' })
       await m.talk('player', 'Lucrăm la asta.', 2.2)
       m.walk(e, C.x + 40, C.z - 16).catch(() => {})
       m.walk(c2, C.x + 40, C.z - 15).catch(() => {})

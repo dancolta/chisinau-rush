@@ -6,6 +6,7 @@ import { MISSIONS } from './missions.js'
 import { ACTIVITIES, Activities } from './activities.js'
 import { StreetEvents } from './events.js'
 import { CURB_H } from '../world/CityLayout.js'
+import { FILTER } from '../physics/Physics.js'
 import { fmt } from '../ui/UI.js'
 
 export class MissionFail extends Error {
@@ -66,7 +67,28 @@ class MissionContext {
     return new Promise((res, rej) => this.waiters.push({ conds, res, rej }))
   }
   // fire-and-forget sub-script (chatter, background beats); failures are swallowed
-  task(fn) { Promise.resolve().then(fn).catch((e) => { if (!(e instanceof MissionFail)) console.error(e) }) }
+  // fire-and-forget side script; fn gets live() so it can bail out once stop() is called
+  task(fn) {
+    const h = { on: true, stop: () => { h.on = false } }
+    Promise.resolve().then(() => fn(() => h.on && !this.failed)).catch((e) => { if (!(e instanceof MissionFail)) console.error(e) })
+    return h
+  }
+  // timed background lines (radio, phone calls, passengers): [[delay, who, text, secs?], ...]
+  // stop() cuts them off (and clears the subtitle) when the scene they belong to is over
+  chatter(lines) {
+    const h = this.task(async (live) => {
+      for (const [delay, who, text, secs] of lines) {
+        await this.wait(delay)
+        if (!live()) return
+        h.talking = true
+        await this.talk(who, text, secs)
+        h.talking = false
+      }
+    })
+    const stop = h.stop
+    h.stop = () => { if (h.on && h.talking) this.ui.subtitle(null); stop() }
+    return h
+  }
   // per-frame callback for the lifetime of the mission; return true to remove it
   every(fn) { const o = { update: (dt) => { if (fn(dt) === true) o.update = null } }; this.tracked.push(o); return o }
 
@@ -363,6 +385,33 @@ class MissionContext {
   // ---- cinematics ----------------------------------------------------------------------------
   shot(opts) { this.check(); if (this.skipping) return Promise.resolve(); return new Promise((res) => this.game.cameraRig.shot({ ...opts, onEnd: res })) }
   hold(opts) { this.game.cameraRig.shot({ dur: 9999, ...opts }) }
+  // open, walkable spot near (x, z) for staging a scene, as far as possible from smoking wrecks
+  stageSpot(x, z, { r = 6, avoid = [] } = {}) {
+    const g = this.game
+    const bad = [...avoid, ...g.vehicles.list.filter((v) => v.health < 45).map((v) => v.pos)]
+    let best = { x, z }, bestS = -1
+    for (let i = 0; i < 16; i++) {
+      const a = i / 16 * Math.PI * 2
+      for (const rr of [r, r * 0.55]) {
+        const cx = x + Math.sin(a) * rr, cz = z + Math.cos(a) * rr
+        if (g.physics.groundHeight(cx, cz, 3) > 0.5) continue
+        const sc = bad.length ? Math.min(...bad.map((b) => Math.hypot(b.x - cx, b.z - cz))) : 99
+        if (sc > bestS + 0.5) { bestS = sc; best = { x: cx, z: cz } }
+      }
+    }
+    return best
+  }
+  // camera spot around (x, z) with an unobstructed view of it: tries angles fanning out from `prefer`
+  clearView(x, z, { dist = 5, h = 1.9, lookY = 1.1, prefer = 0, steps = 12 } = {}) {
+    const P = this.game.physics
+    for (let i = 0; i < steps; i++) {
+      const a = prefer + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * (Math.PI * 2 / steps)
+      const cx = x + Math.sin(a) * dist, cz = z + Math.cos(a) * dist
+      const dx = cx - x, dy = h - lookY, dz = cz - z, L = Math.hypot(dx, dy, dz)
+      if (!P.raycast(x, lookY, z, dx / L, dy / L, dz / L, L + 0.8, FILTER.Q_SOLID)) return { from: [cx, h, cz], look: [x, lookY, z] }
+    }
+    return { from: [x + Math.sin(prefer) * dist, h, z + Math.cos(prefer) * dist], look: [x, lookY, z] }
+  }
   fade(to, ms = 600) { return this.ui.fade(to, ms) }
   tod(h) { this.game.renderer.tod.set(h); this.game.renderer.applyTimeOfDay(); this.game.renderer.updateEnvironment(true) }
   teleport(x, z, ry = null) {
