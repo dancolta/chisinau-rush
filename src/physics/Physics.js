@@ -20,7 +20,8 @@ export const FILTER = {
   GROUND: groups(GROUP.GROUND, ALL & ~GROUP.SENSOR),
   VEHICLE: groups(GROUP.VEHICLE, ALL & ~GROUP.SENSOR),
   PLAYER: groups(GROUP.PLAYER, GROUP.STATIC | GROUP.GROUND | GROUP.VEHICLE | GROUP.PROP | GROUP.PED),
-  PED: groups(GROUP.PED, GROUP.STATIC | GROUP.GROUND | GROUP.VEHICLE | GROUP.PLAYER | GROUP.PROP),
+  // peds don't physically block cars (hits are resolved in code so nobody becomes a concrete wall)
+  PED: groups(GROUP.PED, GROUP.STATIC | GROUP.GROUND | GROUP.PLAYER),
   PROP: groups(GROUP.PROP, ALL & ~GROUP.SENSOR),
   DEBRIS: groups(GROUP.DEBRIS, GROUP.STATIC | GROUP.GROUND),
   // queries
@@ -118,14 +119,17 @@ export class Physics {
     return { body, col }
   }
 
+  // removal is idempotent: touching a removed Rapier handle panics the whole WASM world
   remove(body) {
-    if (!body) return
+    if (!body || body.__removed) return
+    body.__removed = true
     for (let i = 0; i < body.numColliders(); i++) this.user.delete(body.collider(i).handle)
     this.world.removeRigidBody(body)
   }
 
   removeCollider(col) {
-    if (!col) return
+    if (!col || col.__removed) return
+    col.__removed = true
     this.user.delete(col.handle)
     this.world.removeCollider(col, true)
   }

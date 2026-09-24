@@ -295,13 +295,16 @@ export class Traffic {
     return v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1
   }
 
-  fixedUpdate(h) { for (const d of this.drivers) d.fixedUpdate(h) }
+  fixedUpdate(h) {
+    if (this.drivers.some((d) => d.v.disposed)) this.drivers = this.drivers.filter((d) => !d.v.disposed)
+    for (const d of this.drivers) d.fixedUpdate(h)
+  }
 
   update(dt) {
     this.updateLights(dt)
     const p = this.game.player
     if (!p) return
-    const pos = p.vehicle ? p.vehicle.pos : p.pos
+    const pos = this.game.focus()
     this.spawnT -= dt
     if (this.spawnT <= 0) {
       this.spawnT = 0.35

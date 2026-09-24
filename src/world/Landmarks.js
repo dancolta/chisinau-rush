@@ -22,7 +22,10 @@ export class Landmarks {
   g(x, z) { return this.B.vcol(x, z, 'bld') }
   st(x, z) { return this.B.vcol(x, z, 'static') }
   fac(x, z) { return this.B.facade(x, z) }
-  solid(cx, cy, cz, hx, hy, hz, ry = 0) { return this.P.box(cx, cy, cz, hx, hy, hz, { rotY: ry }) }
+  solid(cx, cy, cz, hx, hy, hz, ry = 0) {
+    if (hy > 1.2) this.w.footprints.push({ x: cx, z: cz, hx, hz, ry })
+    return this.P.box(cx, cy, cz, hx, hy, hz, { rotY: ry })
+  }
   patch(surface, x0, z0, x1, z1, lift = 0.012) {
     const s = surface === 'plaza' ? 8 : surface === 'dirt' ? 6 : surface === 'paving' ? 4 : 12
     this.B.flat((x0 + x1) / 2, (z0 + z1) / 2, surface, s).rect(x0, z0, x1, z1, Y + lift)
@@ -768,7 +771,7 @@ export class Landmarks {
     const sign = this.w.signs.sign('GARA CHIȘINĂU', { bg: '#e4d5b2', fg: '#8e3424', w: 768, h: 110 })
     this.w.pendingSigns.push({ x: gx, y: 14.4, z: gz - 8.12, ry: Math.PI, w: 11, h: 1.6, rect: sign, lit: 0.8 })
     // platforms + rails along the south edge
-    const pz = RAIL_Z - 6
+    const pz = RAIL_Z - 8.5
     const pl = this.st(gx, pz)
     pl.box(200, 0.3, 6, { x: gx - 20, y: 0, z: pz, color: 0xa7a39a })
     pl.box(200, 0.05, 0.4, { x: gx - 20, y: 0.3, z: pz + 2.8, color: 0xe8c14a })

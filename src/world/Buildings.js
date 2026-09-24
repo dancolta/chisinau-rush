@@ -84,6 +84,7 @@ export class Buildings {
       g.box(1.3, 0.05, 0.05, { x, y: top + ah * 0.8, z, ry: rnd() * 3, color: 0x3a3a3a })
     }
     this.P.box(cx, y0 + h / 2, cz, len / 2, h / 2, depth / 2, { rotY: ry })
+    this.w.footprints.push({ x: cx, z: cz, hx: len / 2, hz: depth / 2, ry })
     return { top, color }
   }
 
@@ -140,8 +141,15 @@ export class Buildings {
       }
     }
     const hh = 9.5 * tall
-    if (side === 's' || side === 'n') this.P.box((from + to) / 2, CURB_H + hh, side === 's' ? line - 4.8 : line + 4.8, len / 2, hh, 4.7)
-    else this.P.box(side === 'e' ? line - 4.8 : line + 4.8, CURB_H + hh, (from + to) / 2, 4.7, hh, len / 2)
+    if (side === 's' || side === 'n') {
+      const zc = side === 's' ? line - 4.8 : line + 4.8
+      this.P.box((from + to) / 2, CURB_H + hh, zc, len / 2, hh, 4.7)
+      this.w.footprints.push({ x: (from + to) / 2, z: zc, hx: len / 2, hz: 4.8 })
+    } else {
+      const xc = side === 'e' ? line - 4.8 : line + 4.8
+      this.P.box(xc, CURB_H + hh, (from + to) / 2, 4.7, hh, len / 2)
+      this.w.footprints.push({ x: xc, z: (from + to) / 2, hx: 4.8, hz: len / 2 })
+    }
   }
 
   // KayKit rows around a block's perimeter; returns the courtyard rect
@@ -260,6 +268,7 @@ export class Buildings {
     const len = n * (W + 0.05)
     const [cx, cz] = [x0 + len / 2, z]
     this.P.box(cx, CURB_H + 1.3, cz, len / 2, 1.3, 2.95)
+    this.w.footprints.push({ x: cx, z: cz, hx: len / 2, hz: 2.95 })
     this.w.garages.push({ x0, z, n, ry, w: W })
   }
 

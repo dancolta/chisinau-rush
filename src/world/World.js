@@ -42,6 +42,7 @@ export class World {
     this.clearZones = [] // circles { x, z, r }
     this.clearRects = [] // rects
     this.meshes = []
+    this.footprints = [] // { x, z, hx, hz, ry } for the map
     this.trolleyLaneZ = 9.25
     // intersections with traffic lights: the boulevard crossings + a few busy ones
     this.controlled = []

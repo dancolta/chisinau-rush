@@ -25,6 +25,7 @@ function getLightMat() {
 export class Vehicle {
   constructor(game, kind, opts = {}) {
     this.game = game
+    this.id = ++Vehicle.count
     this.kind = kind
     this.def = VEHICLES[kind]
     const d = this.def
@@ -172,7 +173,7 @@ export class Vehicle {
     const v = b.linvel()
     let vf = v.x * fx + v.z * fz
     let vr = v.x * rx + v.z * rz
-    const throttle = this.broken ? 0 : this.throttle
+    const throttle = this.broken || this.stalled ? 0 : this.throttle
     const steer = this.steer
     this.braking = false
     // longitudinal
@@ -232,6 +233,8 @@ export class Vehicle {
     this.roll += (tr - this.roll) * (1 - Math.exp(-6 * dt))
     this.bump *= Math.exp(-8 * dt)
     _e.set(this.pitch + Math.sin(performance.now() * 0.05) * this.bump, hd, this.roll, 'YXZ')
+    // scripted pose override (e.g. nose-down in a crater)
+    if (this.pose) { _e.x += this.pose.pitch || 0; _e.z += this.pose.roll || 0; m.position.y += this.pose.dy || 0 }
     m.quaternion.setFromEuler(_e)
     // wheels
     const r0 = this.def.kay ? 0.34 : 0.35
@@ -257,8 +260,11 @@ export class Vehicle {
   }
 
   dispose() {
+    if (this.disposed) return
+    this.disposed = true
     this.game.scene.remove(this.mesh)
     this.game.physics.remove(this.body)
     this.lightsMesh.geometry.dispose()
   }
 }
+Vehicle.count = 0

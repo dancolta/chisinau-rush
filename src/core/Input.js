@@ -26,6 +26,7 @@ const KEYMAP = {
   choice3: ['Digit3', 'Numpad3'],
   choice4: ['Digit4', 'Numpad4'],
   retry: ['KeyR'],
+  job: ['KeyT'],
   camLeft: ['KeyZ'],
   camRight: ['KeyX'],
   radio: ['KeyR'],

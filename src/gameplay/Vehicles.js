@@ -23,10 +23,24 @@ export class Vehicles {
     return v
   }
 
+  // make room for a scripted vehicle: ambient cars nearby go away and their slots stay empty
+  clearSpot(x, z, r = 5.5) {
+    for (const s of this.parkedSlots) if ((s.x - x) ** 2 + (s.z - z) ** 2 < (r + 2) ** 2) s.taken = true
+    for (const v of [...this.list]) {
+      if (v.keep || v.driver === 'player' || v.def.trolley) continue
+      if ((v.pos.x - x) ** 2 + (v.pos.z - z) ** 2 > r * r) continue
+      if (v.driver && v.driver.eject) { const d = v.driver; if (this.game.traffic.drivers.includes(d)) { this.game.traffic.despawn(d); continue } }
+      if (v.slot) this.parkedActive.delete(v.slot.i)
+      this.remove(v)
+    }
+  }
+
   remove(v) {
+    if (!v || v.disposed) return
     const i = this.list.indexOf(v)
     if (i >= 0) this.list.splice(i, 1)
-    if (v.driver === 'player') this.exit(true)
+    if (v.driver === 'player' || this.game.player?.vehicle === v) this.exit(true)
+    if (v.slot) { this.parkedActive.delete(v.slot.i); v.slot = null }
     v.dispose()
   }
 
@@ -128,11 +142,14 @@ export class Vehicles {
     const game = this.game, p = game.player, v = p.vehicle
     if (!v) return
     if (!force && Math.abs(v.speed) > 8) return
+    const wasPassenger = p.passenger
+    p.passenger = false
     // driver door is on the left (+x local); try left, right, behind, front
     const fx = Math.sin(v.heading), fz = Math.cos(v.heading)
     const lx = Math.cos(v.heading), lz = -Math.sin(v.heading)
     const w = v.def.dims[0] + 0.7, l = v.def.dims[2] + 0.8
-    const tries = [[lx * w, lz * w], [-lx * w, -lz * w], [-fx * l, -fz * l], [fx * l, fz * l], [0, 0]]
+    // passengers get out on the kerb side (right), drivers on the left
+    const tries = wasPassenger ? [[-lx * w, -lz * w], [lx * w, lz * w], [-fx * l, -fz * l], [fx * l, fz * l], [0, 0]] : [[lx * w, lz * w], [-lx * w, -lz * w], [-fx * l, -fz * l], [fx * l, fz * l], [0, 0]]
     let spot = tries[4]
     for (const [ox, oz] of tries) {
       const x = v.pos.x + ox, z = v.pos.z + oz
@@ -193,7 +210,7 @@ export class Vehicles {
   fixedUpdate(h) {
     const game = this.game, p = game.player, input = game.input
     const pv = p?.vehicle
-    if (pv) {
+    if (pv && !p.passenger) {
       const ctrl = p.control && !game.ui?.modalOpen
       pv.throttle = ctrl ? input.throttle() : 0
       pv.steer = ctrl ? input.steer() : 0
@@ -209,13 +226,13 @@ export class Vehicles {
     const game = this.game, p = game.player
     for (const v of this.list) v.update(dt, game.alpha)
     if (!p) return
-    const pos = p.vehicle ? p.vehicle.pos : p.pos
+    const pos = this.game.focus()
     this.checkT -= dt
     if (this.checkT <= 0) { this.checkT = 0.5; this.updateParked(pos.x, pos.z) }
     if (p.vehicle) {
       const v = p.vehicle
       if (game.input.pressed('horn')) game.audio?.horn(v)
-      if (game.input.pressed('interact') && p.control && !game.ui?.modalOpen) this.exit()
+      if (game.input.pressed('interact') && p.control && !p.passenger && !game.cutscene && !game.ui?.modalOpen) this.exit()
       p.char.pos.set(v.pos.x, v.pos.y, v.pos.z)
     }
   }
