@@ -9,10 +9,19 @@
     "build": "vite build",
     "preview": "vite preview --port 4173"
   },
-  "dependencies": {
-    "phaser": "^3.80.1"
-  },
   "devDependencies": {
-    "vite": "^5.4.0"
+    "playwright": "^1.56.1",
+    "vite": "^7.3.6"
+  },
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.20.0",
+    "@fontsource/anton": "^5.3.0",
+    "@fontsource/bangers": "^5.3.0",
+    "@fontsource/bungee": "^5.3.0",
+    "@fontsource/paytone-one": "^5.3.0",
+    "@fontsource/rubik": "^5.3.0",
+    "n8ao": "^2.0.1",
+    "postprocessing": "^6.39.5",
+    "three": "^0.186.0"
   }
 }

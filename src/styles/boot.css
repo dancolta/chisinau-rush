@@ -1,0 +1,39 @@
+:root {
+  --ink: #0d0b12;
+  --paper: #f6ecd8;
+  --gold: #ffcf4a;
+  --amber: #f39a3c;
+  --rust: #d2542f;
+  --teal: #2f8f9d;
+  --sky: #9ed6e8;
+  --green: #5fd06a;
+  --red: #ff4d4d;
+  --muted: #b7b0a6;
+  --panel: rgba(14, 11, 20, 0.78);
+  --panel-solid: #15111c;
+  --stroke: rgba(255, 207, 74, 0.35);
+  --display: 'Bungee', 'Paytone One', 'Rubik', system-ui, sans-serif;
+  --title: 'Bangers', 'Bungee', system-ui, sans-serif;
+  --body: 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --num: 'Paytone One', 'Rubik', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #0e0f13; overflow: hidden; }
+body { font-family: var(--body); color: var(--paper); -webkit-font-smoothing: antialiased; user-select: none; }
+#app, #viewport { position: fixed; inset: 0; }
+#viewport canvas { display: block; width: 100%; height: 100%; outline: none; }
+#ui { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+
+.boot { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #0b0a10; transition: opacity 0.8s ease; }
+.boot.hide { opacity: 0; pointer-events: none; }
+.boot-art { position: absolute; inset: 0; background: url('/title-art.jpg') center / cover no-repeat; image-rendering: pixelated; transform: scale(1.04); animation: bootpan 22s ease-in-out infinite alternate; }
+.boot-shade { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 60%, rgba(10, 8, 14, 0.2), rgba(10, 8, 14, 0.85) 70%), linear-gradient(180deg, rgba(10, 8, 14, 0.1), rgba(10, 8, 14, 0.9)); }
+.boot-inner { position: relative; width: min(560px, 86vw); text-align: center; margin-top: 30vh; }
+.boot-logo { font-family: var(--title); font-size: clamp(48px, 9vw, 104px); letter-spacing: 3px; color: var(--gold); text-shadow: 0 5px 0 #6a2412, 0 10px 30px rgba(0, 0, 0, 0.6); line-height: 0.95; }
+.boot-logo span { color: #fff; }
+.boot-bar { height: 10px; margin: 28px auto 12px; border-radius: 6px; background: rgba(255, 255, 255, 0.1); overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.15); }
+.boot-bar i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--rust), var(--gold)); transition: width 0.25s ease; }
+.boot-status { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+.boot-tip { margin-top: 22px; font-size: 15px; color: #e9dfcd; min-height: 40px; opacity: 0.9; }
+@keyframes bootpan { from { transform: scale(1.04) translate(0, 0); } to { transform: scale(1.1) translate(-1.5%, -1%); } }
