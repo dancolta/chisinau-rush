@@ -97,6 +97,29 @@ export class DynamicProps {
     this.types[item.type].mesh.setMatrixAt(item.index, d.matrix)
   }
 
+  // shove clutter out of a car-sized box (a car being spawned or teleported there), so a car
+  // never materialises inside a bin or the melon pile and gets ground up by the overlap
+  clearBox(x, z, ry, hx, hz, pad = 0.3) {
+    const s = Math.sin(ry), c = Math.cos(ry)
+    for (const it of this.items) {
+      const T = this.types[it.type]
+      const pr = T.shape === 'ball' ? T.r : Math.hypot(T.hx, T.hz)
+      const t = it.body.translation()
+      const dx = t.x - x, dz = t.z - z
+      const lf = dx * s + dz * c, lr = -dx * c + dz * s
+      const ef = hz + pr + pad, er = hx + pr + pad
+      if (Math.abs(lf) > ef || Math.abs(lr) > er || t.y > 3) continue
+      let nf = lf, nr = lr
+      if (ef - Math.abs(lf) < er - Math.abs(lr)) nf = Math.sign(lf || 1) * (ef + 0.05)
+      else nr = Math.sign(lr || 1) * (er + 0.05)
+      it.body.setTranslation({ x: x + nf * s - nr * c, y: it.home.y, z: z + nf * c + nr * s }, true)
+      it.body.setLinvel({ x: 0, y: 0, z: 0 }, true)
+      it.body.setAngvel({ x: 0, y: 0, z: 0 }, true)
+      this.write(it)
+      T.mesh.instanceMatrix.needsUpdate = true
+    }
+  }
+
   update() {
     const dirty = new Set()
     for (const it of this.items) {

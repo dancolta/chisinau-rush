@@ -148,6 +148,7 @@ export class Vehicle {
   get forwardZ() { return Math.cos(this.heading) }
 
   teleport(x, y, z, ry) {
+    this.game.world?.dyn?.clearBox(x, z, ry ?? this.heading, this.def.dims[0], this.def.dims[2])
     this.body.setTranslation({ x, y, z }, true)
     this.body.setLinvel({ x: 0, y: 0, z: 0 }, true)
     this.body.setAngvel({ x: 0, y: 0, z: 0 }, true)

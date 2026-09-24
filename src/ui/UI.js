@@ -158,10 +158,11 @@ export class UI {
 
   subtitle(name, text, secs = 3) {
     clearTimeout(this.subT)
+    this.subText = text || null
     if (!text) { this.subEl.classList.add('hidden'); return }
     this.subEl.innerHTML = (name ? `<b>${name}:</b>` : '') + fmt(text)
     this.subEl.classList.remove('hidden')
-    if (secs) this.subT = setTimeout(() => this.subEl.classList.add('hidden'), secs * 1000)
+    if (secs) this.subT = setTimeout(() => { this.subEl.classList.add('hidden'); this.subText = null }, secs * 1000)
   }
 
   bigMessage(title, sub = '', { color = '', secs = 3.2 } = {}) {

@@ -20,13 +20,13 @@ export class Ambient {
     for (const b of w.benches) {
       if (b.special || rnd() > 0.3) continue
       const off = 0.45
-      this.spots.push({ x: b.x, z: b.z, list: [{ spec: rnd() < 0.4 ? { ...CAST.zina, top: { style: 'coat', color: [0x4a5a7a, 0x6a3a4a, 0x3a5a4a][Math.floor(rnd() * 3)], lapel: 0x2a2a30 } } : null, x: b.x + Math.sin(b.ry) * off, z: b.z + Math.cos(b.ry) * off, ry: b.ry + Math.PI, state: 'sit' }] })
+      this.spots.push({ x: b.x, z: b.z, hours: [7, 22], list: [{ spec: rnd() < 0.4 ? { ...CAST.zina, top: { style: 'coat', color: [0x4a5a7a, 0x6a3a4a, 0x3a5a4a][Math.floor(rnd() * 3)], lapel: 0x2a2a30 } } : null, x: b.x + Math.sin(b.ry) * off, z: b.z + Math.cos(b.ry) * off, ry: b.ry + Math.PI, state: 'sit' }] })
     }
     // wedding photo shoot in front of the Arc (the Arc behind the couple, the Government across)
     const arc = w.places.arc
     if (arc) {
       const z0 = arc.z - 0.6   // just north of the arch
-      this.spots.push({ x: arc.x, z: z0, list: [
+      this.spots.push({ x: arc.x, z: z0, hours: [10, 19], list: [
         { spec: BRIDE, x: arc.x - 0.5, z: z0, ry: Math.PI, voice: 'female', say: ['Mai zâmbim o dată!', 'Ține-mă de mână, nu de telefon!', 'Poza asta o punem pe Odnoklassniki!'] },
         { spec: GROOM, x: arc.x + 0.5, z: z0, ry: Math.PI },
         { spec: PHOTO, x: arc.x + 0.3, z: z0 - 4.6, ry: 0, state: 'phone', say: ['Mai aproape! Și acum sărutul!', 'Stați, că n-am prins Arcul!', 'Încă una, pentru nași!'] },
@@ -35,10 +35,10 @@ export class Ambient {
       ] })
     }
     // market vendors behind every second stall
-    w.stalls.forEach((s, i) => { if (i % 2 === 0) this.spots.push({ x: s.x, z: s.z, list: [{ spec: rnd() < 0.5 ? CAST.vanzatoare : null, x: s.x + (rnd() - 0.5), z: s.z - 3.5, ry: 0, state: rnd() < 0.5 ? 'talk' : 'idle', voice: 'female', say: ['Roșii de Moldova, nu din Turcia!', 'Hai, că dau ieftin! Azi-dimineață culese!', 'Cântarul e cinstit, maică, zău!'] }] }) })
+    w.stalls.forEach((s, i) => { if (i % 2 === 0) this.spots.push({ x: s.x, z: s.z, hours: [7, 18], covered: true, list: [{ spec: rnd() < 0.5 ? CAST.vanzatoare : null, x: s.x + (rnd() - 0.5), z: s.z - 3.5, ry: 0, state: rnd() < 0.5 ? 'talk' : 'idle', voice: 'female', say: ['Roșii de Moldova, nu din Turcia!', 'Hai, că dau ieftin! Azi-dimineață culese!', 'Cântarul e cinstit, maică, zău!'] }] }) })
     // old men playing cards in the Grădina Publică
     const al = w.places.aleea_clasicilor
-    if (al) this.spots.push({ x: al.x, z: al.z, list: [0, 1, 2, 3].map((k) => { const a = k / 4 * Math.PI * 2; return { spec: OLDMAN([0x4a4a3a, 0x3a4a5a, 0x5a4a3a, 0x3a3a3a][k]), x: al.x - 6 + Math.cos(a) * 0.9, z: al.z + 4 + Math.sin(a) * 0.9, ry: Math.atan2(-Math.cos(a), -Math.sin(a)), state: 'squat', say: k === 0 ? ['Iar ai trișat, Vasile!', 'Asul de treflă! Hai, dă banii!', 'Pe vremea lui Brejnev jucam pe mașini.'] : null } }) })
+    if (al) this.spots.push({ x: al.x, z: al.z, hours: [9, 20.5], list: [0, 1, 2, 3].map((k) => { const a = k / 4 * Math.PI * 2; return { spec: OLDMAN([0x4a4a3a, 0x3a4a5a, 0x5a4a3a, 0x3a3a3a][k]), x: al.x - 6 + Math.cos(a) * 0.9, z: al.z + 4 + Math.sin(a) * 0.9, ry: Math.atan2(-Math.cos(a), -Math.sin(a)), state: 'squat', say: k === 0 ? ['Iar ai trișat, Vasile!', 'Asul de treflă! Hai, dă banii!', 'Pe vremea lui Brejnev jucam pe mașini.'] : null } }) })
   }
 
   spawn(spot) {
@@ -69,10 +69,14 @@ export class Ambient {
     if (this.t > 0) return
     this.t = 0.8
     const P = g.focus()
+    // scenes keep their hours and go indoors when it pours (market stalls have roofs);
+    // they pack up only once you're not right next to them
+    const hr = g.renderer.tod.hour, wet = (g.weather?.k || 0) > 0.35
+    const open = (s) => hr >= s.hours[0] && hr < s.hours[1] && (!wet || s.covered)
     for (const s of this.spots) {
       const d = Math.hypot(s.x - P.x, s.z - P.z)
-      if (!s.npcs && d < 75) this.spawn(s)
-      else if (s.npcs && d > 105) this.despawn(s)
+      if (!s.npcs && d < 75 && open(s)) this.spawn(s)
+      else if (s.npcs && (d > 105 || (d > 40 && !open(s)))) this.despawn(s)
     }
     // a line now and then from someone nearby
     const pp = g.player?.pos

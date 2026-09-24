@@ -127,8 +127,13 @@ export const borea = {
       await m.wait(0.8)
       await m.talk('player', 'Ăsta nu-i vin. Sunt… dosare. Cu ștampila Primăriei.', 3.2)
       await m.talk('mascat', 'N-ai văzut nimic. Pleacă. Acum.', 2.4)
-      await m.walk(mas, van.pos.x - 1.6, van.pos.z, { timeout: 4 })
-      m.story.removeNpc(mas)
+      // he jogs to the van's side door and climbs in
+      const door = { x: van.pos.x - Math.cos(van.heading) * 1.7, z: van.pos.z + Math.sin(van.heading) * 1.7 }
+      m.hold({ from: [drop.x + 3, 2.4, drop.z - 6.8], look: [door.x + 1.5, 1.2, door.z + 0.6], dur: 60 })
+      await m.walk(mas, door.x, door.z, { run: true, timeout: 5 })
+      g.audio?.sfx('door', { at: van.pos, vol: 0.8 })
+      mas.ride(van)
+      await m.wait(0.5)
       van.locked = false
     })
     m.story.leave(van)

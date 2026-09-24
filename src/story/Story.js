@@ -202,11 +202,13 @@ class MissionContext {
     if (this.skipping) return
     const sp = this.speaker(who)
     const s = secs ?? clamp(1.4 + text.length * 0.05, 2.2, 6.5)
-    this.ui.subtitle(sp.name, text, s)
+    // the line stays up for as long as it lasts in game time (slow frames stretch both alike);
+    // the real-time timeout is only a safety net
+    this.ui.subtitle(sp.name, text, s * 4)
     const npc = this.npcFor(who)
     if (npc && npc.char.visible && !npc.riding) npc.say(text, s)
     else if (sp.voice && this.game.audio) { const stop = this.game.audio.voiceStart(sp.voice, text); setTimeout(() => stop && stop(), Math.min(s, 3) * 1000) }
-    await this.wait(s)
+    try { await this.wait(s) } finally { if (this.ui.subText === text) this.ui.subtitle(null) }
   }
 
   // big "new evidence" card; also stored in the save
@@ -394,8 +396,10 @@ class MissionContext {
       const a = i / 16 * Math.PI * 2
       for (const rr of [r, r * 0.55]) {
         const cx = x + Math.sin(a) * rr, cz = z + Math.cos(a) * rr
-        if (g.physics.groundHeight(cx, cz, 3) > 0.5) continue
-        const sc = bad.length ? Math.min(...bad.map((b) => Math.hypot(b.x - cx, b.z - cz))) : 99
+        const gh = g.physics.groundHeight(cx, cz, 3)
+        if (gh > 0.5) continue
+        // wrecks far away, and kerb-high ground (pavements, squares) over traffic lanes
+        const sc = Math.min(12, bad.length ? Math.min(...bad.map((b) => Math.hypot(b.x - cx, b.z - cz))) : 12) + (gh > CURB_H * 0.5 ? 4 : 0)
         if (sc > bestS + 0.5) { bestS = sc; best = { x: cx, z: cz } }
       }
     }

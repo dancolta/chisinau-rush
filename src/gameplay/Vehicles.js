@@ -2,7 +2,7 @@ import { Vehicle } from '../entities/Vehicle.js'
 import { H_ROADS, V_ROADS } from '../world/CityLayout.js'
 import { roadProfile } from '../world/Ground.js'
 import { mulberry } from '../world/rng.js'
-import { TRAFFIC_MIX } from '../data/vehicles.js'
+import { TRAFFIC_MIX, VEHICLES } from '../data/vehicles.js'
 import { FILTER } from '../physics/Physics.js'
 
 // Owns every vehicle: player driving, enter/exit/carjack, parked cars, crash damage.
@@ -18,6 +18,8 @@ export class Vehicles {
 
   spawn(kind, x, z, ry = 0, opts = {}) {
     const y = opts.y ?? this.game.physics.groundHeight(x, z)
+    const dims = VEHICLES[kind]?.dims
+    if (dims) this.game.world?.dyn?.clearBox(x, z, ry, dims[0], dims[2])
     const v = new Vehicle(this.game, kind, { x, y, z, ry, ...opts })
     this.list.push(v)
     return v
@@ -193,7 +195,14 @@ export class Vehicles {
       if (!(x instanceof Vehicle)) continue
       const f = force / x.def.mass
       if (f < 8) continue
-      const dmg = Math.min(35, (f - 8) * 0.6)
+      let dmg = Math.min(35, (f - 8) * 0.6)
+      if (other && other.prop) {
+        // street clutter dents a car, it never totals one (and a pile of melons is one hit, not twenty)
+        const now = performance.now()
+        if (now - (x.propHitAt || 0) < 450) continue
+        x.propHitAt = now
+        dmg = Math.min(other.type === 'dumpster' ? 8 : 2.5, dmg)
+      }
       x.damage(dmg)
       if (x.driver === 'player') {
         game.cameraRig?.shake(Math.min(0.7, f / 60))

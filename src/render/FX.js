@@ -41,22 +41,22 @@ void main() {
 `
 
 class Emitter {
-  constructor(scene, texture, blending, nightDim = 0) {
-    this.n = MAX
-    this.pos = new Float32Array(MAX * 3)
-    this.vel = new Float32Array(MAX * 3)
-    this.life = new Float32Array(MAX)
-    this.maxLife = new Float32Array(MAX)
-    this.size = new Float32Array(MAX)
-    this.size0 = new Float32Array(MAX)
-    this.grow = new Float32Array(MAX)
-    this.alpha = new Float32Array(MAX)
-    this.alpha0 = new Float32Array(MAX)
-    this.tint = new Float32Array(MAX * 3)
-    this.rot = new Float32Array(MAX)
-    this.spin = new Float32Array(MAX)
-    this.grav = new Float32Array(MAX)
-    this.drag = new Float32Array(MAX)
+  constructor(scene, texture, blending, nightDim = 0, max = MAX) {
+    const N = this.n = max
+    this.pos = new Float32Array(N * 3)
+    this.vel = new Float32Array(N * 3)
+    this.life = new Float32Array(N)
+    this.maxLife = new Float32Array(N)
+    this.size = new Float32Array(N)
+    this.size0 = new Float32Array(N)
+    this.grow = new Float32Array(N)
+    this.alpha = new Float32Array(N)
+    this.alpha0 = new Float32Array(N)
+    this.tint = new Float32Array(N * 3)
+    this.rot = new Float32Array(N)
+    this.spin = new Float32Array(N)
+    this.grav = new Float32Array(N)
+    this.drag = new Float32Array(N)
     this.cursor = 0
     const g = new THREE.BufferGeometry()
     this.aPos = new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage)
@@ -74,6 +74,7 @@ class Emitter {
   }
 
   emit(x, y, z, o) {
+    this.idle = false
     const i = this.cursor
     this.cursor = (this.cursor + 1) % this.n
     this.pos[i * 3] = x; this.pos[i * 3 + 1] = y; this.pos[i * 3 + 2] = z
@@ -92,8 +93,11 @@ class Emitter {
   }
 
   update(dt) {
+    if (this.idle) return
+    let alive = 0
     for (let i = 0; i < this.n; i++) {
       if (this.life[i] <= 0) { if (this.alpha[i] !== 0) this.alpha[i] = 0; continue }
+      alive++
       this.life[i] -= dt
       const k = Math.max(0, this.life[i] / this.maxLife[i])
       const d = Math.exp(-this.drag[i] * dt)
@@ -108,6 +112,8 @@ class Emitter {
       this.rot[i] += this.spin[i] * dt
     }
     this.aPos.needsUpdate = true; this.aSize.needsUpdate = true; this.aAlpha.needsUpdate = true; this.aTint.needsUpdate = true; this.aRot.needsUpdate = true
+    // nothing alive: this pass zeroed the last alphas, skip work (and uploads) until the next emit
+    if (!alive) this.idle = true
   }
 }
 
@@ -156,12 +162,30 @@ class Skids {
   end(key) { this.last.delete(key) }
 }
 
+// flat little sprites for things that aren't smoke: a sheet of paper (lines of text) and a confetti square
+function flatTexture(lines) {
+  const c = document.createElement('canvas')
+  c.width = c.height = 32
+  const x = c.getContext('2d')
+  x.fillStyle = '#fff'
+  if (lines) {
+    x.fillRect(7, 3, 18, 26)
+    x.fillStyle = 'rgba(40,40,60,0.35)'
+    for (let i = 0; i < 6; i++) x.fillRect(10, 8 + i * 3.4, i % 3 === 2 ? 7 : 12, 1.3)
+  } else x.fillRect(9, 5, 14, 22)
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
+}
+
 export class FX {
   constructor(game) {
     this.game = game
     const tex = game.assets.textures
     this.soft = new Emitter(game.scene, tex.smoke, THREE.NormalBlending, 0.6)
     this.glow = new Emitter(game.scene, tex.particle, THREE.AdditiveBlending)
+    this.sheets = new Emitter(game.scene, flatTexture(true), THREE.NormalBlending, 0.5, 160)
+    this.bits = new Emitter(game.scene, flatTexture(false), THREE.NormalBlending, 0.4, 420)
     this.skids = new Skids(game.scene)
     this.t = 0
   }
@@ -198,8 +222,8 @@ export class FX {
 
   paper(x, y, z, n = 6) {
     for (let i = 0; i < n; i++) {
-      const a = Math.random() * Math.PI * 2
-      this.soft.emit(x, y + 0.5, z, { vx: Math.cos(a) * 1.5, vy: 2 + Math.random() * 2, vz: Math.sin(a) * 1.5, life: 1.2, size: 0.3, color: [2.2, 2.2, 2.1], alpha: 0.9, grav: 2.5, drag: 2, spin: 6 })
+      const a = Math.random() * Math.PI * 2, s = 1 + Math.random() * 1.6
+      this.sheets.emit(x, y + 0.4, z, { vx: Math.cos(a) * s, vy: 2.2 + Math.random() * 2.4, vz: Math.sin(a) * s, life: 1.8 + Math.random() * 0.8, size: 0.26, color: [1, 0.98, 0.92], alpha: 1, grav: 3.2, drag: 1.8, spin: (Math.random() - 0.5) * 9 })
     }
   }
 
@@ -214,7 +238,7 @@ export class FX {
     const cols = [[1, 0.8, 0.1], [0.1, 0.4, 1], [1, 0.1, 0.2], [1, 1, 1]]
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 5
-      this.glow.emit(x, y, z, { vx: Math.cos(a) * s, vy: 4 + Math.random() * 6, vz: Math.sin(a) * s, life: 2.5 + Math.random(), size: 0.22, color: cols[i % 4], grav: 4, drag: 1.2 })
+      this.bits.emit(x, y, z, { vx: Math.cos(a) * s, vy: 4 + Math.random() * 6, vz: Math.sin(a) * s, life: 2.5 + Math.random(), size: 0.16, color: cols[i % 4], grav: 4, drag: 1.2, spin: (Math.random() - 0.5) * 14 })
     }
   }
 
@@ -232,5 +256,7 @@ export class FX {
     }
     this.soft.update(dt)
     this.glow.update(dt)
+    this.sheets.update(dt)
+    this.bits.update(dt)
   }
 }
