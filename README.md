@@ -14,6 +14,8 @@ npm run dev        # http://localhost:5173
 npm run build      # static build in dist/ (deployable anywhere, e.g. GitHub Pages)
 ```
 
+Every push to `main` builds and publishes the game to GitHub Pages (`.github/workflows/deploy.yml`).
+
 ### Controls
 
 | | Keyboard / mouse | Gamepad | Touch |
