@@ -38,6 +38,7 @@ import { Touch, isTouchDevice } from '../ui/Touch.js'
 import { Weather } from '../render/Weather.js'
 import { NightLights } from '../render/NightLights.js'
 import { GrassField } from '../world/GrassField.js'
+import { Cloud } from '../net/Cloud.js'
 
 const STEP = 1 / 60
 if (import.meta.env.DEV) { window.THREE = THREE; window.__CR = { Character, CAST } }
@@ -61,9 +62,13 @@ export class Game {
     this.weapons = WEAPONS
     // dev: ?turbo=4 runs the simulation 4x faster (automated playthrough tests on slow machines)
     this.turbo = import.meta.env.DEV ? Math.max(1, +(new URLSearchParams(location.search).get('turbo') || 1)) : 1
+    // optional account with cloud saves (does nothing for guests)
+    this.cloud = new Cloud(this)
   }
 
   async boot(progress) {
+    // logged in: fetch the cloud save while the city loads
+    this.cloud.start()
     this.settings = loadSettings()
     progress(0.02, 'Pornim motorul…')
     this.renderer = new Renderer(this.viewport, this.settings)
