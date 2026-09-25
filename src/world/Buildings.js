@@ -56,6 +56,8 @@ export class Buildings {
         const lx = x0 + 3.2 * (k + 0.5)
         const [x, z] = W(lx, side * (depth / 2 + 0.55))
         fb.box(x, z, 2.95, 1.1, y0, floors * fh, ry, color, [fh, 3.2, rnd() * 100, 6], shade(color, 0.75))
+        // the loggia stacks stand on the ground a metre proud of the wall: solid, or you walk into them
+        this.P.box(x, y0 + floors * fh / 2, z, 1.475, floors * fh / 2, 0.55, { rotY: ry })
       }
     }
     // entrances on the back (courtyard) side
@@ -86,7 +88,8 @@ export class Buildings {
       g.box(0.07, ah, 0.07, { x, y: top, z, color: 0x3a3a3a })
       g.box(1.3, 0.05, 0.05, { x, y: top + ah * 0.8, z, ry: rnd() * 3, color: 0x3a3a3a })
     }
-    this.P.box(cx, y0 + h / 2, cz, len / 2, h / 2, depth / 2, { rotY: ry })
+    // (out to the plinth, which sits 15 cm proud of the walls)
+    this.P.box(cx, y0 + h / 2, cz, len / 2 + 0.15, h / 2, depth / 2 + 0.15, { rotY: ry })
     this.w.footprints.push({ x: cx, z: cz, hx: len / 2, hz: depth / 2, ry })
     return { top, color }
   }

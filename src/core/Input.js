@@ -30,6 +30,7 @@ const KEYMAP = {
   photo: ['KeyO'],
   camLeft: ['KeyZ'],
   camRight: ['KeyX'],
+  camMode: ['KeyV'],
   radio: ['KeyR'],
   debug: ['Backquote'],
 }
@@ -43,6 +44,7 @@ const PADMAP = {
   swap: [4],
   horn: [10],
   lookBack: [11],
+  camMode: [12],
   pause: [9],
   map: [8],
   choice1: [12], choice2: [15], choice3: [13], choice4: [14],

@@ -384,7 +384,7 @@ export class Props {
     const rnd = mulberry(314)
     let i = 0
     for (const b of BLOCKS) {
-      if (!['istoric', 'soviet', 'linella', 'acasa', 'piata', 'autogara', 'gara', 'muzeu', 'teatru', 'usm'].includes(b.zone)) continue
+      if (!['istoric', 'soviet', 'linella', 'acasa', 'piata', 'autogara', 'gara', 'muzeu', 'teatru', 'usm', 'romasca'].includes(b.zone)) continue
       const corners = [[b.x0 + 3.5, b.z0 + 2.4], [b.x1 - 3.5, b.z1 - 2.4]]
       for (const [x, z] of corners) {
         if (rnd() < 0.35 || this.w.keepClear(x, z)) continue

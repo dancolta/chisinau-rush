@@ -208,30 +208,42 @@ export class Vehicles {
   }
 
   // ---- crashes ---------------------------------------------------------------------------
+  // Contact events fire every physics step while two things touch, so they only open an "impact":
+  // for a tenth of a second the car keeps the hardest jolt (its velocity change in one step), then
+  // takes one hit sized by that jolt (Vehicle.fixedUpdate). Scraping along a wall or leaning on
+  // another car barely changes velocity and costs nothing; one crash is one hit, not sixty.
   onContact(a, b, force) {
     const game = this.game
     for (const [x, other] of [[a, b], [b, a]]) {
-      if (!(x instanceof Vehicle)) continue
+      if (!(x instanceof Vehicle) || x.disposed) continue
       const f = force / x.def.mass
       if (f < 8) continue
-      let dmg = Math.min(35, (f - 8) * 0.6)
-      if (other && other.prop) {
-        // street clutter dents a car, it never totals one (and a pile of melons is one hit, not twenty)
-        const now = performance.now()
-        if (now - (x.propHitAt || 0) < 450) continue
-        x.propHitAt = now
-        dmg = Math.min(other.type === 'dumpster' ? 8 : 2.5, dmg)
+      const lv = x.body.linvel(), sv = x.setVel
+      const dv = sv ? Math.hypot(lv.x - sv.x, lv.z - sv.z) : 0
+      if (x.hitCool > 0) continue
+      if (!x.impact) {
+        if (dv < 2.2) continue
+        x.impact = { t: 0.1, dv: 0, f: 0, other }
+        // the bang and the shake land on the first contact, the damage when the jolt is known
+        if (x.driver === 'player') {
+          game.cameraRig?.shake(Math.min(0.7, dv / 22))
+          game.audio?.sfx('impact', { vol: Math.min(1, dv / 12), pitch: 0.8 + Math.random() * 0.3, at: x.pos })
+        } else if (dv > 5) game.audio?.sfx('impact', { vol: Math.min(0.8, dv / 16), at: x.pos })
+        if (other && other.prop) game.events.emit('prop:hit', { prop: other, by: x })
       }
-      x.damage(dmg)
-      if (x.driver === 'player') {
-        game.cameraRig?.shake(Math.min(0.7, f / 60))
-        game.audio?.sfx('impact', { vol: Math.min(1, f / 40), pitch: 0.8 + Math.random() * 0.3, at: x.pos })
-        game.events.emit('player:crash', { force: f, other })
-      } else if (f > 14) {
-        game.audio?.sfx('impact', { vol: Math.min(0.8, f / 60), at: x.pos })
-      }
-      if (other && other.prop) game.events.emit('prop:hit', { prop: other, by: x })
+      x.impact.dv = Math.max(x.impact.dv, dv)
+      x.impact.f = Math.max(x.impact.f, f)
     }
+  }
+
+  // called by a car when its impact window closes
+  crashed(x, { dv, f, other }) {
+    // ~3 per m/s past a light knock: a 50 km/h wall costs a third of the car, three big ones total it
+    let dmg = Math.min(42, Math.max(0, (dv - 3) * 3.2))
+    // street clutter dents a car, it never totals one
+    if (other && other.prop) dmg = Math.min(other.type === 'dumpster' ? 8 : 2.5, dmg)
+    if (dmg > 0) x.damage(dmg)
+    if (x.driver === 'player') this.game.events.emit('player:crash', { force: f, dv, dmg, other })
   }
 
   // ---- loop ------------------------------------------------------------------------------

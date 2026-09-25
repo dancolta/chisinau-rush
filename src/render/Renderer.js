@@ -194,7 +194,7 @@ export class Renderer {
     this.focus.copy(focus)
     const L = this.sun
     this.shadowDir ||= this.tod.lightDir.clone()
-    if (this.shadowDir.angleTo(this.tod.lightDir) > 0.006) this.shadowDir.copy(this.tod.lightDir)
+    if (this.shadowDir.angleTo(this.tod.lightDir) > 0.003) this.shadowDir.copy(this.tod.lightDir)
     const dir = this.shadowDir
     const size = this.q.shadowSize * 2
     const texel = size / this.q.shadowMap

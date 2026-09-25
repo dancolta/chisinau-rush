@@ -53,7 +53,8 @@ export class Landmarks {
     this.garaje(block(1, 3))
     this.linella(block(4, 3))
     this.gara(block(6, 3))
-    for (const b of [block(0, 0), block(2, 0), block(3, 0), block(4, 0), block(5, 0), block(0, 3), block(2, 3), block(5, 3)]) {
+    this.romasca(block(5, 3))
+    for (const b of [block(0, 0), block(2, 0), block(3, 0), block(4, 0), block(5, 0), block(0, 3), block(2, 3)]) {
       this.bld.soviet(b, { shops: b.row === 3 && b.col === 2 })
       this.w.place('bloc_' + b.id, 'Blocuri ' + (b.row === 0 ? 'Râșcani' : 'Botanica'), b.cx, b.cz, { kind: 'district' })
     }
@@ -699,6 +700,94 @@ export class Landmarks {
     for (let x = x0 + 5; x < x1 - 4; x += 9) this.w.treeSpots.push({ x, z: z0 + 5, kind: 'spruce' })
     this.w.place('ambasada', 'Ambasada', gx, z1 + 6, { kind: 'landmark' })
     this.w.place('ambasada_curte', 'Curtea Ambasadei', gx, b.cz + 6, { kind: 'spot' })
+  }
+
+  // ===========================================================================
+  // Romanița, "Romașca": Oleg Vronski's 22-storey concrete daisy (1978-86), once the tallest
+  // building in town, in Parcul Valea Trandafirilor. Four utility floors on a slim drum, sixteen
+  // floors of flats cantilevered round it in petals, a "flying saucer" on the roof.
+  romasca(b) {
+    const rnd = mulberry(1986)
+    const tx = b.ix1 - 20, tz = b.iz1 - 22
+    const fb = this.fac(tx, tz), g = this.g(tx, tz)
+    const CONC = 0xc9c3b6, CONC_D = 0x9d978b
+    // the drum: utility floors, glazed at the bottom, ribs that carry the petals above
+    const baseH = 12.4
+    g.cyl(6.4, 6.6, 0.6, 32, { x: tx, y: Y, z: tz, color: CONC_D })
+    g.cyl(6.1, 6.1, 3.2, 32, { x: tx, y: Y + 0.6, z: tz, color: GLASS })
+    g.cyl(6.3, 6.3, baseH - 3.8, 32, { x: tx, y: Y + 3.8, z: tz, color: CONC })
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2
+      g.box(0.7, baseH, 1.2, { x: tx + Math.sin(a) * 6.5, y: Y, z: tz + Math.cos(a) * 6.5, ry: a, color: CONC_D })
+    }
+    // the petals: a lobed plan (12 bays) walled with the same window shader as every block, so the
+    // flats light up at night like the rest of the city; the window grid runs on round the drum
+    const fh = 3.1, floors = 16, y0 = Y + baseH, H = floors * fh
+    const N = 96, LOBES = 12
+    const R = (a) => 7.2 + 1.5 * Math.pow(0.5 + 0.5 * Math.cos(LOBES * a), 0.8)
+    const params = [fh, 1.6, 44.5, 1]
+    let u = 0
+    const pt = (k) => { const a = (k / N) * Math.PI * 2; return [tx + Math.sin(a) * R(a), tz + Math.cos(a) * R(a)] }
+    for (let k = 0; k < N; k++) {
+      // clockwise from above, so every wall faces out (see FacadeBuilder.wall)
+      const [x1, z1] = pt(N - k), [x0, z0] = pt(N - k - 1)
+      fb.wall(x1, z1, x0, z0, y0, H, 0xd8d2c4, params, u)
+      u += Math.hypot(x0 - x1, z0 - z1)
+    }
+    // slab edges every floor: the "corn cob" rings
+    for (let f = 0; f <= floors; f++) g.cyl(8.95, 8.95, 0.22, 48, { x: tx, y: y0 + f * fh - 0.11, z: tz, color: f % 4 ? CONC : CONC_D })
+    g.cyl(8.9, 8.9, 0.3, 48, { x: tx, y: y0 + H, z: tz, color: CONC_D })
+    // technical floors and the saucer
+    const ty = y0 + H + 0.3
+    g.cyl(5.8, 5.8, 3.6, 32, { x: tx, y: ty, z: tz, color: CONC })
+    g.cyl(11.5, 6, 1.6, 40, { x: tx, y: ty + 3.6, z: tz, color: CONC_D })
+    g.cyl(11.5, 11.5, 1.1, 40, { x: tx, y: ty + 5.2, z: tz, color: 0xe4ded2 })
+    g.cyl(11.6, 11.6, 0.35, 40, { x: tx, y: ty + 5.55, z: tz, color: GLASS })
+    g.cyl(7.5, 11.5, 0.9, 40, { x: tx, y: ty + 6.3, z: tz, color: 0xd2ccbf })
+    g.dome(3.2, { x: tx, y: ty + 7.2, z: tz, color: 0xbdb7aa, seg: 20 })
+    g.cyl(0.12, 0.2, 9, 6, { x: tx, y: ty + 10, z: tz, color: 0x3a3a3a })
+    g.box(2.6, 0.08, 0.08, { x: tx, y: ty + 15, z: tz, color: 0x3a3a3a })
+    // entrance canopy toward the park
+    g.box(5, 0.3, 3.2, { x: tx - 7.4, y: Y + 3.2, z: tz, ry: Math.PI / 2, color: CONC_D })
+    for (const s of [-1, 1]) g.box(0.3, 3.2, 0.3, { x: tx - 8.8, y: Y, z: tz + s * 2.2, color: CONC_D })
+    this.P.cylinder(tx, Y + baseH / 2, tz, baseH / 2, 6.7)
+    this.P.cylinder(tx, y0 + H / 2, tz, H / 2, 8.9)
+    this.w.footprints.push({ x: tx, z: tz, hx: 9, hz: 9 })
+    this.clear(tx - 12, tz - 12, tx + 12, tz + 12)
+    this.patch('plaza', tx - 13, tz - 11, tx + 8, tz + 11)
+    this.w.place('romasca', 'Romașca (Floarea de Piatră)', tx - 12, tz, { kind: 'landmark' })
+
+    // Parcul Valea Trandafirilor: a lake, paths round it, roses, benches, plenty of trees
+    const lx = b.cx - 14, lz = b.cz + 6, lr = 17
+    this.B.flat(lx, lz, 'dirt_o', 6).disc(lx, lz, lr + 4, Y + 0.012, 48)
+    const w = this.st(lx, lz)
+    w.cyl(lr + 0.6, lr + 0.6, 0.35, 48, { x: lx, y: Y - 0.1, z: lz, color: 0x9d978b })
+    w.cyl(lr, lr, 0.32, 48, { x: lx, y: Y - 0.08, z: lz, color: 0x3a6f8f })
+    this.P.cylinder(lx, Y + 0.5, lz, 0.5, lr + 0.4)
+    this.w.fountains.push({ x: lx, z: lz, y: Y + 1.5, r: 3 })
+    this.clear(lx - lr - 5, lz - lr - 5, lx + lr + 5, lz + lr + 5)
+    this.patch('dirt', b.ix0, lz - 2, lx - lr - 2, lz + 2, 0.011)
+    this.patch('dirt', lx + lr + 2, lz - 2, tx - 9, lz + 2, 0.011)
+    this.patch('dirt', lx - 2, b.iz0, lx + 2, lz - lr - 2, 0.011)
+    this.patch('dirt', lx - 2, lz + lr + 2, lx + 2, b.iz1, 0.011)
+    for (let a = 0; a < 10; a++) {
+      const ang = (a / 10) * Math.PI * 2 + 0.3
+      this.w.benchSpots.push({ x: lx + Math.cos(ang) * (lr + 2.6), z: lz + Math.sin(ang) * (lr + 2.6), ry: -ang - Math.PI / 2 })
+    }
+    // rose beds: low green mounds with red and pink blooms
+    const roses = this.st(lx, lz)
+    for (let i = 0; i < 26; i++) {
+      const ang = (i / 26) * Math.PI * 2
+      const x = lx + Math.cos(ang) * (lr + 5.6), z = lz + Math.sin(ang) * (lr + 5.6)
+      roses.sphere(0.9, 8, 6, { x, y: Y + 0.2, z, sy: 0.55, color: 0x2f5a2a })
+      for (let k = 0; k < 3; k++) roses.sphere(0.2, 6, 4, { x: x + rnd.range(-0.5, 0.5), y: Y + 0.62, z: z + rnd.range(-0.5, 0.5), color: rnd() < 0.5 ? 0xc0263a : 0xe07aa0 })
+    }
+    for (let i = 0; i < 110; i++) {
+      const x = rnd.range(b.ix0 + 3, b.ix1 - 3), z = rnd.range(b.iz0 + 3, b.iz1 - 3)
+      if (Math.hypot(x - lx, z - lz) < lr + 8 || Math.hypot(x - tx, z - tz) < 16 || Math.abs(z - lz) < 4 || Math.abs(x - lx) < 4) continue
+      this.w.treeSpots.push({ x, z, kind: rnd() < 0.3 ? 'poplar' : 'broad' })
+    }
+    this.w.place('valea_trandafirilor', 'Parcul Valea Trandafirilor', lx, lz - lr - 6, { kind: 'park' })
   }
 
   // ===========================================================================

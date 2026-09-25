@@ -62,7 +62,9 @@ export class UI {
     this.wantedEl = el('div', 'hud-wanted', '<span class="s">★</span><span class="s">★</span><span class="s">★</span><span class="s">★</span><span class="s">★</span>'); tr.appendChild(this.wantedEl)
     this.weaponEl = el('div', 'hud-weapon'); tr.appendChild(this.weaponEl)
     this.popsEl = el('div'); tr.appendChild(this.popsEl)
-    this.toastsEl = el('div', 'toasts'); this.hud.appendChild(this.toastsEl)
+    // notifications stack under the stats in the same column, so they can never cover the money,
+    // the stars or the weapon however tall that column gets
+    this.toastsEl = el('div', 'toasts'); tr.appendChild(this.toastsEl)
     // bottom-left
     const bl = el('div', 'hud-bl'); this.hud.appendChild(bl)
     const mm = this.minimapWrap = el('div', 'minimap-wrap'); bl.appendChild(mm)
@@ -107,7 +109,7 @@ export class UI {
     this.objEl.querySelector('.sub').innerHTML = fmt(sub)
     this.objEl.querySelector('.sub').style.display = sub ? '' : 'none'
     this.objEl.classList.remove('hidden')
-    if (flash) { this.objEl.classList.remove('flash'); void this.objEl.offsetWidth; this.objEl.classList.add('flash'); this.game.audio?.sfx('notify', { bus: 'ui', vol: 0.6 }) }
+    if (flash) { this.objEl.classList.remove('obj-in'); void this.objEl.offsetWidth; this.objEl.classList.add('obj-in'); this.game.audio?.sfx('notify', { bus: 'ui', vol: 0.6 }) }
   }
 
   setTimer(secs) {
@@ -454,6 +456,15 @@ export class UI {
     })
   }
 
+  districtBanner(name) {
+    this.districtEl?.remove()
+    const sub = { Centru: 'Sectorul Centru', 'Râșcani': 'Sectorul Râșcani', Botanica: 'Sectorul Botanica', Gara: 'Gara Feroviară' }[name] || ''
+    const d = el('div', 'district-banner', `<div class="n">${name}</div>${sub ? `<div class="s">${sub}</div>` : ''}`)
+    this.top.appendChild(d)
+    this.districtEl = d
+    setTimeout(() => { d.classList.add('out'); setTimeout(() => d.remove(), 700) }, 3200)
+  }
+
   // ---- per frame ---------------------------------------------------------------------------
   update(dt) {
     const g = this.game, pr = g.progress, p = g.player
@@ -462,6 +473,12 @@ export class UI {
     const tod = g.renderer.tod
     const pos = p.vehicle ? p.vehicle.pos : p.pos
     const dist = g.home?.inside ? 'Acasă · Blocul 7' : districtAt(pos.x, pos.z)
+    // crossing into another district: its name along the bottom for a few seconds
+    if (dist !== this._district) {
+      const was = this._district
+      this._district = dist
+      if (was && !g.home?.inside && !g.cutscene) this.districtBanner(dist)
+    }
     const clk = `${tod.clock}<small>${dist}</small>`
     if (clk !== this._clk) { this._clk = clk; this.clockEl.innerHTML = clk }
     this.dispMoney = this.dispMoney ?? pr.lei
