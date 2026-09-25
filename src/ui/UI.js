@@ -65,7 +65,7 @@ export class UI {
     this.toastsEl = el('div', 'toasts'); this.hud.appendChild(this.toastsEl)
     // bottom-left
     const bl = el('div', 'hud-bl'); this.hud.appendChild(bl)
-    const mm = el('div', 'minimap-wrap'); bl.appendChild(mm)
+    const mm = this.minimapWrap = el('div', 'minimap-wrap'); bl.appendChild(mm)
     const cv = document.createElement('canvas'); mm.appendChild(cv)
     mm.appendChild(el('div', 'minimap-n', 'N'))
     this.streetEl = el('div', 'minimap-street'); mm.appendChild(this.streetEl)
@@ -328,6 +328,9 @@ export class UI {
   // floating "!" over NPCs that have something for you
   setTags(list) { this.tags = list }
 
+  // at home: no minimap (there's no map in a flat)
+  setIndoors(on) { this.minimapWrap?.classList.toggle('indoors', !!on) }
+
   // ---- dialogue ---------------------------------------------------------------------------
   // lines: array of strings or { who, text } ; returns when finished. choices -> returns index
   async dialogue(speaker, lines, { choices = null, portrait = true } = {}) {
@@ -458,7 +461,7 @@ export class UI {
     // top right
     const tod = g.renderer.tod
     const pos = p.vehicle ? p.vehicle.pos : p.pos
-    const dist = districtAt(pos.x, pos.z)
+    const dist = g.home?.inside ? 'Acasă · Blocul 7' : districtAt(pos.x, pos.z)
     const clk = `${tod.clock}<small>${dist}</small>`
     if (clk !== this._clk) { this._clk = clk; this.clockEl.innerHTML = clk }
     this.dispMoney = this.dispMoney ?? pr.lei
@@ -514,7 +517,9 @@ export class UI {
     }
     // waypoint marker first (it has priority over tags), with an edge arrow when off-screen
     const placed = []
-    const mk = this.marker
+    // at home the waypoint waits outside (no arrow pointing through the wall carpet)
+    const mk = this.game.home?.inside ? null : this.marker
+    this.markerEl.style.visibility = this.game.home?.inside ? 'hidden' : ''
     if (mk) {
       const cam = this.game.camera
       _v.set(mk.x, (mk.y ?? 0.2) + 3.2, mk.z).project(cam)

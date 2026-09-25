@@ -89,6 +89,7 @@ export class Ambient {
       n.ambient = d
       n.spot = spot
       n.archetype = d.archetype || spot.archetype || 'civilian'
+      n.noTalk = !!d.noTalk
       n.home.ry = d.ry
       if (d.anim) n.char.anim.play(d.anim)
       this.npcs.push(n)

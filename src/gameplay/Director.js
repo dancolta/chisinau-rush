@@ -1,6 +1,7 @@
 import { Progress, RANKS } from './Progress.js'
 import { CAST } from '../data/outfits.js'
 import { CURB_H } from '../world/CityLayout.js'
+import { composeSpec } from '../data/wardrobe.js'
 
 // Top-level game flow: new game / continue, fainting, getting busted, waypoints, autosave.
 export class Director {
@@ -18,7 +19,8 @@ export class Director {
     const old = g.player
     g.physics.remove(old.body)
     const P = g.Player
-    g.player = new P(g, CAST[type] || CAST.patan, { x, z, y: g.physics.groundHeight(x, z), ry })
+    // the hero in whatever they last put on
+    g.player = new P(g, composeSpec(type, g.progress.outfit), { x, z, y: g.physics.groundHeight(x, z), ry })
     g.player.setWeapon(g.progress.weapon)
   }
 
@@ -66,6 +68,8 @@ export class Director {
     if (mk) out.push({ kind: 'target', x: mk.x, z: mk.z, edge: true })
     for (const t of g.story.blipList()) out.push(t)
     if (g.street) out.push(...g.street.blips())
+    if (g.home) out.push(...g.home.blips())
+    if (g.wardrobe) out.push(...g.wardrobe.blips())
     if (g.crew) out.push(...g.crew.blips())
     if (g.police) {
       for (const o of g.police.officers) if (!o.char.ko) out.push({ kind: 'police', x: o.pos.x, z: o.pos.z })

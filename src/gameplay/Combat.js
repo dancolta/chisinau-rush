@@ -2,6 +2,7 @@ import { WEAPONS, WEAPON_ORDER } from '../data/weapons.js'
 import { angleDiff } from '../entities/Character.js'
 
 const POW = ['BUF!', 'PAC!', 'ȚAC!', 'BANG!', 'POC!', 'ZDRANG!']
+const WET = ['M-ai udat!', 'Ce faci, măi?! Am haine de la Milano!', 'Apă?! Pe bune?!', 'Ești normal?!', 'Mamă, m-o udat un nebun!']
 
 // Melee combat: aiming, hit resolution, NPC attacks, getting run over.
 export class Combat {
@@ -30,10 +31,12 @@ export class Combat {
       dir = Math.atan2(Math.sin(yaw) * m.y - Math.cos(yaw) * m.x, Math.cos(yaw) * m.y + Math.sin(yaw) * m.x)
     }
     let best = null, bs = 1e9
+    // a water pistol reaches further than fists: lock on at its range
+    const maxD = Math.max(4, (WEAPONS[p.weapon]?.range || 0) + 0.5)
     for (const t of this.targets()) {
       if (t.char.ko || t.state === 'knocked' || t.ally) continue
       const dx = t.pos.x - p.pos.x, dz = t.pos.z - p.pos.z, d = Math.hypot(dx, dz)
-      if (d > 4 || Math.abs(t.pos.y - p.pos.y) > 1.6) continue
+      if (d > maxD || Math.abs(t.pos.y - p.pos.y) > 1.6) continue
       const da = Math.abs(angleDiff(dir, Math.atan2(dx, dz)))
       if (da > 1.3) continue
       const score = d + da * 2.4 + (t.hostile ? -2 : 0)
@@ -64,6 +67,7 @@ export class Combat {
       const mul = (g.progress?.dmgMul || 1) * (heavy ? 1.5 : 1)
       const knock = w.knock * (heavy ? 1.8 : 1)
       t.takeHit(w.dmg * mul, p.pos.x, p.pos.z, knock, p, { stun: w.stun })
+      if (w.water && !t.char.ko && Math.random() < 0.45) t.say?.(WET[Math.floor(Math.random() * WET.length)], 2.2)
       hits++
       if (t.state === 'knocked' && t.hp <= 0) { g.progress.stats.ko++; g.events.emit('npc:ko', t) }
       if (!t.noCrime) g.events.emit('crime', { type: t.personality === 'cop' ? 'assault_cop' : 'assault', x: t.pos.x, z: t.pos.z, severity: t.personality === 'cop' ? 3 : w.heat ? 2 : 1, victim: t })
@@ -80,12 +84,21 @@ export class Combat {
       propHit = true
       if (it.type === 'watermelon') { g.fx?.splat(tp.x, tp.y, tp.z); g.audio?.sfx('splat', { at: tp }) }
     }
-    if (hits || propHit) {
+    if ((hits || propHit) && !w.water) {
       const heavy = w.heavy || w.key !== 'fist'
-      g.audio?.sfx(w.key === 'sticla' ? 'glass' : heavy ? 'punch_heavy' : 'punch', { at: p.pos, pitch: 0.9 + Math.random() * 0.25 })
+      g.audio?.sfx(w.sfx || (w.key === 'sticla' ? 'glass' : heavy ? 'punch_heavy' : 'punch'), { at: p.pos, pitch: 0.9 + Math.random() * 0.25 })
       g.cameraRig?.shake(heavy ? 0.5 : 0.33)
       g.hitstop?.(heavy ? 70 : 45)
-      if (hits && Math.random() < 0.55) g.ui?.pow(p.pos.x + fx * 1.1, p.pos.y + 1.5, p.pos.z + fz * 1.1, POW[Math.floor(Math.random() * POW.length)])
+      if (hits && (w.pow || Math.random() < 0.55)) g.ui?.pow(p.pos.x + fx * 1.1, p.pos.y + 1.5, p.pos.z + fz * 1.1, w.pow || POW[Math.floor(Math.random() * POW.length)])
+    }
+    // the water pistol: a jet of water, a splash where it lands
+    if (w.water) {
+      for (let i = 0; i < 16; i++) {
+        const s = 9 + Math.random() * 5, sp = (Math.random() - 0.5) * 0.12
+        g.fx?.soft.emit(p.pos.x + fx * 0.5, p.pos.y + 1.3, p.pos.z + fz * 0.5, { vx: Math.sin(yaw + sp) * s, vy: 1.2 + Math.random(), vz: Math.cos(yaw + sp) * s, life: 0.55, size: 0.09, grow: 0.8, alpha: 0.75, color: [0.62, 0.8, 1], drag: 0.6 })
+      }
+      g.audio?.sfx('spray', { at: p.pos, pitch: 1.5, vol: 0.6 })
+      if (hits) g.audio?.sfx('splat', { at: p.pos, vol: 0.5, pitch: 1.3 })
     }
     if (w.key === 'spray' || w.key === 'suflanta') {
       for (let i = 0; i < 18; i++) {
@@ -142,8 +155,9 @@ export class Combat {
 
   cycleWeapon(p) {
     const g = this.game, pr = g.progress
-    const owned = WEAPON_ORDER.filter((k) => pr.weapons.includes(k))
-    if (owned.length < 2) { g.ui?.notify('N-ai altă armă încă. Borea Țigan vinde „unelte".'); return }
+    // your fists and what you carry; the rest waits in the chest at home
+    const owned = WEAPON_ORDER.filter((k) => k === 'fist' || (pr.carry || []).includes(k))
+    if (owned.length < 2) { g.ui?.notify(pr.weapons.length > 1 ? 'Armele-s acasă, în lada de sub divan.' : 'N-ai altă armă încă. Borea Țigan vinde „unelte".'); return }
     const i = owned.indexOf(pr.weapon)
     pr.weapon = owned[(i + 1) % owned.length]
     p.setWeapon(pr.weapon)

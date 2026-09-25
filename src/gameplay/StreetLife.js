@@ -149,7 +149,8 @@ export class StreetLife {
     let k = this.filmers.length
     for (const n of g.peds.list) {
       if (k >= 3) break
-      if (n.archetype === 'gopnik' || n.personality === 'cop' || n.char.ko || n.chat || (n.state !== 'walk' && n.state !== 'idle')) continue
+      // (never standing still on a crossing: cars wait for anyone on the road)
+      if (n.archetype === 'gopnik' || n.personality === 'cop' || n.char.ko || n.chat || n.onRoad || (n.state !== 'walk' && n.state !== 'idle')) continue
       const d = Math.hypot(n.pos.x - pos.x, n.pos.z - pos.z)
       if (d < 12 || d > 30 || Math.random() > 0.3) continue
       n.state = 'phone'; n.path = []; n.vel.set(0, 0, 0)
@@ -175,7 +176,7 @@ export class StreetLife {
     const g = this.game, p = g.player
     if (this.chats.length >= 2) return
     const L = g.peds.list, now = performance.now()
-    const ok = (n) => n.state === 'walk' && !n.chat && !n.char.ko && (n.archetype === 'civilian' || n.archetype === 'babushka') && now > (n.chatCD || 0)
+    const ok = (n) => n.state === 'walk' && !n.chat && !n.char.ko && !n.onRoad && (n.archetype === 'civilian' || n.archetype === 'babushka') && now > (n.chatCD || 0)
     for (let i = 0; i < L.length; i++) {
       const a = L[i]
       if (!ok(a)) continue
@@ -303,8 +304,11 @@ export class StreetLife {
     const g = this.game, pr = g.progress, p = g.player
     n.path = []; n.state = 'talk'; n.vel.set(0, 0, 0)
     n.char.lookAtNow(p.pos.x, p.pos.z); p.char.lookAtNow(n.pos.x, n.pos.z)
-    const fee = 10
-    const i = await g.ui.dialogue(g.street.speaker(n), [this.fill(pick(GOP.shake))], { choices: [
+    // the flashier your clothes, the higher the toll
+    const rich = pr.look?.rich || 0
+    const fee = 10 + rich * 15
+    const ask = rich >= 2 ? `Stai, stai. Cu așa haine, și ${fee} de lei ai. Taxă de drum, [[bratan|tanti]].` : pick(GOP.shake)
+    const i = await g.ui.dialogue(g.street.speaker(n), [this.fill(ask)], { choices: [
       { text: `Na, ${fee} lei. Să fie pace.`, cost: `${fee} lei`, disabled: pr.lei < fee },
       { text: this.fill('N-am, [[bratan|băieți]]. Pe bune.') },
       { text: 'Vă bat pe toți. Pe rând sau deodată?', cost: '👊' },

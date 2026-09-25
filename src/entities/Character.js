@@ -69,6 +69,22 @@ export class Character {
     this.anim.update(dt, this.speed)
   }
 
+  // new clothes: same person in the same spot, rebuilt body (the animation starts fresh)
+  setSpec(spec) {
+    const old = this.mesh
+    this.spec = spec
+    this.mesh = buildCharacter(spec)
+    this.mesh.userData.character = this
+    if (old.userData.isPlayer) this.mesh.userData.isPlayer = true
+    this.anim = new Animator(this.mesh)
+    this.mesh.visible = this.visible
+    this.game.scene.add(this.mesh)
+    this.game.scene.remove(old)
+    old.geometry.dispose()
+    old.skeleton.dispose()
+    this.syncNow()
+  }
+
   dispose() {
     this.game.scene.remove(this.mesh)
     this.mesh.geometry.dispose()

@@ -24,6 +24,9 @@ import { Interaction } from '../gameplay/Interaction.js'
 import { Crew } from '../gameplay/Crew.js'
 import { StreetLife } from '../gameplay/StreetLife.js'
 import { StreetTalk } from '../gameplay/StreetTalk.js'
+import { Gear } from '../gameplay/Gear.js'
+import { Wardrobe } from '../gameplay/Wardrobe.js'
+import { Safehouse } from '../gameplay/Safehouse.js'
 import { Director } from '../gameplay/Director.js'
 import { UI } from '../ui/UI.js'
 import { Menus } from '../ui/Menus.js'
@@ -112,6 +115,10 @@ export class Game {
     this.crew = new Crew(this)
     this.life = new StreetLife(this)
     this.street = new StreetTalk(this)
+    // what you own: weapons, clothes, and the flat in Blocul 7
+    this.gear = new Gear(this)
+    this.wardrobe = new Wardrobe(this)
+    this.home = new Safehouse(this)
     this.story = new Story(this)
     this.director = new Director(this)
     this.menus = new Menus(this, this.ui)
@@ -251,7 +258,7 @@ export class Game {
     this.safe('story', () => this.story.fixedUpdate(h))
     this.safe('vehicles', () => this.vehicles.fixedUpdate(h))
     this.safe('peds', () => { this.peds.fixedUpdate(h); this.ambient.fixedUpdate(h); this.crew.fixedUpdate(h) })
-    this.physics.step()
+    this.safe('physics', () => this.physics.step())
     this.safe('postPhysics', () => this.vehicles.postPhysics(h))
   }
 
@@ -267,7 +274,7 @@ export class Game {
       this.safe('peds', () => { this.peds.update(dt); this.ambient.update(dt); this.crew.update(dt) })
       if (playing) this.safe('police', () => this.police.update(dt))
       this.safe('story', () => this.story.update(dt))
-      if (playing) this.safe('street', () => { this.life.update(dt); this.street.update(dt) })
+      if (playing) this.safe('street', () => { this.life.update(dt); this.street.update(dt); this.home.update(dt) })
       if (playing) this.safe('interaction', () => this.interaction.update(dt))
       if (playing) this.safe('director', () => this.director.update(dt))
       this.safe('fx', () => { this.fx.update(dt); this.vehicleFX(dt); this.weather.update(dt); this.nightLights.update(rawDt); this.grass.update(rawDt) })

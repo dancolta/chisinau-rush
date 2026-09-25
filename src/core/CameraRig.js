@@ -24,6 +24,7 @@ export class CameraRig {
     this.fovKick = 0
     this.baseFov = game.settings.fov || 42
     this.cut = null           // active cutscene shot
+    this.room = null          // indoors: a fixed-height camera outside the open fourth wall
     this.userYawT = 0
     this.userTurnT = 0        // > 0 right after the player turned the camera themselves
     this.pivot = new THREE.Vector3()   // the hero's head, eased: what the camera orbits
@@ -40,6 +41,7 @@ export class CameraRig {
 
   // jump straight to the resting position behind the hero (after teleports and cutscenes)
   snap() {
+    if (this.room) { this.roomPos(this.pos); this.cam.position.copy(this.pos); return }
     const p = this.game.player
     if (p) {
       const car = p.vehicle
@@ -92,6 +94,7 @@ export class CameraRig {
 
     const p = game.player
     if (!p) return
+    if (this.room) { this.updateRoom(rawDt); return }
     const car = p.vehicle
     if (car !== this.lastCar) { if (car) this.enterT = 0.9; this.lastCar = car }
     // ---- user look controls: mouse (locked pointer, or right/middle drag), right stick, Z/X ---------
@@ -184,6 +187,28 @@ export class CameraRig {
     const fov = this.baseFov + this.fovKick
     if (Math.abs(this.cam.fov - fov) > 0.01) { this.cam.fov = fov; this.cam.updateProjectionMatrix() }
     this.updateCutout(car ? car.mesh.position : p.char.mesh.position, !!car)
+  }
+
+  // indoors: the camera slides along outside the open wall, looking in at the hero
+  roomPos(out) {
+    const r = this.room, cp = this.game.player.char.mesh.position
+    const tx = THREE.MathUtils.clamp(cp.x, r.x0 + 2.2, r.x1 - 2.2)
+    return out.set(r.cx + (tx - r.cx) * 0.7, r.camY, r.camZ)
+  }
+
+  updateRoom(rawDt) {
+    const r = this.room, cp = this.game.player.char.mesh.position
+    this.yaw = Math.PI // W walks away from the camera, into the room
+    this.roomPos(_v)
+    this.pos.lerp(_v, 1 - Math.exp(-3 * rawDt))
+    this.cam.position.copy(this.pos)
+    this.applyShake(rawDt)
+    _look.set(cp.x * 0.75 + r.cx * 0.25, cp.y + 1.0, cp.z * 0.6 + r.cz * 0.4)
+    if (!this.roomLook) this.roomLook = _look.clone()
+    this.roomLook.lerp(_look, 1 - Math.exp(-5 * rawDt))
+    this.cam.lookAt(this.roomLook)
+    if (Math.abs(this.cam.fov - r.fov) > 0.01) { this.cam.fov += (r.fov - this.cam.fov) * (1 - Math.exp(-6 * rawDt)); this.cam.updateProjectionMatrix() }
+    this.updateCutout(null)
   }
 
   // low cinematic angle by default; zooming out with the wheel lifts toward the classic top view

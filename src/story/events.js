@@ -119,7 +119,7 @@ export class StreetEvents {
   }
   update(dt) {
     const g = this.game, s = this.story
-    if (g.state !== 'play' || s.active || g.ui.modalOpen || g.cutscene || g.police.level > 0) return
+    if (g.state !== 'play' || s.active || g.ui.modalOpen || g.cutscene || g.police.level > 0 || g.home?.inside) return
     if (!s.isDone('paine')) return
     this.t -= dt
     if (this.t > 0) return

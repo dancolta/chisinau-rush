@@ -183,6 +183,8 @@ export class Renderer {
     this.renderer.toneMappingExposure = s.exposure * (this.settings?.brightness ?? 1)
     this.scene.fog.far = 900
     this.weather?.apply(this)
+    // indoors: the lamp lights the room, the sky only comes in through the window
+    if (this.indoors) { this.sun.intensity *= 0.12; this.hemi.intensity *= 0.55 }
   }
 
   // keep the shadow frustum centred on the action, snapped to texels to avoid shimmer.

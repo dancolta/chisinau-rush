@@ -261,7 +261,7 @@ export class RouteDriver {
   }
   fixedUpdate(h) {
     const v = this.v
-    if (this.done || v.driver !== this) return
+    if (this.done || v.disposed || v.driver !== this) return
     if (v.broken) { v.throttle = 0; v.handbrake = true; return }
     let w = this.points[this.i]
     if (!w) { this.finish(); return }

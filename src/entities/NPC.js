@@ -130,6 +130,7 @@ export class NPC {
 
   // ---- per fixed step -----------------------------------------------------------------
   fixedUpdate(h) {
+    if (this.disposed) return
     const c = this.char
     c.beginStep()
     if (this.riding) { c.pos.copy(this.riding.pos); c.heading = this.riding.heading; this.moveBody(); return }
@@ -258,6 +259,7 @@ export class NPC {
   }
 
   moveBody() {
+    if (this.disposed) return
     const p = this.char.pos
     this.body.setNextKinematicTranslation({ x: p.x, y: p.y + CAP_HALF + CAP_R, z: p.z })
   }
@@ -280,6 +282,7 @@ export class NPC {
   }
 
   teleport(x, y, z, ry) {
+    if (this.disposed) return
     this.char.setPos(x, y, z)
     if (ry !== undefined) { this.char.heading = ry; this.char.prevHeading = ry }
     this.body.setTranslation({ x, y: y + CAP_HALF + CAP_R, z }, true)

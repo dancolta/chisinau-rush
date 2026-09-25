@@ -482,7 +482,8 @@ export class StreetTalk {
     const pr = this.game.progress, st = this.mem(n, true)
     st.haggled = true
     const badanta = pr.type === 'badanta'
-    if (Math.random() < 0.35 + pr.cred / 200 + (badanta ? 0.4 : 0)) { st.cheap = true; return { line: badanta ? VEND.haggleOkBadanta : VEND.haggleOk } }
+    // haggling in a designer coat doesn't convince anybody
+    if (Math.random() < 0.35 + pr.cred / 200 + (badanta ? 0.4 : 0) - (pr.look?.rich || 0) * 0.08) { st.cheap = true; return { line: badanta ? VEND.haggleOkBadanta : VEND.haggleOk } }
     return { line: VEND.haggleNo }
   }
 

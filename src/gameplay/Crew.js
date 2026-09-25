@@ -35,7 +35,7 @@ export class Crew {
 
   recruit(n, secs = 300) {
     const g = this.game
-    if (this.has(n)) return
+    if (!n || n.disposed || this.has(n)) return false
     this.detach(n)
     n.ally = true; n.crew = true; n.persistent = true; n.noCrime = true
     n.personality = 'tough'; n.hostile = false; n.enemy = false; n.stayDown = false
@@ -51,6 +51,7 @@ export class Crew {
     this.list.push(n)
     g.progress.stats.recruits = (g.progress.stats.recruits || 0) + 1
     g.events.emit('crew:join', n)
+    return true
   }
 
   // out of whichever crowd owned it (a street walker or somebody at a hangout)
@@ -90,6 +91,14 @@ export class Crew {
     this.babaT = now + 4000
     this.dismissAll(CREW.baba)
     this.game.progress.addRespect('gop', -10, 'ai lovit o babă')
+  }
+
+  // you went home: the lads wait by the stairwell, then fall in behind you again
+  holdAll(on) {
+    for (const n of this.list) {
+      if (on) { this.setWaiting(n, true); n.held = true }
+      else if (n.held) { n.held = false; this.setWaiting(n, false) }
+    }
   }
 
   setWaiting(n, on) {
@@ -216,7 +225,7 @@ export class Crew {
       if (n.boarding) { this.stepBoarding(n, dt); continue }
       const d = Math.hypot(n.pos.x - p.pos.x, n.pos.z - p.pos.z)
       // left waiting and you never came back
-      if (n.waiting && d > 140) { this.release(n); continue }
+      if (n.waiting && d > 140 && !n.held) { this.release(n); continue }
       if (threats.length && !pv && (!n.waiting || d < 18)) {
         const cur = n.target
         const busy = n.state === 'fight' && cur && cur !== p && !cur.char.ko && threats.includes(cur)
@@ -241,7 +250,11 @@ export class Crew {
     }
   }
 
-  fixedUpdate(h) { for (const n of this.list) n.fixedUpdate(h) }
+  fixedUpdate(h) {
+    // someone else disposed one of the lads (a wipe, a reset): drop them before the physics step
+    if (this.list.some((n) => n.disposed)) this.list = this.list.filter((n) => !n.disposed)
+    for (const n of this.list) n.fixedUpdate(h)
+  }
 
   update(dt) {
     const g = this.game, p = g.player

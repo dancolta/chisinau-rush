@@ -306,3 +306,33 @@ table.ctl td b { color: #fff; }
 .create .turntable { position: relative; cursor: grab; touch-action: none; }
 .create .turntable:active { cursor: grabbing; }
 .create .turn-hint { position: absolute; left: 50%; bottom: 7vh; transform: translateX(-50%); font-size: 13px; color: rgba(255,255,255,0.8); background: rgba(12,10,18,0.55); border: 1px solid rgba(255,255,255,0.12); border-radius: 20px; padding: 6px 14px; pointer-events: none; white-space: nowrap; }
+
+/* ---- side list panel: wardrobe, clothes shops, the weapon chest ---- */
+.lp { position: absolute; top: var(--edge-y); right: var(--edge-x); bottom: var(--edge-y); width: min(430px, 44vw); display: flex; flex-direction: column; background: rgba(14,11,20,0.92); border: 1px solid rgba(255,207,74,0.35); border-radius: 18px; box-shadow: 0 16px 40px rgba(0,0,0,0.55); z-index: 40; pointer-events: auto; animation: lpin 0.28s cubic-bezier(.2,1.2,.5,1); overflow: hidden; }
+@keyframes lpin { from { transform: translateX(30px); opacity: 0 } to { transform: none; opacity: 1 } }
+.lp-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 18px 8px; }
+.lp-title { font-family: var(--title); font-size: 30px; letter-spacing: 1px; color: #fff; line-height: 1; }
+.lp-sub { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+.lp-x { background: none; border: 1px solid rgba(255,255,255,0.18); color: #ddd; border-radius: 10px; width: 32px; height: 32px; cursor: pointer; font-size: 14px; }
+.lp-x:hover { border-color: var(--gold); color: var(--gold); }
+.lp-tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 16px 10px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.lp-tab { background: rgba(255,255,255,0.06); border: 1px solid transparent; color: #d8d0c4; border-radius: 999px; padding: 5px 12px; font-size: 12.5px; cursor: pointer; font-weight: 600; }
+.lp-tab.on { background: var(--gold); color: #1a1206; }
+.lp-list { flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; }
+.lp-empty { color: var(--muted); padding: 18px 8px; font-size: 13.5px; }
+.lp-item { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; border: 2px solid transparent; background: rgba(255,255,255,0.04); cursor: pointer; }
+.lp-item.sel { border-color: var(--gold); background: rgba(255,207,74,0.1); }
+.lp-item.locked { opacity: 0.55; }
+.lp-item.worn .lp-name::after { content: ' ●'; color: #8ef07a; }
+.lp-brand { flex: none; min-width: 84px; max-width: 110px; padding: 6px 7px; border-radius: 8px; font-family: var(--display); font-size: 11px; letter-spacing: 0.5px; text-align: center; line-height: 1.15; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12); }
+.lp-body { min-width: 0; }
+.lp-name { color: #fff; font-weight: 700; font-size: 14px; }
+.lp-meta { color: #cfc8bb; font-size: 12.5px; margin-top: 2px; }
+.lp-info { padding: 10px 16px; border-top: 1px solid rgba(255,255,255,0.08); min-height: 56px; }
+.lp-note { color: #e5dccb; font-size: 13px; font-style: italic; margin-bottom: 4px; }
+.lp-act { color: var(--gold); font-weight: 700; font-size: 13.5px; }
+.lp-keys { padding: 8px 16px 12px; color: var(--muted); font-size: 11.5px; }
+.lp-keys b { color: #fff; }
+@media (max-width: 720px) { .lp { width: auto; left: var(--edge-x); top: auto; height: 58vh; } }
+
+.minimap-wrap.indoors { opacity: 0; transition: opacity 0.3s; pointer-events: none; }

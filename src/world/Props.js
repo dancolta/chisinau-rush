@@ -416,8 +416,8 @@ export class Props {
       ['LINELLA', '#009640', '#fff'], ["ANDY'S PIZZA", '#111111', '#ffd200'], ['LA PLĂCINTE', '#21336a', '#ebc372'],
       ['FARMACIE', '#1a8f4a', '#fff'], ['NR. 1', '#e0322b', '#fff'], ['FRANZELUȚA', '#c3812d', '#fff'],
       ['TUCANO COFFEE', '#f9b200', '#1b1b1b'], ['GUSTOK', '#6d3b1f', '#ffe8c0'], ['DAVIDAN', '#8a4f2a', '#fff4dc'],
-      ['LOMBARD', '#5b2d86', '#ffd24a'], ['SALON MOBILĂ', '#2f4f6f', '#fff'], ['FLORĂRIE', '#b0306a', '#fff'],
-      ['BAR „LA COLȚ"', '#3a2a1a', '#ffcf4a'], ['MOBILE & SIM', '#e05a00', '#fff'], ['CROITORIE', '#445566', '#fff'],
+      ['LOMBARD', '#5b2d86', '#ffd24a'], ['MODA DE MILANO', '#111111', '#d4af37'], ['FLORĂRIE', '#b0306a', '#fff'],
+      ['BAR „LA COLȚ"', '#3a2a1a', '#ffcf4a'], ['MOBILE & SIM', '#e05a00', '#fff'], ['SECOND HAND', '#2a5a2a', '#fff'],
       ['CAFENEA', '#4a2f1f', '#f0d9b0'], ['BERE LA HALBĂ', '#b8860b', '#1b1b1b'], ['OPTICA', '#1f6f8f', '#fff'],
     ]
     const rnd = mulberry(777)

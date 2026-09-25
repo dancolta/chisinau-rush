@@ -198,6 +198,7 @@ export class Activities {
   // ---- characters with services -----------------------------------------------------------------
   talkLabel(id) {
     const s = this.story
+    if (id === 'nelu' && !this.pr.weapons.includes('matura')) return 'Nelu Gunoierul: are o mătură de rezervă'
     if (id === 'borea' && s.isDone('borea')) return 'Magazinul lui Borea'
     if (id === 'vova' && s.isDone('jiguli')) return 'Vova: reparații și taxi'
     if (id === 'vitea' && s.isDone('cursa')) return 'Vitea: cursă pe bani'
@@ -209,7 +210,19 @@ export class Activities {
     if (id === 'borea' && s.isDone('borea')) return () => this.boreaShop()
     if (id === 'vova' && s.isDone('jiguli')) return () => this.vovaService()
     if (id === 'vitea' && s.isDone('cursa')) return () => s.run(STREET_RACE)
+    if (id === 'nelu') return () => this.neluService()
     return null
+  }
+
+  // Nelu has a spare broom. For a price. For the city, he says.
+  async neluService() {
+    const g = this.game, pr = this.pr
+    const price = pr.price(WEAPONS.matura.price)
+    const choices = []
+    if (!pr.weapons.includes('matura')) choices.push({ text: `${WEAPONS.matura.icon} Îmi dai și mie o mătură?`, cost: `${price} lei`, disabled: pr.lei < price, act: () => g.gear.buy('matura', price) })
+    choices.push({ text: 'Nimic, spor la măturat.' })
+    const i = await g.ui.dialogue(SPEAKERS.nelu, [pickOne(['Eu mătur. Ei murdăresc. Așa-i contractul.', 'Mătură de rezervă am. E de la primărie, da\' primăria n-o să observe. N-o observat nici gunoiul.'])], { choices })
+    choices[i]?.act?.()
   }
 
   async boreaShop() {
@@ -218,9 +231,10 @@ export class Activities {
       const offers = []
       for (const k of WEAPON_ORDER) {
         const w = WEAPONS[k]
-        if (!w.price || pr.weapons.includes(k)) continue
+        // the rest of the new arsenal comes from Vova, Nelu and the market
+        if (!w.price || pr.weapons.includes(k) || (w.seller && w.seller !== 'borea')) continue
         const wp = Math.round(pr.price(w.price) * (pr.tier('gop') >= 3 ? 0.9 : 1))
-        offers.push({ text: `${w.icon} ${w.name}`, cost: `${wp} lei`, disabled: pr.lei < wp, buy: () => { pr.addLei(-wp); pr.giveWeapon(k); pr.weapon = k; g.player.setWeapon(k); g.ui.notify(`Ai ${w.icon} ${w.name}. {y}[Q]{/y} schimbi arma.`, 3, 'gold') } })
+        offers.push({ text: `${w.icon} ${w.name}`, cost: `${wp} lei`, disabled: pr.lei < wp, buy: () => g.gear.buy(k, wp) })
       }
       if (!pr.flags.acteFalse) offers.push({ text: '🪪 Acte false („de deputat")', cost: '150 lei', disabled: pr.lei < 150, buy: () => { pr.addLei(-150); pr.flags.acteFalse = true; g.ui.notify('Ai acte false. La prima oprire, poliția te salută.', 3.4, 'gold') } })
       if (!pr.flags.nitro) offers.push({ text: '🔥 Nitro sub capotă ([⇧] la volan)', cost: '300 lei', disabled: pr.lei < 300, buy: () => { pr.addLei(-300); pr.flags.nitro = true; g.ui.notify('Nitro montat. Ține {y}[⇧]{/y} la volan. „Aproape legal", zice Borea.', 3.8, 'gold') } })
@@ -242,6 +256,8 @@ export class Activities {
     const nearCar = p.vehicle || g.vehicles.list.filter((v) => !v.def.trolley && !v.locked && (!v.driver || v.driver === 'player') && dist(v.pos, p.pos) < 14).sort((a, b) => dist(a.pos, p.pos) - dist(b.pos, p.pos))[0]
     const choices = []
     if (nearCar) choices.push({ text: `Repară ${nearCar.def.name} (${Math.round(nearCar.health)}%)`, cost: '40 lei', disabled: pr.lei < 40 || nearCar.health >= 99, act: () => { pr.addLei(-40); nearCar.health = 100; nearCar.broken = false; g.ui.notify('Ca nouă. Ca veche-bună, adică.', 2.6, 'green') } })
+    const wr = pr.price(WEAPONS.cheie.price)
+    if (!pr.weapons.includes('cheie')) choices.push({ text: `${WEAPONS.cheie.icon} Cheia franceză de pe perete`, cost: `${wr} lei`, disabled: pr.lei < wr, act: () => g.gear.buy('cheie', wr) })
     const hasTaxi = g.vehicles.list.some((v) => v.def.name && v.kind === 'taxi' && dist(v.pos, p.pos) < 40)
     if (!hasTaxi && this.story.isDone('taxi')) choices.push({ text: 'Dă-mi un taxi', cost: 'gratis', act: () => { const v = g.vehicles.spawn('taxi', -200, 252.5, Math.PI / 2); v.keep = true; g.ui.notify('Loganul cumnatului e al tău. Apasă {y}[T]{/y} în taxi pentru clienți.', 3.4, 'gold') } })
     choices.push({ text: 'Nimic, mersi.' })
