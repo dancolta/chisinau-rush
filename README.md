@@ -75,9 +75,10 @@ node tools/systems.mjs                          # side systems checks (busted, s
 node tools/shot.mjs --out shot.png --eval "…"   # screenshots
 node tools/gallery.mjs --missions eban,mitingul    # capture every cutscene of the given missions
 node tools/views.mjs --out views --only night,play_day  # fixed review shots (day, dusk, night, gameplay camera)
+node tools/trailer.mjs --format both               # the 18 s teaser (16:9 + 9:16), rendered offline frame by frame
 ```
 
-`?turbo=4` speeds up the simulation in dev builds; `?touch` forces touch controls on desktop.
+`?turbo=4` speeds up the simulation in dev builds; `?touch` forces touch controls on desktop; `?capture` stops the frame loop and advances the game (clock, timers, CSS animations) only through `window.__cap.step(dt)`, for offline video capture.
 
 ## Credits
 
