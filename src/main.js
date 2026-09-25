@@ -1,32 +1,47 @@
-import Phaser from 'phaser'
-import BootScene from './scenes/BootScene.js'
-import CreateScene from './scenes/CreateScene.js'
-import CentruScene from './scenes/CentruScene.js'
-import UiScene from './scenes/UiScene.js'
+import '@fontsource/rubik/400.css'
+import '@fontsource/rubik/500.css'
+import '@fontsource/rubik/700.css'
+import '@fontsource/rubik/900.css'
+import '@fontsource/bungee/400.css'
+import '@fontsource/bangers/400.css'
+import '@fontsource/paytone-one/400.css'
+import './styles/boot.css'
+import './styles/ui.css'
+import { Game } from './core/Game.js'
+import { TIPS } from './data/tips.js'
 
-const config = {
-  type: Phaser.AUTO,
-  parent: 'game',
-  backgroundColor: '#1b1d24',
-  pixelArt: true,        // crisp 16-bit scaling, no smoothing
-  roundPixels: true,
-  scale: {
-    mode: Phaser.Scale.RESIZE,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: '100%',
-    height: '100%',
-  },
-  physics: {
-    default: 'arcade',
-    arcade: { gravity: { x: 0, y: 0 }, debug: false },
-  },
-  scene: [BootScene, CreateScene, CentruScene, UiScene],
+const BASE = import.meta.env.BASE_URL || './'
+const boot = document.getElementById('boot')
+const fill = document.getElementById('boot-fill')
+const status = document.getElementById('boot-status')
+const tip = document.getElementById('boot-tip')
+document.querySelector('.boot-art').style.backgroundImage = `url(${BASE}title-art.jpg)`
+
+let tipIdx = Math.floor(Math.random() * TIPS.length)
+tip.textContent = TIPS[tipIdx]
+const tipTimer = setInterval(() => { tipIdx = (tipIdx + 1) % TIPS.length; tip.textContent = TIPS[tipIdx] }, 4200)
+
+async function start() {
+  const game = new Game({
+    viewport: document.getElementById('viewport'),
+    ui: document.getElementById('ui'),
+  })
+  window.__game = game
+  try {
+    await game.boot((p, label) => {
+      fill.style.width = `${Math.round(p * 100)}%`
+      if (label) status.textContent = label
+    })
+  } catch (e) {
+    console.error(e)
+    status.textContent = 'Eroare la încărcare: ' + (e && e.message ? e.message : e)
+    return
+  }
+  clearInterval(tipTimer)
+  fill.style.width = '100%'
+  boot.classList.add('hide')
+  setTimeout(() => boot.remove(), 900)
+  game.start()
 }
 
-window.__game = new Phaser.Game(config)
-
-// Hide the HTML loading splash once Phaser is up.
-window.addEventListener('load', () => {
-  const el = document.getElementById('loading')
-  if (el) setTimeout(() => el.remove(), 400)
-})
+start()

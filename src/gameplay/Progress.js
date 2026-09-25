@@ -1,0 +1,140 @@
+// Player progression, economy and save data.
+
+export const RANKS = [
+  { xp: 0, name: 'Plecat peste hotare', joke: 'Ai adus euro și un frigider în rate. Acasă-i mai bine, de la distanță.' },
+  { xp: 250, name: 'Băiat de cartier', joke: 'Te știe toată curtea. Și ăia cu care ai datorii.' },
+  { xp: 700, name: 'Om cu relații', joke: 'Ai un cumătru la primărie. Acuma ai și tu pe cineva.' },
+  { xp: 1400, name: 'Om de afaceri', joke: 'SRL pe numele soacrei. Birou euroreparat, vedere la groapă.' },
+  { xp: 2400, name: 'Consilier', joke: 'Votezi ce zice partidul. Parcarea pe trotuar, inclusă.' },
+  { xp: 3700, name: 'Candidat', joke: 'Promiți drumuri și apă caldă. Lumea a mai auzit, da\' votează.' },
+  { xp: 5200, name: 'Primar de Chișinău', joke: 'Ai ajuns sus. Prima ședință: lucrăm la asta.' },
+]
+
+export const PERKS = {
+  patan: { dmg: 1.6, cred: 25, lei: 0 },
+  taxist: { lei: 30, fareBonus: 1.5 },
+  conductor: { passive: 0.25, heatDecay: 1.6 },
+  agent: { lei: 20, sell: 1.4 },
+  director: { lei: 160 },
+  ionel: { maxHp: 130, hunger: 0.6 },
+}
+
+const SAVE_KEY = 'cr3d-save'
+
+export class Progress {
+  constructor(game) {
+    this.game = game
+    this.reset()
+  }
+
+  reset(player = { name: 'Ion', type: 'patan' }) {
+    this.name = player.name || 'Ion'
+    this.type = player.type || 'patan'
+    const perk = PERKS[this.type] || {}
+    this.perk = perk
+    this.lei = 45 + (perk.lei || 0)
+    this.maxHp = perk.maxHp || 100
+    this.hp = this.maxHp
+    this.hunger = 1
+    this.xp = 0
+    this.rankIdx = 0
+    this.cred = perk.cred || 0
+    this.civic = 0
+    this.weapons = ['fist']
+    this.weapon = 'fist'
+    this.flags = {}
+    this.story = { done: [], current: null, chapter: 0 }
+    this.dosare = []
+    this.potholes = []
+    this.stats = { km: 0, ko: 0, cars: 0, fares: 0, bribes: 0, busted: 0, fainted: 0, eaten: 0, races: 0 }
+    this.hour = 17.6
+    this.passiveAcc = 0
+  }
+
+  get rank() { return RANKS[this.rankIdx] }
+  get nextRank() { return RANKS[this.rankIdx + 1] || null }
+  get dmgMul() { return this.perk.dmg || 1 }
+
+  addLei(n, reason = '') {
+    n = Math.round(n)
+    if (!n) return
+    this.lei = Math.max(0, this.lei + n)
+    this.game.ui?.money(n, reason)
+    if (n > 0) this.game.audio?.sfx(n >= 50 ? 'coins_many' : 'cash', { bus: 'ui', vol: 0.7 })
+  }
+
+  spend(n) {
+    if (this.lei < n) return false
+    this.addLei(-n)
+    return true
+  }
+
+  addXp(n, why) {
+    this.xp += Math.round(n)
+    this.game.ui?.xp(n, why)
+    let idx = this.rankIdx
+    while (RANKS[idx + 1] && this.xp >= RANKS[idx + 1].xp) idx++
+    if (idx > this.rankIdx) {
+      this.rankIdx = idx
+      this.game.events.emit('rankup', RANKS[idx], idx)
+    }
+  }
+
+  addCred(n) { this.cred = Math.max(0, Math.min(100, this.cred + n)) }
+  addCivic(n) { this.civic = Math.max(0, Math.min(100, this.civic + n)) }
+
+  heal(n) { this.hp = Math.min(this.maxHp, this.hp + n) }
+  feed(n) { this.hunger = Math.min(1, this.hunger + n); this.stats.eaten++ }
+
+  hurt(n) {
+    if (this.game.cheats?.god) return
+    this.hp = Math.max(0, this.hp - n)
+    if (this.hp <= 0) this.game.events.emit('player:down')
+  }
+
+  giveWeapon(k) { if (!this.weapons.includes(k)) this.weapons.push(k) }
+
+  update(dt) {
+    // hunger drains slowly; an empty stomach slowly eats HP
+    const rate = (this.perk.hunger || 1) / 960
+    const before = this.hunger
+    this.hunger = Math.max(0, this.hunger - dt * rate)
+    if (before >= 0.2 && this.hunger < 0.2) this.game.ui?.notify('🍞 Ți-e foame. Un chioșc, o plăcintă, o șaurma… ceva.', 4, 'gold')
+    if (before >= 0.06 && this.hunger < 0.06) this.game.ui?.notify('{r}Mori de foame!{/r} Mănâncă ceva până nu leșini.', 4, 'red')
+    if (this.hunger <= 0) this.hurt(dt * 0.35)
+    else if (this.hunger > 0.5 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + dt * 0.35)
+    if (this.perk.passive) {
+      this.passiveAcc += dt * this.perk.passive
+      if (this.passiveAcc >= 5) { this.passiveAcc -= 5; this.lei += 5 }
+    }
+  }
+
+  // ---- persistence -------------------------------------------------------------------------
+  serialize() {
+    const g = this.game
+    const p = g.player
+    return {
+      v: 3, name: this.name, type: this.type, lei: this.lei, hp: this.hp, maxHp: this.maxHp, hunger: this.hunger,
+      xp: this.xp, rankIdx: this.rankIdx, cred: this.cred, civic: this.civic, weapons: this.weapons, weapon: this.weapon,
+      flags: this.flags, story: this.story, dosare: this.dosare, potholes: this.potholes, stats: this.stats,
+      hour: g.renderer.tod.hour, pos: p ? { x: p.pos.x, z: p.pos.z } : null, t: Date.now(),
+    }
+  }
+
+  save() {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(this.serialize())) } catch (e) { /* storage blocked */ }
+  }
+
+  static hasSave() {
+    try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return s && s.v === 3 ? s : null } catch (e) { return null }
+  }
+
+  static clearSave() { try { localStorage.removeItem(SAVE_KEY) } catch (e) { /* noop */ } }
+
+  load(d) {
+    this.reset({ name: d.name, type: d.type })
+    for (const k of ['lei', 'hp', 'maxHp', 'hunger', 'xp', 'rankIdx', 'cred', 'civic', 'weapons', 'weapon', 'flags', 'story', 'dosare', 'potholes', 'stats', 'hour']) if (d[k] !== undefined) this[k] = d[k]
+    this.stats = { km: 0, ko: 0, cars: 0, fares: 0, bribes: 0, busted: 0, fainted: 0, eaten: 0, races: 0, ...this.stats }
+    this.story = { done: [], current: null, chapter: 0, ...this.story }
+  }
+}
