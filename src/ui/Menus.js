@@ -328,7 +328,7 @@ export class Menus {
   renderControls(body) {
     const rows = [
       ['Mers / condus', 'W A S D · săgeți', 'stick stânga · RT/LT', 'joystick stânga'],
-      ['Fugi / nitro', 'Shift', 'B', '» / 🔥'],
+      ['Fugi repede / nitro', 'ține Shift', 'ține B', '» / 🔥'],
       ['Lovește', 'Click · J · K', 'X', '👊'],
       ['Sari / frână de mână', 'Space', 'A', '⤒ / ⤓'],
       ['Acțiune, urcă/coboară, vorbește', 'E', 'Y', 'E'],
@@ -374,9 +374,13 @@ export class Menus {
 
   showSettingsOnly() {
     const g = this.game
-    const m = el('div', 'pause', '<div class="top"><h1>SETĂRI</h1></div><div class="body"></div><div class="foot"><button class="btn primary">‹ Înapoi</button></div>')
+    // on top of the title screen (the main menu layer sits above the in-game pause layer)
+    const m = el('div', 'pause over', '<div class="top"><h1>SETĂRI</h1></div><div class="body"></div><div class="foot"><button class="btn primary">‹ Înapoi</button></div>')
     this.layer.appendChild(m)
     this.renderSettings(m.querySelector('.body'))
-    m.querySelector('button').onclick = () => { m.remove(); g.audio?.sfx('back', { bus: 'ui' }) }
+    const close = () => { m.remove(); window.removeEventListener('keydown', onKey, true); g.audio?.sfx('back', { bus: 'ui' }) }
+    const onKey = (e) => { if (e.code === 'Escape' || (e.code === 'Backspace' && !/INPUT|SELECT/.test(e.target?.tagName))) { e.preventDefault(); e.stopPropagation(); close() } }
+    window.addEventListener('keydown', onKey, true)
+    m.querySelector('.foot button').onclick = close
   }
 }

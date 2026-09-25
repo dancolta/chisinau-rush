@@ -64,7 +64,8 @@ export class Input {
     this.virtual = { x: 0, y: 0, mag: 0 } // on-screen joystick
     this.touchCam = false
 
-    const isTypingTarget = (t) => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
+    // form controls keep their keys (typing a name, arrows on a slider or a dropdown)
+    const isTypingTarget = (t) => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)
 
     window.addEventListener('keydown', (e) => {
       if (isTypingTarget(e.target)) return
