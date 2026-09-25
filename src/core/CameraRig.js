@@ -111,10 +111,11 @@ export class CameraRig {
       this.target.set(cp.x, cp.y + 1.65, cp.z).add(this.lookAhead)
       this.dist += (5.8 - this.dist) * (1 - Math.exp(-2 * rawDt))
       this.pitch += (this.wantPitch(0.24) - this.pitch) * (1 - Math.exp(-2 * rawDt))
-      // on foot the camera drifts in behind the direction you run, unless you're steering it
+      // on foot the camera drifts in behind you while you run roughly forward (never while
+      // strafing: controls are camera-relative, so that would curve your run into a circle)
       if (this.userYawT <= 0 && speed > 2.5 && game.settings.camFollow !== false) {
-        const want = Math.atan2(p.vel.x, p.vel.z)
-        this.yaw += wrap(want - this.yaw) * (1 - Math.exp(-0.9 * rawDt))
+        const diff = wrap(Math.atan2(p.vel.x, p.vel.z) - this.yaw)
+        if (Math.abs(diff) < 0.9) this.yaw += diff * (1 - Math.exp(-0.8 * rawDt))
       }
     }
     const follow = car ? 7 : 9
