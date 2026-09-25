@@ -262,7 +262,7 @@ export class Buildings {
       if (w < 20) break
       _q.setFromEuler(_e.set(0, br, 0)); _m.compose(_p.set(bx, CURB_H, bz), _q, _s.set(1, 1, 1))
       this.B.atlas(bx, bz, bench.geometry, _m.clone(), 'props')
-      this.w.benches.push({ x: bx, z: bz, ry: br })
+      this.w.benches.push({ x: bx, z: bz, ry: br, yard: true })
     }
     // trees scattered away from the centre
     const nTrees = Math.floor((w * d) / 170)

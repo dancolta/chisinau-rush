@@ -69,6 +69,14 @@ export class Player {
     if (m) { hand.add(m); this.weaponMesh = m }
   }
 
+  // dress up: rebuild the body, put the weapon back in the new hand
+  setLook(spec) {
+    if (this.weaponMesh) { this.weaponMesh.parent?.remove(this.weaponMesh); this.weaponMesh.geometry.dispose(); this.weaponMesh = null }
+    this.char.setSpec(spec)
+    this.setWeapon(this.weapon)
+    this.game.portraits?.forget?.('player')
+  }
+
   enableCollider(on) {
     this.collider.setEnabled(on)
   }
@@ -206,8 +214,8 @@ export class Player {
     const game = this.game
     const tgt = game.combat ? game.combat.aimTarget(this) : null
     this.aimYaw = tgt ? Math.atan2(tgt.pos.x - this.pos.x, tgt.pos.z - this.pos.z) : this.char.heading
-    // close the gap to a locked target so the swing lands
-    if (tgt) {
+    // close the gap to a locked target so the swing lands (a water pistol shoots from where you are)
+    if (tgt && !w.ranged) {
       const d = Math.hypot(tgt.pos.x - this.pos.x, tgt.pos.z - this.pos.z)
       const reach = (w.range || 1.4) * 0.85
       if (d > reach) { const v = Math.min(9, (d - reach) / 0.13); this.lunge = { t: 0.13, vx: Math.sin(this.aimYaw) * v, vz: Math.cos(this.aimYaw) * v } }

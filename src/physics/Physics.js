@@ -151,7 +151,9 @@ export class Physics {
         const b = this.user.get(ev.collider2())
         const f = ev.totalForceMagnitude()
         const dir = ev.maxForceDirection()
-        for (const h of this.contactHandlers) h(a, b, f, dir, ev)
+        for (const h of this.contactHandlers) {
+          try { h(a, b, f, dir, ev) } catch (e) { if (!this.handlerErr) { this.handlerErr = true; console.error('[physics] contact handler', e) } }
+        }
       })
     } else {
       this.events.clear()

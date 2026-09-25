@@ -19,6 +19,9 @@ export class Portraits {
     this.buf = new Uint8Array(this.size * this.size * 4)
   }
 
+  // drop a cached portrait (the hero changed clothes)
+  forget(key) { this.cache.delete(key) }
+
   // who: { id, spec, name, bg? }
   get(who) {
     const key = who.id || who.name

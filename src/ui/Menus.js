@@ -333,13 +333,15 @@ export class Menus {
     const t = PLAYER_TYPES.find((x) => x.key === pr.type) || PLAYER_TYPES[0]
     const next = pr.nextRank
     const col = el('div', 'col'); col.style.flex = '1'; body.appendChild(col)
-    col.innerHTML = `<div style="display:flex;gap:18px;align-items:center;margin-bottom:14px"><div style="width:110px;height:110px;border-radius:14px;border:3px solid var(--gold);background:url(${g.portraits.get({ id: 'player', spec: CAST[pr.type] })}) center/cover"></div>
+    col.innerHTML = `<div style="display:flex;gap:18px;align-items:center;margin-bottom:14px"><div style="width:110px;height:110px;border-radius:14px;border:3px solid var(--gold);background:url(${g.portraits.get({ id: 'player', spec: g.player?.char?.spec || CAST[pr.type] })}) center/cover"></div>
       <div><div style="font-family:var(--title);font-size:34px;color:#fff;letter-spacing:1px">${pr.name}</div><div style="color:var(--muted)">${t.name}</div>
       <div style="margin-top:6px;font-family:var(--display);color:var(--gold)">${pr.rank.name}</div>
       <div style="font-size:12.5px;color:#cfc8bb">${next ? `${pr.xp} / ${next.xp} XP până la „${next.name}"` : 'Rang maxim'}</div></div></div>
       <div style="font-size:13.5px;color:#e5dccb;margin-bottom:10px">⚡ ${t.perk}</div>`
     const rows = [
       ['Lei', pr.lei], ['Viață', `${Math.round(pr.hp)} / ${pr.maxHp}`], ['Respect pe stradă', pr.cred + ' / 100'], ['Respect civic', pr.civic + ' / 100'],
+      ['👊 Gopnicii te știu', `${pr.tierName('gop')} · ${pr.respect.gop}${pr.look.gop ? ` (haine ${pr.look.gop > 0 ? '+' : ''}${pr.look.gop})` : ''}`], ['🥧 Babele te știu', `${pr.tierName('bab')} · ${pr.respect.bab}${pr.look.bab ? ` (haine ${pr.look.bab > 0 ? '+' : ''}${pr.look.bab})` : ''}`], ['👮 Poliția te știe', `${pr.tierName('pol')} · ${pr.respect.pol}${pr.look.pol ? ` (haine ${pr.look.pol > 0 ? '+' : ''}${pr.look.pol})` : ''}`],
+      ['Vorbit cu lumea', pr.stats.talks || 0], ['Gașcă adunată', pr.stats.recruits || 0],
       ['Dosare găsite', pr.dosare.length], ['Gropi astupate', pr.potholes.length], ['Oameni puși la pământ', pr.stats.ko], ['Mașini „împrumutate"', pr.stats.cars],
       ['Curse de taxi', pr.stats.fares], ['Mită dată', pr.stats.bribes], ['Leșinat', pr.stats.fainted], ['Kilometri condus', (pr.stats.km / 1000).toFixed(1)],
     ]
@@ -348,7 +350,8 @@ export class Menus {
     col2.innerHTML = '<div style="font-family:var(--display);color:var(--gold);margin-bottom:10px">ARME</div>'
     for (const k of Object.keys(WEAPONS)) {
       const w = WEAPONS[k], has = pr.weapons.includes(k)
-      col2.appendChild(el('div', 'stat-row', `<span>${w.icon} ${w.name}</span><span style="color:${has ? '#9cf07c' : '#6a655c'}">${has ? (pr.weapon === k ? 'în mână' : 'ai') : w.price ? w.price + ' lei' : '-'}</span>`))
+      const where = pr.weapon === k ? 'în mână' : k === 'fist' || pr.carry.includes(k) ? 'la tine' : 'acasă, în ladă'
+      col2.appendChild(el('div', 'stat-row', `<span>${w.icon} ${w.name}</span><span style="color:${has ? '#9cf07c' : '#6a655c'}">${has ? where : w.price ? w.price + ' lei' : '-'}</span>`))
     }
     col2.appendChild(el('div', '', '<div style="font-family:var(--display);color:var(--gold);margin:16px 0 10px">RANGURI</div>'))
     RANKS.forEach((r, i) => col2.appendChild(el('div', 'stat-row', `<span style="color:${i <= pr.rankIdx ? '#fff' : '#6a655c'}">${i + 1}. ${r.name}</span><span>${r.xp} XP</span>`)))

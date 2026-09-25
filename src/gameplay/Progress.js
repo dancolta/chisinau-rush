@@ -1,4 +1,6 @@
 // Player progression, economy and save data.
+import { CARRY_MAX, WEAPON_ORDER } from '../data/weapons.js'
+import { defaultOutfit, lookOf } from '../data/wardrobe.js'
 
 export const RANKS = [
   { xp: 0, name: 'Plecat peste hotare', joke: 'Ai adus euro și un frigider în rate. Acasă-i mai bine, de la distanță.' },
@@ -24,6 +26,17 @@ export const PERKS = {
 
 const SAVE_KEY = 'cr3d-save'
 
+// street respect, 0-100 per crowd: the gopniks, the grannies, the cops
+export const RESPECT_TIERS = [0, 15, 40, 70]
+export const RESPECT_NAMES = {
+  gop: ['Străin', 'Cunoscut', 'De-al nostru', 'Bratan'],
+  bab: ['Străin', 'Cuminte', 'Ca un nepot', 'Sfânt'],
+  pol: ['Necunoscut', 'Cunoscut', 'Om de încredere', 'Cumătru'],
+}
+export const RESPECT_WHO = { gop: 'gopnici', bab: 'babe', pol: 'poliție' }
+export const RESPECT_ICON = { gop: '👊', bab: '🥧', pol: '👮' }
+export function respectTier(v) { let t = 0; for (let i = 1; i < RESPECT_TIERS.length; i++) if (v >= RESPECT_TIERS[i]) t = i; return t }
+
 export class Progress {
   constructor(game) {
     this.game = game
@@ -45,11 +58,16 @@ export class Progress {
     this.civic = 0
     this.weapons = ['fist']
     this.weapon = 'fist'
+    this.carry = []            // weapons on you (besides your fists); the rest wait in the chest at home
+    this.outfit = defaultOutfit(this.type)
+    this.clothes = []          // clothes bought (your own are always yours)
+    this._look = null
     this.flags = {}
     this.story = { done: [], current: null, chapter: 0 }
     this.dosare = []
     this.potholes = []
-    this.stats = { km: 0, ko: 0, cars: 0, fares: 0, bribes: 0, busted: 0, fainted: 0, eaten: 0, races: 0 }
+    this.respect = { gop: perk.gop ?? (perk.cred ? 20 : 0), bab: perk.bab || 0, pol: 0 }
+    this.stats = { km: 0, ko: 0, cars: 0, fares: 0, bribes: 0, busted: 0, fainted: 0, eaten: 0, races: 0, talks: 0, recruits: 0, fights: 0 }
     this.hour = 17.6
     this.passiveAcc = 0
   }
@@ -86,6 +104,29 @@ export class Progress {
   }
 
   addCred(n) { this.cred = Math.max(0, Math.min(100, this.cred + n)) }
+
+  // what your clothes say to each crowd (added to your respect with them)
+  get look() { return (this._look ||= lookOf(this.type, this.outfit)) }
+  setOutfit(o) { this.outfit = { ...this.outfit, ...o }; this._look = null }
+  respectEff(k) { return Math.max(0, Math.min(100, (this.respect[k] || 0) + (this.look[k] || 0))) }
+  tier(k) { return respectTier(this.respectEff(k)) }
+  tierName(k) { return RESPECT_NAMES[k][this.tier(k)] }
+  // respect with a crowd; a toast for anything noticeable and a bigger one on a new tier
+  addRespect(k, n, why = '') {
+    n = Math.round(n)
+    if (!n || !(k in this.respect)) return
+    const before = this.respect[k], t0 = this.tier(k)
+    this.respect[k] = Math.max(0, Math.min(100, before + n))
+    const d = this.respect[k] - before
+    if (!d) return
+    const t1 = this.tier(k)
+    const ui = this.game.ui
+    if (t1 !== t0) {
+      ui?.notify(`${RESPECT_ICON[k]} ${t1 > t0 ? '{g}' : '{r}'}Respect la ${RESPECT_WHO[k]}: ${RESPECT_NAMES[k][t1]}${t1 > t0 ? '{/g}' : '{/r}'}`, 3.6, t1 > t0 ? 'green' : 'red')
+      if (t1 > t0) this.game.audio?.sfx('confirm', { bus: 'ui', vol: 0.7 })
+      this.game.events.emit('respect', { k, tier: t1, up: t1 > t0 })
+    } else if (Math.abs(d) >= 2) ui?.notify(`${RESPECT_ICON[k]} ${d > 0 ? '+' : ''}${d} respect la ${RESPECT_WHO[k]}${why ? ' · ' + why : ''}`, 2.4, d > 0 ? '' : 'red')
+  }
   addCivic(n) { this.civic = Math.max(0, Math.min(100, this.civic + n)) }
 
   heal(n) { this.hp = Math.min(this.maxHp, this.hp + n) }
@@ -97,7 +138,14 @@ export class Progress {
     if (this.hp <= 0) this.game.events.emit('player:down')
   }
 
-  giveWeapon(k) { if (!this.weapons.includes(k)) this.weapons.push(k) }
+  // returns true when it's on you, false when it went to the chest at home (hands full)
+  giveWeapon(k) {
+    if (!this.weapons.includes(k)) this.weapons.push(k)
+    if (k === 'fist' || this.carry.includes(k)) return true
+    if (this.carry.length < CARRY_MAX) { this.carry.push(k); this.sortCarry(); return true }
+    return false
+  }
+  sortCarry() { this.carry.sort((a, b) => WEAPON_ORDER.indexOf(a) - WEAPON_ORDER.indexOf(b)) }
 
   update(dt) {
     // hunger drains slowly; an empty stomach slowly eats HP
@@ -121,7 +169,8 @@ export class Progress {
     return {
       v: 3, name: this.name, type: this.type, lei: this.lei, hp: this.hp, maxHp: this.maxHp, hunger: this.hunger,
       xp: this.xp, rankIdx: this.rankIdx, cred: this.cred, civic: this.civic, weapons: this.weapons, weapon: this.weapon,
-      flags: this.flags, story: this.story, dosare: this.dosare, potholes: this.potholes, stats: this.stats,
+      flags: this.flags, story: this.story, dosare: this.dosare, potholes: this.potholes, stats: this.stats, respect: this.respect,
+      carry: this.carry, outfit: this.outfit, clothes: this.clothes,
       hour: g.renderer.tod.hour, pos: p ? { x: p.pos.x, z: p.pos.z } : null, t: Date.now(),
     }
   }
@@ -138,8 +187,18 @@ export class Progress {
 
   load(d) {
     this.reset({ name: d.name, type: d.type })
-    for (const k of ['lei', 'hp', 'maxHp', 'hunger', 'xp', 'rankIdx', 'cred', 'civic', 'weapons', 'weapon', 'flags', 'story', 'dosare', 'potholes', 'stats', 'hour']) if (d[k] !== undefined) this[k] = d[k]
-    this.stats = { km: 0, ko: 0, cars: 0, fares: 0, bribes: 0, busted: 0, fainted: 0, eaten: 0, races: 0, ...this.stats }
+    const fresh = this.respect
+    for (const k of ['lei', 'hp', 'maxHp', 'hunger', 'xp', 'rankIdx', 'cred', 'civic', 'weapons', 'weapon', 'flags', 'story', 'dosare', 'potholes', 'stats', 'hour', 'respect', 'carry', 'clothes']) if (d[k] !== undefined) this[k] = d[k]
+    // older saves: carry what you own (up to the limit), wear what you came in
+    if (!Array.isArray(d.carry)) this.carry = WEAPON_ORDER.filter((k) => k !== 'fist' && this.weapons.includes(k)).slice(0, CARRY_MAX)
+    this.carry = this.carry.filter((k) => this.weapons.includes(k))
+    if (this.weapon !== 'fist' && !this.carry.includes(this.weapon)) this.weapon = 'fist'
+    this.outfit = { ...defaultOutfit(this.type), ...(d.outfit || {}) }
+    this.clothes = Array.isArray(this.clothes) ? this.clothes : []
+    this._look = null
+    // saves from before street respect start where a new game of that character would
+    this.respect = { ...fresh, ...this.respect }
+    this.stats = { km: 0, ko: 0, cars: 0, fares: 0, bribes: 0, busted: 0, fainted: 0, eaten: 0, races: 0, talks: 0, recruits: 0, fights: 0, ...this.stats }
     this.story = { done: [], current: null, chapter: 0, ...this.story }
   }
 }

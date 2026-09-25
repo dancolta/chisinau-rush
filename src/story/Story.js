@@ -170,7 +170,7 @@ class MissionContext {
   // ---- talking -------------------------------------------------------------------------------
   speaker(who) {
     if (typeof who === 'string') {
-      if (who === 'player') { const pr = this.progress; return { id: 'player', name: pr.name, role: 'tu', spec: CAST[pr.type], voice: pr.perk.female ? { pitch: 1.05, type: 'female' } : { pitch: 1, type: 'male' } } }
+      if (who === 'player') { const pr = this.progress; return { id: 'player', name: pr.name, role: 'tu', spec: this.game.player?.char?.spec || CAST[pr.type], voice: pr.perk.female ? { pitch: 1.05, type: 'female' } : { pitch: 1, type: 'male' } } }
       return SPEAKERS[who] || { name: who }
     }
     return who
@@ -763,6 +763,8 @@ export class Story {
     this.events.update(dt)
     const tags = []
     if (this.giverId && this.cast[this.giverId] && !this.active) tags.push({ npc: this.cast[this.giverId], icon: '!' })
+    if (g.crew) tags.push(...g.crew.tags())
+    if (g.street) tags.push(...g.street.tags())
     g.ui.setTags(tags)
   }
 

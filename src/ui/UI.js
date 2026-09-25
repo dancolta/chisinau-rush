@@ -65,7 +65,7 @@ export class UI {
     this.toastsEl = el('div', 'toasts'); this.hud.appendChild(this.toastsEl)
     // bottom-left
     const bl = el('div', 'hud-bl'); this.hud.appendChild(bl)
-    const mm = el('div', 'minimap-wrap'); bl.appendChild(mm)
+    const mm = this.minimapWrap = el('div', 'minimap-wrap'); bl.appendChild(mm)
     const cv = document.createElement('canvas'); mm.appendChild(cv)
     mm.appendChild(el('div', 'minimap-n', 'N'))
     this.streetEl = el('div', 'minimap-street'); mm.appendChild(this.streetEl)
@@ -328,6 +328,9 @@ export class UI {
   // floating "!" over NPCs that have something for you
   setTags(list) { this.tags = list }
 
+  // at home: no minimap (there's no map in a flat)
+  setIndoors(on) { this.minimapWrap?.classList.toggle('indoors', !!on) }
+
   // ---- dialogue ---------------------------------------------------------------------------
   // lines: array of strings or { who, text } ; returns when finished. choices -> returns index
   async dialogue(speaker, lines, { choices = null, portrait = true } = {}) {
@@ -394,7 +397,8 @@ export class UI {
       const onClick = (e) => { if (e.button === 0) { e.stopPropagation(); done() } }
       const onTouch = () => done()
       setTimeout(() => { window.addEventListener('keydown', onKey, true); window.addEventListener('mousedown', onClick, true); window.addEventListener('touchstart', onTouch, true) }, 160)
-      const pad = setInterval(() => { this.game.input.pollGamepad(); if (this.game.input.pressed('confirm')) done() }, 50)
+      let prevA = !!this.game.input.padState()?.b[0]
+      const pad = setInterval(() => { const a = !!this.game.input.padState()?.b[0]; if (a && !prevA) done(); prevA = a }, 40)
       if (this.game.autoTalk) setTimeout(done, 140)
     })
   }
@@ -411,18 +415,33 @@ export class UI {
       })
       const paint = () => btns.forEach((b, i) => b.classList.toggle('sel', i === sel))
       paint()
+      const step = (k) => { sel = (sel + k + choices.length) % choices.length; paint(); this.game.audio?.sfx('hover', { bus: 'ui' }) }
+      // gamepad: d-pad or left stick moves, A picks
+      let prev = this.game.input.padState(), stickT = 0
+      const pad = setInterval(() => {
+        const now = this.game.input.padState()
+        if (!now) return
+        const edge = (i) => now.b[i] && !(prev && prev.b[i])
+        stickT -= 0.04
+        if (edge(12) || (now.y < -0.55 && stickT <= 0)) { step(-1); stickT = 0.28 }
+        else if (edge(13) || (now.y > 0.55 && stickT <= 0)) { step(1); stickT = 0.28 }
+        else if (Math.abs(now.y) < 0.3) stickT = 0
+        if (edge(0)) pick(sel)
+        prev = now
+      }, 40)
       const pick = (i) => {
         const o = typeof choices[i] === 'string' ? {} : choices[i]
         if (o.disabled) { this.game.audio?.sfx('error', { bus: 'ui' }); return }
         window.removeEventListener('keydown', onKey, true)
+        clearInterval(pad)
         this.game.audio?.sfx('confirm', { bus: 'ui' })
         resolve(i)
       }
       const onKey = (e) => {
         const n = parseInt(e.key, 10)
         if (n >= 1 && n <= choices.length) { e.stopPropagation(); pick(n - 1) }
-        else if (e.code === 'ArrowDown' || e.code === 'KeyS') { sel = (sel + 1) % choices.length; paint(); this.game.audio?.sfx('hover', { bus: 'ui' }) }
-        else if (e.code === 'ArrowUp' || e.code === 'KeyW') { sel = (sel + choices.length - 1) % choices.length; paint(); this.game.audio?.sfx('hover', { bus: 'ui' }) }
+        else if (e.code === 'ArrowDown' || e.code === 'KeyS') step(1)
+        else if (e.code === 'ArrowUp' || e.code === 'KeyW') step(-1)
         else if (e.code === 'Enter' || e.code === 'KeyE' || e.code === 'Space') { e.stopPropagation(); pick(sel) }
       }
       setTimeout(() => window.addEventListener('keydown', onKey, true), 150)
@@ -442,7 +461,7 @@ export class UI {
     // top right
     const tod = g.renderer.tod
     const pos = p.vehicle ? p.vehicle.pos : p.pos
-    const dist = districtAt(pos.x, pos.z)
+    const dist = g.home?.inside ? 'Acasă · Blocul 7' : districtAt(pos.x, pos.z)
     const clk = `${tod.clock}<small>${dist}</small>`
     if (clk !== this._clk) { this._clk = clk; this.clockEl.innerHTML = clk }
     this.dispMoney = this.dispMoney ?? pr.lei
@@ -498,7 +517,9 @@ export class UI {
     }
     // waypoint marker first (it has priority over tags), with an edge arrow when off-screen
     const placed = []
-    const mk = this.marker
+    // at home the waypoint waits outside (no arrow pointing through the wall carpet)
+    const mk = this.game.home?.inside ? null : this.marker
+    this.markerEl.style.visibility = this.game.home?.inside ? 'hidden' : ''
     if (mk) {
       const cam = this.game.camera
       _v.set(mk.x, (mk.y ?? 0.2) + 3.2, mk.z).project(cam)
@@ -534,6 +555,8 @@ export class UI {
       e.style.display = ''
       const html = `<span class="ex">${t.icon || '!'}</span>${t.label || ''}`
       if (e._h !== html) { e._h = html; e.innerHTML = html; e._w = 0 }
+      const cls = 'npc-tag' + (t.cls ? ' ' + t.cls : '')
+      if (e._cls !== cls) { e._cls = cls; e.className = cls; e._w = 0 }
       order.push({ e, s, d: (pos.x - cp.x) ** 2 + (pos.z - cp.z) ** 2 })
     })
     order.sort((a, b) => a.d - b.d)

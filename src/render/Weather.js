@@ -61,7 +61,7 @@ export class Weather {
     this.k += (this.target - this.k) * Math.min(1, dt / 9)
     if (this.k < 0.002) this.k = 0
     const k = this.k
-    this.mesh.visible = k > 0.01
+    this.mesh.visible = k > 0.01 && !g.home?.inside
     const u = this.uniforms
     u.uAmount.value = k
     u.uTime.value += dt
@@ -78,7 +78,7 @@ export class Weather {
         if (z) z.roughness = 0.74 - 0.35 * k
       }
     }
-    g.audio?.rain?.(k)
+    g.audio?.rain?.(g.home?.inside ? k * 0.35 : k)
   }
 
   // darker, greyer light while it rains (called after the time-of-day palette is applied)
