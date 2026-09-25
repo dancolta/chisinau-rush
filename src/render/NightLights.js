@@ -64,8 +64,8 @@ export class NightLights {
       const pp = p.vehicle ? p.vehicle.pos : p.pos
       this.fill.position.set(pp.x + (cam.position.x - pp.x) * 0.35, pp.y + 2.6, pp.z + (cam.position.z - pp.z) * 0.35)
       this.fill.intensity = 7 * night * (g.cutscene ? 0.6 : 1)
-      // headlights of the car you're driving
-      const v = p.vehicle && !p.passenger ? p.vehicle : null
+      // headlights of the car you're in, whether you drive or ride in the back of a taxi
+      const v = p.vehicle || null
       const on = v && night > 0.2 && !v.broken
       this.head.intensity += ((on ? 420 * night : 0) - this.head.intensity) * fade
       if (v) {

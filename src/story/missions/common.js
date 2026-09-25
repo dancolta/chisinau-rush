@@ -55,16 +55,21 @@ export function cheerAll(list, anim = 'cheer') { for (const c of list) if (!c.ch
 
 // ---------------------------------------------------------------------------
 // taxi fare: passenger waits at `from`, rides to `to`, pays on arrival
-export async function taxiFare(m, { taxi = null, spec = null, name = 'Clientul', voice = { pitch: 1, type: 'male' }, from, to, toLabel, lines = [], arrive = [], crashLines = null, patience = 25, pay = null }) {
+// (`npc`: a client spawned ahead of time, already standing there when you pull up)
+export async function taxiFare(m, { taxi = null, spec = null, name = 'Clientul', voice = { pitch: 1, type: 'male' }, from, to, toLabel, lines = [], arrive = [], crashLines = null, patience = 25, pay = null, wreckEnds = false, npc: waiting = null }) {
   const g = m.game
   const sp = { name, voice, spec }
-  const npc = m.spawn(null, spec || randomCivilian(Math.random), from.x, from.z, { name, voice, ry: from.ry ?? 0 })
+  const npc = waiting || m.spawn(null, spec || randomCivilian(Math.random), from.x, from.z, { name, voice, ry: from.ry ?? 0 })
   npc.lookAtPlayer = true
   const inTaxi = () => { const v = m.car; return !!v && (!taxi || v === taxi) && !v.broken }
-  let offT = 0, phase = 'pickup', was = null
+  let offT = 0, phase = 'pickup', was = null, shown = false
   const watch = m.every((dt) => {
+    // a wrecked cab is its own story (in a shift it just ends the shift)
+    if (taxi && taxi.broken) { g.ui.setTimer(null); if (!wreckEnds) m.fail('Taxiul e praf. Clientul și-a chemat altul.'); return true }
     const inside = inTaxi()
     if (!inside && !g.cutscene) { offT += dt; if (offT > patience) m.fail('Ai lăsat taxiul. Clientul a plecat supărat.') } else offT = 0
+    // how long the client will wait for you, on the objective
+    if (offT > 0 && patience >= 6) { g.ui.setTimer(patience - offT); shown = true } else if (shown) { g.ui.setTimer(null); shown = false }
     // out of the cab: point back to it; back in: point to the fare
     if (taxi && inside !== was) {
       was = inside
@@ -83,19 +88,25 @@ export async function taxiFare(m, { taxi = null, spec = null, name = 'Clientul',
   })
   m.marker(null)
   let v = m.car
+  // the cab waits while they climb in (kerb side), and they only hurry when it's far
   const rx = -Math.cos(v.heading), rz = Math.sin(v.heading)
-  await m.walk(npc, v.pos.x + rx * 1.7 - Math.sin(v.heading) * 0.6, v.pos.z + rz * 1.7 - Math.cos(v.heading) * 0.6, { run: true, timeout: 4 })
+  const door = { x: v.pos.x + rx * 1.7 - Math.sin(v.heading) * 0.6, z: v.pos.z + rz * 1.7 - Math.cos(v.heading) * 0.6 }
+  const p = m.player
+  p.control = false
+  try { await m.walk(npc, door.x, door.z, { run: dist(npc.pos, door) > 6, timeout: 5 }) } finally { p.control = true }
   npc.ride(v)
   g.audio?.sfx('door', { vol: 0.6 })
   const t0 = m.t
   const d0 = dist(v.pos, to)
-  let crashes = 0
+  let crashes = 0, lastCrash = -9
+  // one knock is one crash (contacts fire every physics step), and only this client complains
   const off = g.events.on('player:crash', (e) => {
-    if (e.force < 16 || !inTaxi()) return
+    if (e.force < 16 || !inTaxi() || m.t - lastCrash < 1.2) return
+    lastCrash = m.t
     crashes++
     if (crashLines && Math.random() < 0.7) m.task(() => m.talk(sp, pickOne(crashLines), 2.4))
   })
-  m.track({ dispose: off })
+  const hook = m.track({ dispose: off })
   phase = 'ride'
   m.objective(`Du clientul la {y}${toLabel}{/y}.`, { sub: 'Bacșiș dacă ajungi repede și fără bușituri.' })
   m.marker(to, toLabel)
@@ -106,7 +117,7 @@ export async function taxiFare(m, { taxi = null, spec = null, name = 'Clientul',
   v = m.car
   const secs = m.t - t0
   const rx2 = -Math.cos(v.heading), rz2 = Math.sin(v.heading)
-  npc.unride(v.pos.x + rx2 * 1.9, v.pos.z + rz2 * 1.9, v.heading + Math.PI / 2)
+  npc.unride(v.pos.x + rx2 * 1.9, v.pos.z + rz2 * 1.9, v.heading - Math.PI / 2)
   g.audio?.sfx('door', { vol: 0.6 })
   const par = d0 / 8 + 14
   const base = Math.round((18 + d0 / 11) * (g.progress.perk.fareBonus || 1))
@@ -120,7 +131,9 @@ export async function taxiFare(m, { taxi = null, spec = null, name = 'Clientul',
   npc.walkTo(to.x + rand(-6, 6), to.z + rand(-6, 6))
   const walker = npc
   setTimeout(() => { if (m.story.npcs.includes(walker)) m.story.removeNpc(walker) }, 9000)
+  m.untrack(hook)
   m.untrack(watch)
+  if (shown) g.ui.setTimer(null)
   return { total, secs, crashes, npc }
 }
 

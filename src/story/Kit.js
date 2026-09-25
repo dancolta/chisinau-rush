@@ -196,8 +196,9 @@ export class VisionCone {
 // ---------------------------------------------------------------------------
 // drives a vehicle along a list of points (tailing targets, fleeing villains, racers)
 export class RouteDriver {
-  constructor(game, v, points, { speed = 16, loop = false, onEnd = null, avoid = true, laps = 0, loopFrom = 0, priority = true } = {}) {
+  constructor(game, v, points, { speed = 16, loop = false, onEnd = null, avoid = true, laps = 0, loopFrom = 0, priority = true, yieldPlayer = false } = {}) {
     this.game = game; this.v = v; this.points = points; this.i = 0; this.loopFrom = loopFrom
+    this.yieldPlayer = yieldPlayer   // stop (and honk) for the hero on foot instead of driving through
     this.speed = speed; this.loop = loop || laps > 0; this.laps = laps; this.lap = 0; this.onEnd = onEnd; this.avoid = avoid
     this.speedMul = 1
     this.done = false
@@ -299,22 +300,33 @@ export class RouteDriver {
     v.steer = clamp(-err * 2.5, -1, 1)
     let target = (w.speed ?? this.speed) * this.speedMul
     if (Math.abs(err) > 0.5) target = Math.min(target, 9)
+    // with a passenger: ease off early for a slower leg ahead (≈3 m/s² instead of a slammed brake)
+    if (this.chauffeur && nx !== w) {
+      const ns = (nx.speed ?? this.speed) * this.speedMul
+      target = Math.min(target, Math.sqrt(ns * ns + 6 * Math.max(0, d2 - (w.r || 7))))
+    }
     const tr = this.game.traffic
     const chauffeur = this.chauffeur
     let blocker = null
     const passing = this.offsetTarget !== 0 ? this.passing : null
     if (this.avoid && tr) {
       const obs = tr.obstacleAhead(v, 8 + Math.abs(v.speed) * (chauffeur ? 1.2 : 1), passing, 0.2)
-      if (obs && !obs.player) {
-        // with a passenger: queue politely; otherwise shove through at walking pace
-        target = Math.min(target, chauffeur ? Math.max(0, (obs.d - 3.2) * 0.9) : Math.max(3, obs.d * 0.9))
+      const onFoot = obs?.player && this.yieldPlayer && !this.game.player.vehicle
+      if (obs && (!obs.player || onFoot)) {
+        // with a passenger (or the hero standing in the road): queue politely; otherwise shove
+        // through at walking pace
+        target = Math.min(target, chauffeur || onFoot ? Math.max(0, (obs.d - 3.2) * 0.9) : Math.max(3, obs.d * 0.9))
         blocker = obs.v
+        this.honkT = (this.honkT || 0) - h
+        if (onFoot && Math.abs(v.speed) < 1 && this.honkT <= 0) { this.honkT = 3.5; this.game.audio?.horn(v, 0.8) }
       }
     }
     // pulling out round a stopped car: ease out, then go
     if (passing) target = Math.min(target, 3.5 + 11 * clamp(this.offset / LANE_W, 0, 1))
     const e = target - v.speed
     v.throttle = e > 0 ? Math.min(1, e * 0.5 + 0.25) : Math.max(-1, e * 0.3)
+    // and drive like there's a passenger: gentle on both pedals
+    if (this.chauffeur) v.throttle = clamp(v.throttle, -0.35, 0.6)
     v.handbrake = chauffeur && target < 0.3 && Math.abs(v.speed) < 0.6
     // stuck behind slow or stopped traffic on a straight: pull out and pass when the next lane is
     // clear (Nea Grișa has never waited for anyone), then tuck back in once past
@@ -371,6 +383,8 @@ export class RouteDriver {
       const ry = Math.atan2(nx.x - w.x, nx.z - w.z) || v.heading
       g.vehicles.clearSpot?.(w.x, w.z, 7)
       v.teleport(w.x, (g.physics.groundHeight(w.x, w.z, 3) ?? v.pos.y) + 0.3, w.z, ry)
+      // the passenger's camera lands behind the cab, not somewhere across town
+      if (this.chauffeur && g.cameraRig) g.cameraRig.yaw = ry
     }
     if (this.chauffeur && g.ui?.fade) g.ui.fade(1, 250).then(() => { go(); g.cameraRig?.snap(); g.ui.fade(0, 400) })
     else go()

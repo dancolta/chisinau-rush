@@ -60,9 +60,14 @@ export const sosire = {
       'Știu, știu. Toată lumea știe unde-i Blocul 7. E ăla cu gaura în asfalt de la Brejnev.',
     ])
     // ---- the ride home ------------------------------------------------------------------
+    // a short fade covers Grișa taking the wheel and the hero climbing in the back
+    await m.fade(1, 260)
     m.story.removeNpc(grisa)
     taxi.locked = false
     m.board(taxi)
+    g.cameraRig.yaw = taxi.heading + 0.32; g.cameraRig.snap()
+    m.task(async () => { await m.wait(0.35); g.audio?.sfx('door', { vol: 0.55 }); await m.wait(0.4); g.audio?.sfx('engine_crank', { at: taxi.pos, vol: 0.6 }) })
+    await m.fade(0, 420)
     const route = [
       { x: 296, z: 268.25 }, { x: 200, z: 268.25 }, { x: 100, z: 268.25 }, { x: 0, z: 268.25 },
       { x: -44, z: 268.25, speed: 9 }, { x: -52, z: 266.8, speed: 7, r: 4 }, { x: -56.8, z: 262, speed: 7, r: 4 },
@@ -92,9 +97,13 @@ export const sosire = {
       g.ui.subtitle(null)
       await m.fade(1, 400)
       const end = route[route.length - 1]
+      // the driver lets go of the wheel before the jump, so the cab doesn't roll on in the fade
       drv.done = true
+      drv.release?.()
+      taxi.throttle = 0; taxi.steer = 0; taxi.handbrake = true
       taxi.teleport(end.x, g.physics.groundHeight(end.x, end.z, 3) + 0.3, end.z, Math.PI)
-      g.cameraRig.target.copy(taxi.pos); g.cameraRig.snap()
+      g.cameraRig.yaw = Math.PI
+      g.cameraRig.target.set(end.x, taxi.pos.y + 1.7, end.z); g.cameraRig.snap()
       await m.wait(0.3)
       await m.fade(0, 500)
     }
@@ -103,6 +112,7 @@ export const sosire = {
     await m.talk(G, 'Gata, Botanica. Blocul 7. Salut-o pe Tanti Zina, că ea știe tot ce mișcă în cartier.', 3.6)
     m.unboard()
     m.story.leave(taxi, [{ x: -58.25, z: 150 }, { x: -58.25, z: 60 }, { x: -58.25, z: -60 }])
+    m.task(async () => { await m.wait(0.8); g.audio?.horn(taxi, 0.7) })
     // ---- Tanti Zina ------------------------------------------------------------------------
     await m.reach('banca_zina', 3.4, { text: 'Mergi la {y}Blocul 7{/y}. Tanti Zina e pe bancă, ca întotdeauna.', label: 'Tanti Zina' })
     await m.cutscene(async () => {
@@ -354,8 +364,14 @@ export const taxi = {
   reward: { xp: 250 },
   async script(m) {
     const g = m.game, p = m.player
-    const spot = freeSpot(g, [{ x: -200, z: 252.5 }, { x: -200, z: 256.5 }, { x: -226, z: 252.5 }])
-    const cab = m.vehicle('taxi', spot.x, spot.z, Math.PI / 2, { persist: true })
+    // a retry takes the cab from the last attempt instead of lining up another one (a wreck gets towed)
+    for (const v of g.vehicles.list.filter((v) => v.vovaCab && v.broken && p.vehicle !== v)) g.vehicles.remove(v)
+    let cab = g.vehicles.list.find((v) => v.vovaCab && !v.broken && !v.disposed)
+    if (!cab) {
+      const spot = freeSpot(g, [{ x: -200, z: 252.5 }, { x: -200, z: 256.5 }, { x: -226, z: 252.5 }])
+      cab = m.vehicle('taxi', spot.x, spot.z, Math.PI / 2, { persist: true })
+      cab.vovaCab = true
+    }
     cab.keep = true
     g.progress.flags.taxiCar = true
     if (p.vehicle !== cab) {
@@ -365,6 +381,12 @@ export const taxi = {
       m.marker(null)
     }
     m.tip('În taxi: oprești lângă client, îl duci, încasezi. Repede și fără bușituri = bacșiș.', 8)
+    // the later clients are already out on the pavement, so nobody pops up beside the cab
+    const F2 = { name: 'Ionel, student', spec: CAST.ionel, voice: { pitch: 1.1, type: 'male' } }
+    const F = { name: 'Funcționarul', spec: CAST.deputat, voice: { pitch: 1.0, type: 'male' } }
+    const ionel = m.spawn(null, F2.spec, 243, 13.2, { name: F2.name, voice: F2.voice, ry: Math.PI })
+    const clerk = m.spawn(null, F.spec, -97, -13.6, { name: F.name, voice: F.voice, ry: 0 })
+    clerk.state = 'phone'
     // fare 1: Linella -> Piața Centrală
     await taxiFare(m, {
       taxi: cab, spec: { ...CAST.vanzatoare, top: { style: 'coat', color: 0x5a6a8a, lapel: 0x4a5a7a }, hair: { style: 'bun', color: 0xb0a8a0 } },
@@ -376,16 +398,15 @@ export const taxi = {
     })
     // fare 2: Piața -> Primăria
     await taxiFare(m, {
-      taxi: cab, spec: CAST.ionel, name: 'Ionel, student', voice: { pitch: 1.1, type: 'male' },
+      taxi: cab, spec: F2.spec, name: F2.name, voice: F2.voice, npc: ionel,
       from: { x: 243, z: 13.2, ry: Math.PI }, to: { x: -90, z: -13.5 }, toLabel: 'Primăria',
       lines: ['La Primărie, șefu\'. Am audiență. Vreau să întreb de ce căminul n-are apă caldă din 2019.', 'Mi-au zis să vin „săptămâna viitoare". De trei ani îmi zic asta.', 'Da\' io-s optimist. Am adus și o plăcintă pentru secretară.'],
       crashLines: ['Plăcinta! Mi-ai turtit plăcinta!', 'Bratan, eu vreau să ajung viu la audiență!'],
       arrive: ['Mersi! Dacă nu ies în două ore, sună la ambasada Italiei.'],
     })
     // fare 3: a clerk from the Primăria, on the phone in Russian, to the railway station
-    const F = { name: 'Funcționarul', spec: CAST.deputat, voice: { pitch: 1.0, type: 'male' } }
     const r3 = await taxiFare(m, {
-      taxi: cab, spec: CAST.deputat, name: 'Funcționarul', voice: F.voice,
+      taxi: cab, spec: F.spec, name: F.name, voice: F.voice, npc: clerk,
       from: { x: -97, z: -13.6, ry: 0 }, to: { x: 356, z: 261.6 }, toLabel: 'Gara Feroviară',
       lines: ['La Gară. Repede. Și fără întrebări.', '(la telefon, în rusă) Da, Vasili Petrovici. Da. Vsio po planu.', '(la telefon) Dokumenty v piatnițu. Poezdom. Da, originalî. Kopii nam ne nujnî.', '(la telefon) Nu, nimeni nu știe. Primarul zice că-i „protocol". Ha.', 'Ce te uiți în oglindă? Condu. Și n-ai auzit nimic.'],
       crashLines: ['Atent, că ai în mașină un om important!', 'Te dau afară din… de unde lucrezi tu. Oriunde!'],

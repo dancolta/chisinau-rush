@@ -100,7 +100,8 @@ export class CameraRig {
     // ---- user look controls: mouse (locked pointer, or right/middle drag), right stick, Z/X ---------
     const sens = game.settings.camSensitivity ?? 1
     const inv = game.settings.invertCam ? -1 : 1
-    const turned = () => { this.userYawT = 2.5; this.userTurnT = 0.12 }
+    // riding in the back you're sightseeing: the view you picked stays put for longer
+    const turned = () => { this.userYawT = p.passenger ? 6 : 2.5; this.userTurnT = 0.12 }
     if (this.userTurnT > 0) this.userTurnT -= rawDt
     const locked = input.locked
     if (locked || input.key('Mouse2') || input.key('Mouse1') || input.touchCam) {
@@ -124,19 +125,22 @@ export class CameraRig {
     const lookBack = !!car && input.act('lookBack')
     if (car) {
       const cp = car.mesh.position
+      const ride = p.passenger
       speed = Math.abs(car.speed || 0)
       _t.set(cp.x, cp.y + 1.7, cp.z)
       // look a little ahead along the motion (never more than 5 m, eased so spins and crashes
       // don't whip the view around)
       _look.set(Math.sin(car.heading), 0, Math.cos(car.heading)).multiplyScalar(Math.min(5, speed * 0.2) * Math.sign(car.speed || 1))
-      this.lookAhead.lerp(_look, 1 - Math.exp(-2.2 * rawDt))
-      // swing in behind the car: briskly right after you get in, then more the faster you go
+      this.lookAhead.lerp(_look, 1 - Math.exp(-(ride ? 1.2 : 2.2) * rawDt))
+      // swing in behind the car: briskly right after you get in, then more the faster you go.
+      // A passenger gets a lazy three-quarter view from the kerb side, so the city goes by
       if (this.userYawT <= 0) {
-        const rate = this.enterT > 0 ? 6 : speed > 1.5 ? 1.1 + Math.min(1.6, speed * 0.06) : 0
-        if (rate) this.yaw += wrap(car.heading - this.yaw) * (1 - Math.exp(-rate * rawDt))
+        const want = car.heading + (ride ? 0.32 : 0)
+        const rate = this.enterT > 0 ? 6 : ride ? (speed > 0.5 ? 0.9 : 0) : speed > 1.5 ? 1.1 + Math.min(1.6, speed * 0.06) : 0
+        if (rate) this.yaw += wrap(want - this.yaw) * (1 - Math.exp(-rate * rawDt))
       }
-      wantDist = 7.8 + Math.min(4, speed * 0.11)
-      basePitch = 0.2
+      wantDist = ride ? 6.6 + Math.min(2, speed * 0.06) : 7.8 + Math.min(4, speed * 0.11)
+      basePitch = ride ? 0.14 : 0.2
     } else {
       const cp = p.char.mesh.position
       speed = Math.abs(p.char.speed)
@@ -182,7 +186,7 @@ export class CameraRig {
     this.cam.lookAt(_look)
 
     // speed FOV kick
-    const kick = car ? Math.min(12, Math.max(0, speed - 12) * 0.35) : p.sprinting ? 6.5 : 0
+    const kick = car ? Math.min(p.passenger ? 5 : 12, Math.max(0, speed - 12) * 0.35) : p.sprinting ? 6.5 : 0
     this.fovKick += (kick - this.fovKick) * (1 - Math.exp(-3 * rawDt))
     const fov = this.baseFov + this.fovKick
     if (Math.abs(this.cam.fov - fov) > 0.01) { this.cam.fov = fov; this.cam.updateProjectionMatrix() }
