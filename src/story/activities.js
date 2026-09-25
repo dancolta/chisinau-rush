@@ -36,27 +36,35 @@ export const TAXI_SHIFT = {
     for (;;) {
       if (outT > 3) break
       const here = m.P
-      const cands = PLACES.filter(([, x, z]) => { const d = Math.hypot(x - here.x, z - here.z); return d > 35 && d < 220 })
+      // the next client appears somewhere you're not looking at
+      const cands = PLACES.filter(([, x, z]) => { const d = Math.hypot(x - here.x, z - here.z); return d > 45 && d < 220 && !g.traffic.visible(x, z) })
       const [fromName, fx, fz] = cands.length ? pickOne(cands) : pickOne(PLACES)
       const far = PLACES.filter(([n, x, z]) => n !== fromName && Math.hypot(x - fx, z - fz) > 120)
       const [toName, tx, tz] = pickOne(far)
       const spec = randomCivilian(Math.random)
-      const who = pickOne(['Clientul', 'Clienta', 'Un domn grăbit', 'O doamnă cu sacoșe', 'Un student', 'Un turist'])
+      // the name and the voice follow what the client looks like
+      const woman = 'stockings' in spec
+      const old = [0x8a8a8a, 0xb8b0a0, 0xd0ccc4].includes(spec.hair?.color)
+      const who = pickOne(woman
+        ? old ? ['O pensionară', 'O doamnă cu sacoșe', 'Clienta'] : ['Clienta', 'O doamnă cu sacoșe', 'O studentă', 'O turistă']
+        : old ? ['Un pensionar', 'Un domn grăbit', 'Clientul'] : ['Clientul', 'Un domn grăbit', 'Un student', 'Un turist'])
       const r = await Promise.race([
         taxiFare(m, {
-          taxi: cab, spec, name: who, voice: { pitch: rand(0.85, 1.25), type: who.startsWith('Client') || who.includes('domn') ? 'male' : 'female' },
+          taxi: cab, spec, name: who, wreckEnds: true, voice: { pitch: old ? rand(1.1, 1.3) : rand(0.85, 1.2), type: old ? 'old' : woman ? 'female' : 'male' },
           from: { x: fx, z: fz }, to: { x: tx, z: tz }, toLabel: toName, patience: 4,
           lines: [pickOne([`La ${toName}, șefu'. Și dacă se poate, fără gropi.`, `${toName}, vă rog. Am întârziat deja.`, `Mă duceți la ${toName}? Cât costă? …Bine, bine.`]), pickOne(['Ați auzit ce-a mai zis primarul? Nici eu. Nu mai ascult.', 'Pe vremea mea, drumul ăsta era mai bun. Pe vremea mea era și eu mai tânăr.', 'Aveți încărcător de telefon? Nu? Nici eu.', 'Muzica asta… e Zdob și Zdub? Dați mai tare!'])],
           crashLines: ['Ușor, domnule!', 'Doamne ferește!', 'Io am plătit pentru o cursă, nu pentru montagne russe!'],
           arrive: [pickOne(['Mersi, șefu\'. Drum bun!', 'Mulțumesc. Păstrați restul. Care rest? Glumesc.', 'Merci! Vă dau cinci stele. Dacă găsesc aplicația.'])],
         }).catch(() => null),
-        m.until(() => outT > 3).then(() => null),
+        m.until(() => outT > 3 || cab.broken).then(() => null),
       ])
       if (!r) break
       earned += r.total; fares++
+      g.progress.save()
     }
-    if (fares) m.notify(`Tura s-a încheiat: ${fares} curse, {g}${earned} lei{/g}.`, 4, 'green')
-    else m.notify('Tura s-a încheiat. Fără clienți azi.', 2.5)
+    if (cab.broken) m.notify('Taxiul e praf. Pe azi, tura s-a terminat.', 4, 'red')
+    if (fares) g.ui.bigMessage('TURA S-A ÎNCHEIAT', `${fares} ${fares === 1 ? 'cursă' : 'curse'} · ${earned} lei`, { secs: 3.2 })
+    else if (!cab.broken) m.notify('Tura s-a încheiat. Fără clienți azi.', 2.5)
     m.cancel()
   },
 }
@@ -271,7 +279,7 @@ export class Activities {
     this.updateDosare()
     // taxi shift on [T]
     const v = p.vehicle
-    if (v && !p.passenger && v.kind === 'taxi' && s.isDone('taxi') && !s.active && !g.ui.modalOpen) {
+    if (v && !p.passenger && v.kind === 'taxi' && !v.broken && s.isDone('taxi') && !s.active && !g.ui.modalOpen) {
       if (this.taxiHint !== v) { this.taxiHint = v; g.ui.tip('Apasă {y}[T]{/y} ca să începi tura de taxi.', 6) }
       if (g.input.pressed('job')) s.run(TAXI_SHIFT)
     } else if (!v) this.taxiHint = 0

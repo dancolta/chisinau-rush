@@ -705,7 +705,7 @@ export class Story {
       const tx = Math.max(-480, Math.min(480, v.pos.x + ax / d * 300)), tz = Math.max(-330, Math.min(350, v.pos.z + az / d * 300))
       points = g.traffic.graph.route(v.pos.x, v.pos.z, tx, tz).slice(1)
     }
-    const d = new RouteDriver(g, v, points.length ? points : [{ x: v.pos.x + Math.sin(v.heading) * 80, z: v.pos.z + Math.cos(v.heading) * 80 }], { speed: 12, priority: false })
+    const d = new RouteDriver(g, v, points.length ? points : [{ x: v.pos.x + Math.sin(v.heading) * 80, z: v.pos.z + Math.cos(v.heading) * 80 }], { speed: 12, priority: false, yieldPlayer: true })
     v.keep = true
     v.leaving = true
     v.locked = true

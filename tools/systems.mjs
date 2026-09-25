@@ -107,10 +107,13 @@ r = await ev(async () => {
   g.vehicles.enter(v)
   await new Promise((r) => setTimeout(r, 400))
   g.input.pressedSet.add('KeyT')
-  for (let k = 0; k < 80 && !g.story.active; k++) await new Promise((r) => setTimeout(r, 100))
+  // count frames, not wall time: under load a frame can take a second
+  let f0 = g.frame
+  for (let k = 0; k < 1500 && !g.story.active && g.frame < f0 + 200; k++) await new Promise((r) => setTimeout(r, 100))
   const started = g.story.active?.def.id
   g.vehicles.exit(true)
-  for (let k = 0; k < 150 && g.story.active; k++) await new Promise((r) => setTimeout(r, 100))
+  f0 = g.frame
+  for (let k = 0; k < 1500 && g.story.active && g.frame < f0 + 900; k++) await new Promise((r) => setTimeout(r, 100))
   return { started, after: g.story.active?.def.id || null }
 })
 check('taxi shift starts with T and ends on exit', r.started === 'act_taxi' && !r.after, JSON.stringify(r))
