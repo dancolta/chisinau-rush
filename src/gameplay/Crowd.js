@@ -133,11 +133,12 @@ export class Crowd {
     for (const n of g.peds.list) {
       const d = dist(n.pos, P)
       if (d < 16) near.push([n, d])
+      // heads that turned after you go back to the road ahead once you're gone
+      else if (n.char.anim.lookYaw) { const a = n.char.anim; a.lookYaw = Math.abs(a.lookYaw) < 0.02 ? 0 : a.lookYaw * 0.5 }
     }
     near.sort((a, b) => a[1] - b[1])
     for (const [n, d] of near) {
-      if (reactors >= 10) break
-      if (!this.plain(n) || n.riding) continue
+      if (reactors >= 10 || !this.plain(n) || n.riding) { if (n.char.anim.lookYaw) n.char.anim.lookYaw *= 0.5; continue }
       reactors++
       const m = this.mem(n)
       const dx = n.pos.x - P.x, dz = n.pos.z - P.z

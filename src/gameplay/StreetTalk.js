@@ -510,7 +510,8 @@ export class StreetTalk {
   copReport(inc) {
     const g = this.game, pr = g.progress
     inc.reported = true
-    pr.addRespect('pol', 4, 'ai raportat')
+    // the first few reports of the day count; after that it's paperwork
+    pr.addRespect('pol', this.cap('polReport', 3) ? 4 : 1, 'ai raportat')
     pr.addCivic(2)
     pr.addXp(10, 'Cetățean vigilent')
     let line = COP.report[inc.kind] || COP.report.any

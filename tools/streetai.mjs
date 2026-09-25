@@ -330,18 +330,24 @@ if (want('cast')) {
     const who = ['vitea', 'gop2', 'gop3'].map((k) => c[k]).filter(Boolean)
     if (!who.length) return { none: true }
     const pos0 = who.map((n) => ({ x: n.pos.x, z: n.pos.z, s: n.state }))
+    // no real mission may start by itself while we stand in the yard
+    const auto = g.story.autoStart
+    g.story.autoStart = null
     T.place(gc.x + 5, gc.z + 3, Math.atan2(-5, -3))
     const f0 = g.frame
     const spoke = await T.until(() => T.said.some((q) => q.f >= f0 && who.includes(q.n)), 200)
     const still = who.every((n, i) => Math.hypot(n.pos.x - pos0[i].x, n.pos.z - pos0[i].z) < 0.2 && n.state === pos0[i].s)
     // with a mission running they're scenery again
     const fake = { def: { id: 'test' }, tick() {}, waiters: [], tracked: [] }
+    const real = g.story.active?.def.id || null
     g.story.active = fake
-    const f1 = g.frame
+    // (by index, not frame: the greeting above may have been said this very frame)
+    const i1 = T.said.length
     await T.frames(60)
-    const quiet = !T.said.some((q) => q.f >= f1 && who.includes(q.n))
+    const loud = T.said.slice(i1).filter((q) => who.includes(q.n)).map((q) => q.text)
     g.story.active = null
-    return { spoke, still, quiet, n: who.length }
+    g.story.autoStart = auto
+    return { spoke, still, quiet: !loud.length, n: who.length, real, loud }
   })
   check('the lads at Blocul 7 greet you outside missions, stay put, stay quiet in one', r.spoke && r.still && r.quiet, JSON.stringify(r))
 }
@@ -472,6 +478,7 @@ if (want('talkcop')) {
     await T.frames(2)
     const prompt = document.querySelector('.prompt')?.textContent || ''
     // something happened to you earlier: report it
+    g.life.incidents = []
     g.life.incident('shake', { lei: 10 })
     T.menus.length = 0
     g.street.tips = []
