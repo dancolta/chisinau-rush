@@ -25,6 +25,7 @@ export const VIEWS = [
   { id: 'play_center', hour: 11, follow: { x: 12, z: -14, ry: -Math.PI / 2 } },
   { id: 'play_night', hour: 21.8, follow: { x: -52, z: 186, ry: Math.PI } },
   { id: 'play_car', hour: 17, follow: { x: -58.25, z: 120, ry: Math.PI, car: 'logan' } },
+  { id: 'trees', hour: 15, from: [-36, 3.2, 170], look: [-24, 3.5, 186] },
 ]
 
 const server = await createServer({ server: { port, strictPort: false, host: '127.0.0.1', fs: { strict: false } }, logLevel: 'error' })

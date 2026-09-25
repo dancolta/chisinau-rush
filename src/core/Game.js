@@ -31,6 +31,7 @@ import { Debug } from './Debug.js'
 import { Touch, isTouchDevice } from '../ui/Touch.js'
 import { Weather } from '../render/Weather.js'
 import { NightLights } from '../render/NightLights.js'
+import { GrassField } from '../world/GrassField.js'
 
 const STEP = 1 / 60
 if (import.meta.env.DEV) { window.THREE = THREE; window.__CR = { Character, CAST } }
@@ -79,6 +80,7 @@ export class Game {
     progress(0.92, 'Oameni, mașini, polițiști…')
     this.fx = new FX(this)
     this.nightLights = new NightLights(this, this.renderer.q.lamps ?? 8)
+    this.grass = new GrassField(this)
     this.weather = this.renderer.weather = new Weather(this)
     this.progress = new Progress(this)
     this.ui = new UI(this)
@@ -247,7 +249,7 @@ export class Game {
       this.safe('story', () => this.story.update(dt))
       if (playing) this.safe('interaction', () => this.interaction.update(dt))
       if (playing) this.safe('director', () => this.director.update(dt))
-      this.safe('fx', () => { this.fx.update(dt); this.vehicleFX(dt); this.weather.update(dt); this.nightLights.update(rawDt) })
+      this.safe('fx', () => { this.fx.update(dt); this.vehicleFX(dt); this.weather.update(dt); this.nightLights.update(rawDt); this.grass.update(rawDt) })
       this.debug?.update(rawDt)
     }
     this.safe('ui', () => { this.ui.update(rawDt); this.touch?.update() })

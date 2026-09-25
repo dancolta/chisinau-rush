@@ -34,6 +34,46 @@ function blob(i) {
   return BLOBS[i % BLOBS.length]
 }
 
+// spruce tiers: a star-shaped skirt whose branch tips droop below the valleys between them,
+// closed underneath so it never looks hollow from a low camera
+const SKIRTS = []
+function skirt(i) {
+  if (!SKIRTS.length) {
+    for (let k = 0; k < 4; k++) {
+      const n = 8 + k, rnd = mulberry(77 + k)
+      const ring = (rT, rV, yT, yV) => {
+        const r = []
+        for (let j = 0; j < n * 2; j++) {
+          const a = (j / (n * 2)) * Math.PI * 2, tip = j % 2 === 0, jit = tip ? 0.85 + rnd() * 0.3 : 1
+          r.push(new THREE.Vector3(Math.cos(a) * (tip ? rT : rV) * jit, tip ? yT - (jit - 1) * 0.3 : yV, Math.sin(a) * (tip ? rT : rV) * jit))
+        }
+        return r
+      }
+      const apex = new THREE.Vector3(0, 1, 0)
+      const mid = ring(0.6, 0.4, 0.46, 0.56), rim = ring(1.0, 0.56, -0.22, 0.05), under = ring(0.28, 0.28, 0.14, 0.14)
+      const pos = []
+      const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _n = new THREE.Vector3(), _o = new THREE.Vector3()
+      const tri = (a, b, c, up) => {
+        _n.crossVectors(_a.subVectors(b, a), _b.subVectors(c, a))
+        _o.set(a.x + b.x + c.x, 0, a.z + b.z + c.z).normalize(); _o.y = up
+        if (_n.dot(_o) < 0) [b, c] = [c, b]
+        pos.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z)
+      }
+      for (let j = 0; j < n * 2; j++) {
+        const j2 = (j + 1) % (n * 2)
+        tri(apex, mid[j], mid[j2], 0.6)
+        tri(mid[j], rim[j], rim[j2], 0.4); tri(mid[j], rim[j2], mid[j2], 0.4)
+        tri(rim[j], under[j], under[j2], -3); tri(rim[j], under[j2], rim[j2], -3)
+      }
+      const g = new THREE.BufferGeometry()
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+      g.computeVertexNormals()
+      SKIRTS.push(g)
+    }
+  }
+  return SKIRTS[i % SKIRTS.length]
+}
+
 // shading baked into the vertex colours: dark underside and core, sunlit crown, a little dapple
 function foliageShade(cy, h) {
   return (p, n) => {
@@ -87,18 +127,19 @@ export function addTreeGeometry(g, x, z, rnd, kind = null) {
       g.add(blob(Math.floor(rnd() * 6)), { x: x + Math.cos(a) * rr, y: cy + rnd.range(-0.2, 0.3) * s, z: z + Math.sin(a) * rr, sx: 1.1 * s, sy: 0.95 * s, sz: 1.1 * s, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
     }
   } else {
-    // spruce: tiers of drooping skirts, darker toward the trunk and the ground
-    g.cyl(0.13 * s, 0.2 * s, 1.6 * s, 7, { x, y, z, color: 0x46342a, shade: trunkShade })
-    const tiers = 4, top = y + 7.2 * s
-    const shade = (p, n) => (0.55 + 0.5 * Math.min(1, (p.y - y) / (7 * s))) * (0.85 + 0.2 * Math.max(0, n.y))
+    // spruce: tiers of drooping star skirts, darker toward the trunk and the ground
+    g.cyl(0.12 * s, 0.2 * s, 2.2 * s, 7, { x, y, z, color: 0x46342a, shade: trunkShade })
+    const tiers = 6, H = 7.6 * s
+    const dark = rnd() < 0.5 ? 0x264c2c : 0x2b5431
     for (let i = 0; i < tiers; i++) {
       const t = i / (tiers - 1)
-      const r = (2.3 - t * 1.75) * s * rnd.range(0.92, 1.08)
-      const h = (2.0 - t * 0.6) * s
-      const yy = y + (1.0 + t * 4.9) * s
-      g.cone(r, h, 9, { x, y: yy, z, ry: rnd() * 3, color: i % 2 ? 0x2d5733 : 0x284f2e, shade, bendTo: { x, y: yy - h, z }, bend: 0.35 })
+      const r = (2.35 - t * 1.85) * s * rnd.range(0.93, 1.07)
+      const h = (1.75 - t * 0.55) * s
+      const yy = y + (1.25 + t * (H - 2.6 * s) / s) * s
+      const shade = (p, n) => (0.5 + 0.55 * Math.min(1, (p.y - y) / H)) * (0.84 + 0.22 * Math.max(0, n.y)) * (0.72 + 0.4 * Math.min(1, Math.hypot(p.x - x, p.z - z) / r))
+      g.add(skirt(i + Math.floor(rnd() * 4)), { x, y: yy, z, sx: r, sy: h, sz: r, ry: rnd() * 6.3, color: i % 2 ? dark : 0x2e5a34, shade, bendTo: { x, y: yy - h * 0.6, z }, bend: 0.3 })
     }
-    g.cone(0.35 * s, 1.2 * s, 7, { x, y: top - 0.9 * s, z, color: 0x2f5b35, shade })
+    g.cone(0.3 * s, 1.3 * s, 7, { x, y: y + H - 0.6 * s, z, color: 0x315f37, shade: () => 1.05 })
   }
   return k
 }
