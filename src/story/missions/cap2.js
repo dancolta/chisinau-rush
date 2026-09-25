@@ -1,4 +1,5 @@
 import { KIOSK_MENU } from '../../data/shops.js'
+import { gen } from '../hero.js'
 import { dist, runRace } from './common.js'
 
 const CH2 = 'Capitolul 2'
@@ -222,7 +223,7 @@ export const profetul = {
     const a = m.enemy('mascat', -24, 12.5, { hp: 55, runSpeed: 5.6 })
     const b = m.enemy('mascat', 22, 12.5, { hp: 55, runSpeed: 5.6 })
     m.brawl([a, b])
-    a.say('Ei! Pune jos!'); b.say('Stai, băiete!')
+    a.say('Ei! Pune jos!'); b.say(`Stai, ${gen(m.game, 'băiete', 'fato')}!`)
     g.audio?.sfx('whistle', { vol: 0.8 })
     m.objective('{r}Fugi cu matrioșca!{/r} Rupe urmărirea.', { sub: 'Depărtează-te la 60 m (sau pune-i la pământ).' })
     let clearT = 0, escaped = false

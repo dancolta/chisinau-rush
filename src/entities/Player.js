@@ -126,8 +126,10 @@ export class Player {
     const wantSprint = canMove && !this.scripted && !this.backward && input.act('sprint') && mag > 0.2
     if (this.stamina <= 0.01 && !this.winded) { this.winded = true; game.ui?.notify?.('Ți s-a tăiat respirația…', 1.6) }
     if (this.winded && this.stamina > 0.3) this.winded = false
-    if (wantSprint && !this.winded) { this.sprinting = true; this.stamina = Math.max(0, this.stamina - h * 0.1) }
-    else { this.sprinting = false; this.stamina = Math.min(1, this.stamina + h * (mag > 0.1 ? 0.16 : 0.3)) }
+    // the stroika worker's lungs: sprint drains much slower and comes back faster
+    const lungs = game.progress?.perk?.stamina || 1
+    if (wantSprint && !this.winded) { this.sprinting = true; this.stamina = Math.max(0, this.stamina - h * 0.1 / lungs) }
+    else { this.sprinting = false; this.stamina = Math.min(1, this.stamina + h * (mag > 0.1 ? 0.16 : 0.3) * Math.sqrt(lungs)) }
     let speed = this.scripted ? (this.scripted.speed ?? 2.2) : this.backward ? 2.6 : this.sprinting ? 9.2 : 5.0
     speed *= this.speedMul
     const busy = c.anim.busy && ['jab', 'cross', 'hook', 'kick', 'swing', 'spray'].includes(c.anim.action?.name)

@@ -101,8 +101,8 @@ export class Menus {
     let sel = 0, name = ''
     const m = el('div', 'create', `
       <div class="side">
-        <h2>CINE EȘTI, BRATU?</h2>
-        <div class="q">Te întorci acasă, la Chișinău, după ani de muncă „afară". Cum te cheamă și ce fel de om ești?</div>
+        <h2>CINE S-O ÎNTORS?</h2>
+        <div class="q">Ani de muncă „afară". Acum te întorci la Chișinău. Cine ești și ce-ai adus cu tine?</div>
         <input maxlength="16" placeholder="Numele tău (ex: Ion)" />
         <div class="types"></div>
         <div class="actions"><button class="btn primary go">▶ Începe povestea</button><button class="btn back">‹ Înapoi</button></div>
@@ -116,17 +116,18 @@ export class Menus {
       types.appendChild(c)
       return c
     })
-    const paint = () => { cards.forEach((c, i) => c.classList.toggle('sel', i === sel)); this.preview(PLAYER_TYPES[sel].key) }
+    const paint = () => { cards.forEach((c, i) => c.classList.toggle('sel', i === sel)); input.placeholder = `Numele tău (ex: ${PLAYER_TYPES[sel].defName || 'Ion'})`; this.preview(PLAYER_TYPES[sel].key) }
     m.querySelector('.go').onclick = () => {
       g.audio?.sfx('confirm', { bus: 'ui' })
       this.clearPreview()
-      g.director.newGame({ name: (name || 'Ion').trim().slice(0, 16) || 'Ion', type: PLAYER_TYPES[sel].key })
+      const t = PLAYER_TYPES[sel]
+      g.director.newGame({ name: (name || t.defName || 'Vasea').trim().slice(0, 16) || t.defName || 'Vasea', type: t.key })
     }
     m.querySelector('.back').onclick = () => { this.clearPreview(); this.showMain() }
     // turn the character round: drag on the right half, or the arrow keys when not typing
     const stage = m.children[1]
     stage.classList.add('turntable')
-    stage.innerHTML = '<div class="turn-hint">⟲ Trage ca să-l rotești · ← →</div>'
+    stage.innerHTML = '<div class="turn-hint">⟲ Trage ca să rotești personajul · ← →</div>'
     let dragX = null
     stage.addEventListener('pointerdown', (e) => { dragX = e.clientX; stage.setPointerCapture?.(e.pointerId) })
     stage.addEventListener('pointermove', (e) => { if (dragX === null) return; this.turnPreview((e.clientX - dragX) * 0.012); dragX = e.clientX })

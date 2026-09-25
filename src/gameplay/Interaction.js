@@ -31,12 +31,13 @@ export class Interaction {
 
   async shop(name, menu) {
     const g = this.game, pr = g.progress
-    const choices = menu.items.map((it) => ({ text: it.name, cost: it.price ? it.price + ' lei' : 'gratis', disabled: pr.lei < (it.price || 0) }))
+    const cost = (it) => pr.price(it.price || 0)
+    const choices = menu.items.map((it) => ({ text: it.name, cost: it.price ? cost(it) + ' lei' : 'gratis', disabled: pr.lei < cost(it) }))
     choices.push({ text: 'Nimic, mersi.' })
     const i = await g.ui.dialogue({ name: menu.seller || name, role: name }, [menu.greet || 'Ce doriți?'], { choices, portrait: false })
     const it = menu.items[i]
     if (!it) return
-    if (it.price && !pr.spend(it.price)) return
+    if (it.price && !pr.spend(cost(it))) return
     if (it.food) pr.feed(it.food)
     if (it.hp) pr.heal(it.hp)
     if (it.stamina) g.player.stamina = 1

@@ -219,7 +219,8 @@ export class Activities {
       for (const k of WEAPON_ORDER) {
         const w = WEAPONS[k]
         if (!w.price || pr.weapons.includes(k)) continue
-        offers.push({ text: `${w.icon} ${w.name}`, cost: `${w.price} lei`, disabled: pr.lei < w.price, buy: () => { pr.addLei(-w.price); pr.giveWeapon(k); pr.weapon = k; g.player.setWeapon(k); g.ui.notify(`Ai ${w.icon} ${w.name}. {y}[Q]{/y} schimbi arma.`, 3, 'gold') } })
+        const wp = pr.price(w.price)
+        offers.push({ text: `${w.icon} ${w.name}`, cost: `${wp} lei`, disabled: pr.lei < wp, buy: () => { pr.addLei(-wp); pr.giveWeapon(k); pr.weapon = k; g.player.setWeapon(k); g.ui.notify(`Ai ${w.icon} ${w.name}. {y}[Q]{/y} schimbi arma.`, 3, 'gold') } })
       }
       if (!pr.flags.acteFalse) offers.push({ text: '🪪 Acte false („de deputat")', cost: '150 lei', disabled: pr.lei < 150, buy: () => { pr.addLei(-150); pr.flags.acteFalse = true; g.ui.notify('Ai acte false. La prima oprire, poliția te salută.', 3.4, 'gold') } })
       if (!pr.flags.nitro) offers.push({ text: '🔥 Nitro sub capotă ([⇧] la volan)', cost: '300 lei', disabled: pr.lei < 300, buy: () => { pr.addLei(-300); pr.flags.nitro = true; g.ui.notify('Nitro montat. Ține {y}[⇧]{/y} la volan. „Aproape legal", zice Borea.', 3.8, 'gold') } })
