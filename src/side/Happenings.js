@@ -89,6 +89,7 @@ export class Happenings {
 
   start(def, spot) {
     this.t = 150 + Math.random() * 90    // then a few minutes of peace
+    this.side?.ui.hideViber()            // the event's objective takes over from the message
     const run = {
       id: def.id, activity: true, event: true, chapterName: 'Întâmplare', title: def.title,
       failTitle: 'RATAT', silentPass: true, noRetry: true, silentStart: true,

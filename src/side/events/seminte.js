@@ -49,6 +49,7 @@ export const SEMINTE = {
     const choice = await m.say(JORA, [fill(g, `Șo, [[bratan|tanti]]? Campionat de semințe. Recordul meu: ${rec} metri. Trei încercări. Dacă-l bați, iei potul: douăzeci de lei.`)], { choices: ['Dă-mi semințele. Țineți-vă bine.', 'Nu scuip, am manierele de la mama.'] })
     if (choice === 1) { await m.talk(JORA, fill(g, 'Manierele… Ha! Du-te, [[bratan|tanti]], du-te.'), 2.4); m.cancel() }
     m.data.started = true
+    m.objective(`Scuipă mai departe de {y}${rec} m{/y}. Ai trei încercări.`)
     lockPlayer(m, true)
     p.teleport(c.x, g.physics.groundHeight(c.x, c.z, 3), c.z, dir)
     g.cameraRig.yaw = dir

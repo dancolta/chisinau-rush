@@ -76,6 +76,7 @@ export const NUNTA = {
     m.track({ dispose: () => g.cameraRig.endShot() })
     for (const n of everyone) { n.char.lookAtNow(c.x, c.z); n.home.ry = n.char.heading; n.state = 'idle' }
     m.music('chase')
+    m.objective('Joacă hora! Nimerește săgețile pe ritm, că se uită tot neamul.')
     g.audio?.sfx('go', { bus: 'ui' })
     let dancing = 0
     const res = await play(m, new Rhythm(g.side, {

@@ -103,7 +103,10 @@ export class SideUI {
     const s = this.stunt
     clearTimeout(this.stuntOut)
     if (s.classList.contains('hidden') || s.classList.contains('done')) { s.className = 'stunt'; this.$.stLive.textContent = ''; this.cache.live = null }
+    this.game.ui.hud.classList.add('stunting')
   }
+
+  stuntHide() { this.stunt.classList.add('hidden'); this.game.ui.hud.classList.remove('stunting') }
 
   stuntTrick(c, name, pts) {
     this.stuntShow()
@@ -143,7 +146,7 @@ export class SideUI {
     this.$.stLive.innerHTML = `COMBO <b>+${aura} AURA</b>`
     s.classList.add('done')
     clearTimeout(this.stuntOut)
-    this.stuntOut = this.later(() => s.classList.add('hidden'), 1500)
+    this.stuntOut = this.later(() => this.stuntHide(), 1500)
   }
 
   stuntFail() {
@@ -153,10 +156,10 @@ export class SideUI {
     s.classList.add('done', 'fail')
     this.game.audio?.sfx('error', { bus: 'ui', vol: 0.45 })
     clearTimeout(this.stuntOut)
-    this.stuntOut = this.later(() => s.classList.add('hidden'), 1400)
+    this.stuntOut = this.later(() => this.stuntHide(), 1400)
   }
 
-  stuntClear() { this.stunt.classList.add('hidden') }
+  stuntClear() { clearTimeout(this.stuntOut); this.stuntHide() }
 
   // ---- the level-up moment ------------------------------------------------------------------------------------
   levelUp(level, title, newTitle, lines) {
@@ -190,13 +193,14 @@ export class SideUI {
     const v = this.viberEl
     v.innerHTML = `<div class="vh"><span class="app">💬 Viber</span><span class="grp">Blocul 7 · vecinii</span></div><div class="vm"><b>${who}:</b> ${fmt(text)}</div>`
     v.classList.remove('hidden', 'out')
+    this.feedEl.classList.add('muted')      // (short screens: the feed would sit under it)
     this.bump(v)
     this.game.audio?.sfx('notify', { bus: 'ui', vol: 0.8 })
     clearTimeout(this.viberT)
-    this.viberT = this.later(() => { v.classList.add('out'); setTimeout(() => v.classList.add('hidden'), 450) }, secs * 1000)
+    this.viberT = this.later(() => { v.classList.add('out'); setTimeout(() => this.hideViber(), 450) }, secs * 1000)
   }
 
-  hideViber() { clearTimeout(this.viberT); this.viberEl.classList.add('hidden') }
+  hideViber() { clearTimeout(this.viberT); this.viberEl.classList.add('hidden'); this.feedEl.classList.remove('muted') }
 
   // ---- the event marker (an offer you can walk up to) ------------------------------------------------------------
   setMark(o) {
@@ -251,9 +255,9 @@ export class SideUI {
         if (r.perk) parts.push(`${PERKS[r.perk].icon} ${PERKS[r.perk].name}`)
         if (r.respect) parts.push(`${r.respect[0] === 'gop' ? '👊' : '🥧'} +${r.respect[1]} respect`)
       }
-      lad.appendChild(el('div', 'au-row' + (lv >= L ? ' got' : lv + 1 === L ? ' cur' : ''), `<span class="n">${lv >= L ? '✔' : L}</span><span class="r">${parts.join(' · ')}</span><span class="a">${nf(levelStart(L))}</span>`))
+      lad.appendChild(el('div', 'au-row' + (lv >= L ? ' got' : lv + 1 === L ? ' cur' : ''), `<span class="n">${lv >= L ? '✔' : L}</span><span class="rw">${parts.join(' · ')}</span><span class="a">${nf(levelStart(L))}</span>`))
     }
-    lad.appendChild(el('div', 'au-row', `<span class="n">★</span><span class="r">După nivelul ${MAX_LEVEL}: câte o stea și 300 de lei la fiecare nivel.</span><span class="a"></span>`))
+    lad.appendChild(el('div', 'au-row', `<span class="n">★</span><span class="rw">După nivelul ${MAX_LEVEL}: câte o stea și 300 de lei la fiecare nivel.</span><span class="a"></span>`))
 
     const col2 = el('div', 'col aura-tab')
     col2.style.flex = '1'
