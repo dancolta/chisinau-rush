@@ -17,7 +17,7 @@ function canvas(w, h) {
 function toTex(c, repeat = true, srgb = true) {
   const t = new THREE.CanvasTexture(c)
   if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping }
-  t.anisotropy = 8
+  t.anisotropy = 16
   t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace
   t.generateMipmaps = true
   t.minFilter = THREE.LinearMipmapLinearFilter
@@ -34,68 +34,146 @@ function speckle(ctx, w, h, r, n, colors, size = [1, 2]) {
   }
 }
 
+// height canvas -> tangent-space normal map (Sobel), for surfaces that should catch the light
+function heightToNormal(hc, strength = 2) {
+  const w = hc.width, h = hc.height
+  const src = hc.getContext('2d').getImageData(0, 0, w, h).data
+  const [c, x] = canvas(w, h)
+  const out = x.createImageData(w, h)
+  const H = (i, j) => src[(((j + h) % h) * w + ((i + w) % w)) * 4] / 255
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const dx = (H(i + 1, j - 1) + 2 * H(i + 1, j) + H(i + 1, j + 1)) - (H(i - 1, j - 1) + 2 * H(i - 1, j) + H(i - 1, j + 1))
+    const dy = (H(i - 1, j + 1) + 2 * H(i, j + 1) + H(i + 1, j + 1)) - (H(i - 1, j - 1) + 2 * H(i, j - 1) + H(i + 1, j - 1))
+    let nx = -dx * strength, ny = dy * strength, nz = 1
+    const l = Math.hypot(nx, ny, nz); nx /= l; ny /= l; nz /= l
+    const o = (j * w + i) * 4
+    out.data[o] = (nx * 0.5 + 0.5) * 255; out.data[o + 1] = (ny * 0.5 + 0.5) * 255; out.data[o + 2] = (nz * 0.5 + 0.5) * 255; out.data[o + 3] = 255
+  }
+  x.putImageData(out, 0, 0)
+  return toTex(c, true, false)
+}
+
+// soft tonal blotches (low frequency: mips well, hides tiling)
+function blotch(x, r, S, n, rMin, rMax, colorFn) {
+  for (let i = 0; i < n; i++) {
+    const cx = r() * S, cy = r() * S, rad = rMin + r() * (rMax - rMin)
+    for (const [ox, oy] of [[0, 0], [S, 0], [-S, 0], [0, S], [0, -S]]) {
+      const g = x.createRadialGradient(cx + ox, cy + oy, 0, cx + ox, cy + oy, rad)
+      g.addColorStop(0, colorFn()); g.addColorStop(1, 'rgba(0,0,0,0)')
+      x.fillStyle = g; x.fillRect(cx + ox - rad, cy + oy - rad, rad * 2, rad * 2)
+    }
+  }
+}
+
+// value noise grain drawn as tiny low-contrast dots in both albedo and height
+function grainPair(a, hgt, r, S, n, amp) {
+  for (let i = 0; i < n; i++) {
+    const px = r() * S, py = r() * S, sz = 1 + r() * 1.6, v = r()
+    const l = Math.floor(128 + (v - 0.5) * amp)
+    a.fillStyle = `rgba(${l},${l},${l},0.18)`; a.fillRect(px, py, sz, sz)
+    if (hgt) { hgt.fillStyle = `rgba(255,255,255,${0.25 * v})`; hgt.fillRect(px, py, sz, sz) }
+  }
+}
+
 export function makeAsphalt() {
   const S = 512
   const [c, x] = canvas(S, S)
+  const [hc, hx] = canvas(S, S)
   const r = rng(7)
-  x.fillStyle = '#44464b'; x.fillRect(0, 0, S, S)
-  // large tonal patches (repairs, wear)
-  for (let i = 0; i < 26; i++) {
-    const g = x.createRadialGradient(r() * S, r() * S, 0, r() * S, r() * S, 40 + r() * 120)
-    const l = 58 + Math.floor(r() * 18)
-    g.addColorStop(0, `rgba(${l},${l + 1},${l + 4},0.35)`); g.addColorStop(1, 'rgba(0,0,0,0)')
-    x.fillStyle = g; x.fillRect(0, 0, S, S)
-  }
-  // a couple of faint repair patches (typical Chișinău), low contrast so tiling doesn't show
+  x.fillStyle = '#3d3f43'; x.fillRect(0, 0, S, S)
+  hx.fillStyle = '#707070'; hx.fillRect(0, 0, S, S)
+  // wear and old repairs: broad, low-contrast tone changes
+  blotch(x, r, S, 30, 40, 150, () => { const l = 50 + Math.floor(r() * 26); return `rgba(${l},${l + 1},${l + 3},0.28)` })
+  // a couple of patched rectangles (typical Chișinău), barely darker
   for (let i = 0; i < 3; i++) {
-    x.fillStyle = r() < 0.5 ? 'rgba(52,53,57,0.35)' : 'rgba(74,75,80,0.22)'
-    const w = 40 + r() * 90, h = 30 + r() * 70
-    x.fillRect(r() * S, r() * S, w, h)
+    const w = 50 + r() * 110, h = 36 + r() * 80, px = r() * S, py = r() * S
+    x.fillStyle = 'rgba(40,41,45,0.35)'; x.fillRect(px, py, w, h)
+    hx.fillStyle = 'rgba(0,0,0,0.12)'; hx.fillRect(px, py, w, h)
   }
-  speckle(x, S, S, r, 9000, ['#3a3c40', '#505257', '#5c5e63', '#36373b', '#6a6b6f'], [1, 2.2])
-  // cracks
-  x.strokeStyle = 'rgba(25,25,28,0.55)'; x.lineWidth = 1.2
-  for (let i = 0; i < 14; i++) {
+  // aggregate: fine, low contrast (no bright specks: they sparkle)
+  grainPair(x, hx, r, S, 16000, 60)
+  // sealed cracks: thin dark lines that sink into the height map
+  for (let i = 0; i < 10; i++) {
     let px = r() * S, py = r() * S
-    x.beginPath(); x.moveTo(px, py)
-    for (let k = 0; k < 7; k++) { px += (r() - 0.5) * 40; py += (r() - 0.5) * 40; x.lineTo(px, py) }
-    x.stroke()
+    const pts = [[px, py]]
+    for (let k = 0; k < 8; k++) { px += (r() - 0.5) * 44; py += (r() - 0.5) * 44; pts.push([px, py]) }
+    for (const [ctx, col, w] of [[x, 'rgba(22,22,24,0.55)', 1.4], [hx, 'rgba(0,0,0,0.6)', 2]]) {
+      ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1])
+      for (const q of pts) ctx.lineTo(q[0], q[1])
+      ctx.stroke()
+    }
   }
-  return toTex(c)
+  // oil drips
+  blotch(x, r, S, 5, 6, 18, () => 'rgba(15,15,18,0.25)')
+  const t = toTex(c)
+  t.userData = { normal: heightToNormal(hc, 1.6) }
+  return t
 }
 
 export function makePaving() {
+  // 0.5 m concrete slabs (128 px per metre), bevelled joints
   const S = 512, T = 64
   const [c, x] = canvas(S, S)
+  const [hc, hx] = canvas(S, S)
   const r = rng(11)
-  x.fillStyle = '#8b8b88'; x.fillRect(0, 0, S, S)
+  x.fillStyle = '#6d6c69'; x.fillRect(0, 0, S, S)
+  hx.fillStyle = '#202020'; hx.fillRect(0, 0, S, S)
   for (let ty = 0; ty < S / T; ty++) for (let tx = 0; tx < S / T; tx++) {
-    const l = 150 + Math.floor((r() - 0.5) * 26)
-    x.fillStyle = `rgb(${l},${l - 2},${l - 6})`
+    const l = 146 + Math.floor((r() - 0.5) * 18)
+    const warm = Math.floor((r() - 0.5) * 6)
+    x.fillStyle = `rgb(${l + warm},${l},${l - 4 - warm})`
     x.fillRect(tx * T + 2, ty * T + 2, T - 4, T - 4)
-    if (r() < 0.06) { // broken tile
-      x.fillStyle = `rgb(${l - 30},${l - 32},${l - 34})`
-      x.beginPath(); x.moveTo(tx * T + 2, ty * T + 2 + r() * T); x.lineTo(tx * T + T - 2, ty * T + 2); x.lineTo(tx * T + T - 2, ty * T + T - 2); x.fill()
+    // bevel: light top-left edge, dark bottom-right edge
+    x.fillStyle = 'rgba(255,255,255,0.10)'; x.fillRect(tx * T + 2, ty * T + 2, T - 4, 2); x.fillRect(tx * T + 2, ty * T + 2, 2, T - 4)
+    x.fillStyle = 'rgba(0,0,0,0.12)'; x.fillRect(tx * T + 2, ty * T + T - 4, T - 4, 2); x.fillRect(tx * T + T - 4, ty * T + 2, 2, T - 4)
+    const g = hx.createLinearGradient(tx * T, ty * T, tx * T + T, ty * T + T)
+    g.addColorStop(0, '#c8c8c8'); g.addColorStop(1, '#b4b4b4')
+    hx.fillStyle = g; hx.fillRect(tx * T + 2, ty * T + 2, T - 4, T - 4)
+    // the odd stained or cracked slab
+    if (r() < 0.12) { x.fillStyle = 'rgba(60,55,48,0.12)'; x.beginPath(); x.arc(tx * T + T * r(), ty * T + T * r(), 8 + r() * 14, 0, Math.PI * 2); x.fill() }
+    if (r() < 0.05) {
+      const ax = tx * T + 4 + r() * (T - 8), ay = ty * T + 3
+      for (const [ctx, col] of [[x, 'rgba(40,40,40,0.5)'], [hx, 'rgba(0,0,0,0.8)']]) {
+        ctx.strokeStyle = col; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(ax, ay)
+        ctx.lineTo(ax + (r() - 0.5) * 20, ay + T * 0.45); ctx.lineTo(ax + (r() - 0.5) * 24, ty * T + T - 3); ctx.stroke()
+      }
     }
   }
-  speckle(x, S, S, r, 5000, ['rgba(60,60,60,0.25)', 'rgba(210,210,200,0.2)'], [1, 2])
-  return toTex(c)
+  grainPair(x, hx, r, S, 7000, 40)
+  blotch(x, r, S, 12, 30, 90, () => `rgba(${r() < 0.5 ? '40,38,34' : '220,216,206'},0.06)`)
+  const t = toTex(c)
+  t.userData = { normal: heightToNormal(hc, 2.4) }
+  return t
 }
 
 export function makePlaza() {
-  const S = 512, T = 128
+  // 1 m granite slabs laid in a running bond (64 px per metre)
+  const S = 512, T = 64
   const [c, x] = canvas(S, S)
+  const [hc, hx] = canvas(S, S)
   const r = rng(23)
-  x.fillStyle = '#9d8f78'; x.fillRect(0, 0, S, S)
-  for (let ty = 0; ty < S / T; ty++) for (let tx = 0; tx < S / T; tx++) {
-    const l = Math.floor((r() - 0.5) * 22)
-    x.fillStyle = `rgb(${196 + l},${184 + l},${160 + l})`
-    x.fillRect(tx * T + 2, ty * T + 2, T - 4, T - 4)
-    // subtle inner granite grain
-    speckle(x, T - 6, T - 6, r, 80, ['rgba(120,110,95,0.18)', 'rgba(250,245,230,0.18)'], [1, 3])
+  x.fillStyle = '#8a7f6e'; x.fillRect(0, 0, S, S)
+  hx.fillStyle = '#303030'; hx.fillRect(0, 0, S, S)
+  for (let ty = 0; ty < S / T; ty++) {
+    const off = (ty % 2) * T / 2
+    for (let tx = -1; tx < S / T; tx++) {
+      const px = tx * T + off, py = ty * T
+      const l = Math.floor((r() - 0.5) * 16)
+      x.fillStyle = `rgb(${192 + l},${181 + l},${160 + l})`
+      x.fillRect(px + 1.5, py + 1.5, T - 3, T - 3)
+      hx.fillStyle = '#c0c0c0'; hx.fillRect(px + 1.5, py + 1.5, T - 3, T - 3)
+    }
   }
-  speckle(x, S, S, r, 3000, ['rgba(120,110,95,0.18)', 'rgba(250,245,230,0.15)'], [1, 2.5])
-  return toTex(c)
+  // granite grain, very fine and soft
+  for (let i = 0; i < 14000; i++) {
+    const v = r()
+    x.fillStyle = v < 0.5 ? 'rgba(95,86,74,0.12)' : 'rgba(250,244,230,0.12)'
+    x.fillRect(r() * S, r() * S, 1 + r(), 1 + r())
+  }
+  blotch(x, r, S, 14, 30, 110, () => `rgba(${r() < 0.5 ? '70,64,56' : '235,228,212'},0.07)`)
+  const t = toTex(c)
+  t.userData = { normal: heightToNormal(hc, 1.8) }
+  return t
 }
 
 export function makeGrass() {

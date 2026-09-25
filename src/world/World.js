@@ -71,18 +71,27 @@ export class World {
     const tex = this.tex
     const mk = (map, opts = {}) => {
       const m = new THREE.MeshStandardMaterial({ map, roughness: 0.92, metalness: 0, ...opts })
+      if (map.userData?.normal) { m.normalMap = map.userData.normal; m.normalScale.set(0.9, 0.9) }
       m.envMapIntensity = 0.35
       return m
     }
-    return {
-      asphalt: mk(tex.asphalt, { roughness: 0.9 }),
-      paving: mk(tex.paving, { roughness: 0.86 }),
+    const base = {
+      asphalt: mk(tex.asphalt, { roughness: 0.88 }),
+      paving: mk(tex.paving, { roughness: 0.84 }),
       curb: mk(tex.concrete, { color: 0xd8d6d0, roughness: 0.9 }),
       grass: mk(tex.grass, { roughness: 1 }),
-      plaza: mk(tex.plaza, { roughness: 0.8 }),
+      plaza: mk(tex.plaza, { roughness: 0.74 }),
       dirt: mk(tex.dirt, { roughness: 1 }),
       concrete: mk(tex.concrete, { roughness: 0.9 }),
     }
+    // '<surface>_o': the same surface laid as a thin overlay on top of another one (patches,
+    // verges, kerb tops). A depth offset instead of a centimetre lift keeps them from z-fighting.
+    for (const k of Object.keys(base)) {
+      const o = base[k].clone()
+      o.polygonOffset = true; o.polygonOffsetFactor = -1; o.polygonOffsetUnits = -2
+      base[k + '_o'] = o
+    }
+    return base
   }
 
   async build(progress = () => {}) {
@@ -175,9 +184,9 @@ export class World {
     markings.polygonOffset = true; markings.polygonOffsetFactor = -2; markings.polygonOffsetUnits = -2
     const mats = {
       vcol: {
-        static: M.vcol({ roughness: 0.85 }),
-        bld: M.vcol({ roughness: 0.86, cutout: true }),
-        tree: M.vcol({ roughness: 0.95, cutout: true, flat: true, emissive: false, key: 'tree' }),
+        static: M.vcol({ roughness: 0.85, detail: 'plaster' }),
+        bld: M.vcol({ roughness: 0.86, cutout: true, detail: 'plaster' }),
+        tree: M.vcol({ roughness: 0.92, cutout: true, flat: false, emissive: false, key: 'tree', detail: 'leaf' }),
         markings,
       },
       atlas: {

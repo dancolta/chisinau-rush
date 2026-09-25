@@ -28,7 +28,7 @@ export class Landmarks {
   }
   patch(surface, x0, z0, x1, z1, lift = 0.012) {
     const s = surface === 'plaza' ? 8 : surface === 'dirt' ? 6 : surface === 'paving' ? 4 : 12
-    this.B.flat((x0 + x1) / 2, (z0 + z1) / 2, surface, s).rect(x0, z0, x1, z1, Y + lift)
+    this.B.flat((x0 + x1) / 2, (z0 + z1) / 2, lift > 0 ? surface + '_o' : surface, s).rect(x0, z0, x1, z1, Y + lift)
   }
   clear(x0, z0, x1, z1) { this.w.clearRects.push({ x0, z0, x1, z1 }) }
 
@@ -289,10 +289,10 @@ export class Landmarks {
     this.w.place('stefan', 'Monumentul lui Ștefan cel Mare', b.ix0 + 9, b.iz0 + 16, { kind: 'landmark' })
     // paths: diagonal + ring around the fountain
     const fx = b.cx, fz = b.cz + 4
-    this.B.flat(fx, fz, 'dirt', 6).disc(fx, fz, 17, Y + 0.012, 40)
+    this.B.flat(fx, fz, 'dirt_o', 6).disc(fx, fz, 17, Y + 0.012, 40)
     this.patch('dirt', b.ix0, fz - 2.5, b.ix1, fz + 2.5, 0.011)
     this.patch('dirt', fx - 2.5, b.iz0, fx + 2.5, b.iz1, 0.011)
-    this.B.flat(fx, fz, 'dirt', 6).orect((b.ix0 + fx) / 2 + 4, (b.iz0 + fz) / 2 + 4, 4, Math.hypot(fx - b.ix0, fz - b.iz0) - 10, Math.atan2(fx - b.ix0, fz - b.iz0), Y + 0.011)
+    this.B.flat(fx, fz, 'dirt_o', 6).orect((b.ix0 + fx) / 2 + 4, (b.iz0 + fz) / 2 + 4, 4, Math.hypot(fx - b.ix0, fz - b.iz0) - 10, Math.atan2(fx - b.ix0, fz - b.iz0), Y + 0.011)
     // fountain
     const g = this.g(fx, fz)
     g.cyl(8, 8.3, 0.7, 36, { x: fx, y: Y, z: fz, color: 0xa39d92 })
@@ -319,7 +319,7 @@ export class Landmarks {
     this.w.place('aleea_clasicilor', 'Aleea Clasicilor', fx + 7, b.iz0 + 30, { kind: 'spot' })
     // Borea Țigan's giant pothole camp (south-east)
     const bx = b.ix1 - 16, bz = b.iz1 - 14
-    this.B.flat(bx, bz, 'dirt', 6).disc(bx, bz, 5.5, Y + 0.013, 24)
+    this.B.flat(bx, bz, 'dirt_o', 6).disc(bx, bz, 5.5, Y + 0.013, 24)
     const k = this.st(bx, bz)
     k.cyl(3.4, 3.1, 0.2, 20, { x: bx, y: Y - 0.05, z: bz, color: 0x2b2622 })
     k.box(2.6, 2.1, 2.2, { x: bx + 5.4, y: Y, z: bz - 1.5, color: 0x6a4a8a })

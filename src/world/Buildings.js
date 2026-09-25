@@ -3,9 +3,12 @@ import { CURB_H } from './CityLayout.js'
 import { mulberry, hashStr } from './rng.js'
 
 export const PANEL_COLORS = [0xd3ccbc, 0xdcd5c3, 0xc0c6ca, 0xcab9a2, 0xaec0c3, 0xdfcca8, 0xcbc2cb, 0xe3dccc, 0xc9b79a, 0xbfb5aa]
-const SHOP_MODELS = ['building_A', 'building_E', 'building_G']
-const KAY_BLD = ['building_A', 'building_B', 'building_C', 'building_D', 'building_E', 'building_F', 'building_G', 'building_H']
 const GARAGE_DOORS = [0x6a7f8e, 0x8e3b2f, 0x3f6e4a, 0xb08a3a, 0x5a5e66, 0x7a4a2a, 0x2f4f7a, 0x9aa2a8]
+// period plasters of central Chișinău: creams, ochres, pale blues and pinks
+const PLASTER_COLORS = [0xe6dcc3, 0xdcc393, 0xe9d99c, 0xbfcdd6, 0xe0b9aa, 0xece6da, 0xc3cba8, 0xd6a98a, 0xd9cfe0, 0xf0e2c8]
+const BRICK_COLORS = [0xa65f45, 0x9a5a44, 0xb57258]
+const ROOF_COLORS = [0x7d8388, 0x6f7479, 0x8c4a3a, 0x3f5f4a, 0x93735a, 0x5d6268]
+const AWNINGS = [0x2f7a3e, 0xb3302e, 0x1f4f9c, 0xd9a520, 0x6b3f2a, 0x3a3a3a]
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _e = new THREE.Euler()
 
@@ -89,7 +92,7 @@ export class Buildings {
   }
 
   // ---------------------------------------------------------------------------
-  // Terraced row of KayKit buildings (CC0). side: which street the fronts face.
+  // Terraced row of period townhouses along a street. side: which street the fronts face.
   // line = coordinate of the building front edge; from..to along the row.
   kayRow({ side, from, to, line, seed = 1, tall = 1, only = null }) {
     const rnd = mulberry(seed)
@@ -97,50 +100,20 @@ export class Buildings {
     if (len < 8) return
     const n = Math.max(1, Math.round(len / 9.6))
     const w = len / n
-    const sx = w / 9.6
     const rot = { s: 0, n: Math.PI, e: Math.PI / 2, w: -Math.PI / 2 }[side]
-    let prev = null
+    let maxH = 0
     for (let i = 0; i < n; i++) {
       const t = from + w * (i + 0.5)
-      let name = only ? rnd.pick(only) : rnd.pick(KAY_BLD)
-      if (name === prev) name = rnd.pick(KAY_BLD)
-      prev = name
-      const sy = rnd.range(0.95, 1.2) * tall
       let x, z
       if (side === 's') { x = t; z = line - 4.8 }
       else if (side === 'n') { x = t; z = line + 4.8 }
       else if (side === 'e') { x = line - 4.8; z = t }
       else { x = line + 4.8; z = t }
-      _q.setFromEuler(_e.set(0, rot, 0))
-      _m.compose(_p.set(x, CURB_H, z), _q, _s.set(sx, sy, 1))
-      const model = this.kay[name]
-      this.B.atlas(x, z, model.geometry, _m.clone(), 'bld')
-      // KayKit backs are blank: give every building a rear facade (and exposed row ends side walls)
-      const ffx = Math.sin(rot), ffz = Math.cos(rot)
-      const rgx = -ffz, rgz = ffx
-      const W = 9.6 * sx, Hh = model.size.y * sy - 0.35, col = shade(model.wallColor ?? 0xc9b8a0, 0.97)
-      const fb = this.B.facade(x, z)
-      const params = [3.3, 2.7, (i * 7.3 + seed) % 97, 4]
-      const bx = x - ffx * 4.83, bz = z - ffz * 4.83
-      fb.wall(bx - rgx * W / 2, bz - rgz * W / 2, bx + rgx * W / 2, bz + rgz * W / 2, CURB_H, Hh, col, params)
-      const ends = []
-      if (i === 0) ends.push(-1)
-      if (i === n - 1) ends.push(1)
-      for (const e of ends) {
-        // outward normal along the row axis (+t or -t)
-        const ax = side === 's' || side === 'n' ? 1 : 0, az = 1 - ax
-        const nx = ax * e, nz = az * e
-        const cx = x + nx * (W / 2 + 0.03), cz = z + nz * (W / 2 + 0.03)
-        const dx = nz, dz = -nx
-        fb.wall(cx - dx * 4.8, cz - dz * 4.8, cx + dx * 4.8, cz + dz * 4.8, CURB_H, Hh, col, params)
-      }
-      // ground-floor shops (the models with awnings) get a brand sign slot
-      if (SHOP_MODELS.includes(name)) {
-        const fx = Math.sin(rot), fz = Math.cos(rot)
-        this.w.signSlots.push({ x: x + fx * 4.83, z: z + fz * 4.83, ry: rot, sx, sy, fx: x + fx * 7, fz: z + fz * 7 })
-      }
+      const floors = Math.max(1, Math.round((rnd.int(1, 3) + (rnd() < 0.3 ? 1 : 0)) * tall))
+      const h = this.townhouse({ cx: x, cz: z, w: w - 0.04, d: 9.6, ry: rot, floors, seed: seed * 31 + i * 7, shop: only ? true : rnd() < 0.72, rnd })
+      maxH = Math.max(maxH, h)
     }
-    const hh = 9.5 * tall
+    const hh = maxH / 2
     if (side === 's' || side === 'n') {
       const zc = side === 's' ? line - 4.8 : line + 4.8
       this.P.box((from + to) / 2, CURB_H + hh, zc, len / 2, hh, 4.7)
@@ -150,6 +123,63 @@ export class Buildings {
       this.P.box(xc, CURB_H + hh, (from + to) / 2, 4.7, hh, len / 2)
       this.w.footprints.push({ x: xc, z: (from + to) / 2, hx: 4.8, hz: len / 2 })
     }
+  }
+
+  // one 19th/early-20th century plastered house: shop ground floor, classical windows above,
+  // string course, cornice and a tin gable roof. Front (street side) = local +z.
+  townhouse({ cx, cz, w, d, ry, floors, seed, shop, rnd }) {
+    const brick = rnd() < 0.18
+    const color = brick ? rnd.pick(BRICK_COLORS) : rnd.pick(PLASTER_COLORS)
+    const gh = shop ? 4.2 : 3.3, fh = 3.3
+    const H = gh + floors * fh + 0.5
+    const W = this.frame(cx, cz, ry)
+    const fb = this.B.facade(cx, cz)
+    const bays = Math.max(2, Math.round(w / 2.9)), ws = w / bays
+    const front = shop ? (brick ? 9 : 8) : (brick ? 7 : 4)
+    const plainSides = [ws, fh, seed % 97, brick ? 7 : 4]
+    // walls clockwise: front, right side, back, left side
+    const A = W(-w / 2, d / 2), B = W(w / 2, d / 2), C = W(w / 2, -d / 2), D = W(-w / 2, -d / 2)
+    fb.wall(A[0], A[1], B[0], B[1], CURB_H, H, color, [fh, ws, seed % 97, front])
+    fb.wall(B[0], B[1], C[0], C[1], CURB_H, H, color, [fh, 2.9, (seed + 3) % 97, 0])
+    fb.wall(C[0], C[1], D[0], D[1], CURB_H, H, color, plainSides)
+    fb.wall(D[0], D[1], A[0], A[1], CURB_H, H, color, [fh, 2.9, (seed + 5) % 97, 0])
+    const g = this.B.vcol(cx, cz, 'bld')
+    const light = shade(color, 1.1), dark = shade(color, 0.72)
+    // plinth, string course over the ground floor, cornice under the roof
+    const [px, pz] = W(0, d / 2 + 0.06)
+    g.box(w + 0.02, 0.45, 0.14, { x: px, y: CURB_H, z: pz, ry, color: dark })
+    const [sx, sz] = W(0, d / 2 + 0.1)
+    g.box(w + 0.02, 0.22, 0.2, { x: sx, y: CURB_H + gh - 0.1, z: sz, ry, color: light })
+    const [kx, kz] = W(0, d / 2 + 0.2)
+    g.box(w + 0.3, 0.26, 0.42, { x: kx, y: CURB_H + H - 0.5, z: kz, ry, color: light })
+    g.box(w + 0.36, 0.14, 0.52, { x: kx, y: CURB_H + H - 0.26, z: kz, ry, color: shade(color, 1.16) })
+    // pilasters at the corners of the front
+    for (const e of [-1, 1]) {
+      const [lx, lz] = W(e * (w / 2 - 0.2), d / 2 + 0.06)
+      g.box(0.4, H - gh - 0.5, 0.12, { x: lx, y: CURB_H + gh + 0.12, z: lz, ry, color: light })
+    }
+    // gable roof, ridge along the street
+    const roofC = rnd.pick(ROOF_COLORS)
+    const rh = Math.min(3.2, d * 0.28)
+    g.prism(d + 0.9, rh, w + 0.3, { x: cx, y: CURB_H + H - 0.12, z: cz, ry: ry + Math.PI / 2, color: roofC })
+    if (rnd() < 0.7) {
+      const [chx, chz] = W((rnd() - 0.5) * w * 0.6, (rnd() - 0.5) * d * 0.3)
+      g.box(0.55, rh + 0.9, 0.55, { x: chx, y: CURB_H + H - 0.2, z: chz, ry, color: shade(color, 0.8) })
+      g.box(0.7, 0.12, 0.7, { x: chx, y: CURB_H + H + rh + 0.68, z: chz, ry, color: 0x55524e })
+    }
+    if (shop) {
+      // an awning over the shopfront now and then, and a slot for the brand sign
+      if (rnd() < 0.45) {
+        const [ax, az] = W(0, d / 2 + 0.75)
+        const ac = rnd.pick(AWNINGS)
+        g.box(w * 0.86, 0.06, 1.5, { x: ax, y: CURB_H + 3.05, z: az, ry, rx: -0.32, color: ac })
+        const [vx, vz] = W(0, d / 2 + 1.46)
+        g.box(w * 0.86, 0.28, 0.04, { x: vx, y: CURB_H + 2.62, z: vz, ry, color: shade(ac, 0.8) })
+      }
+      const ffx = Math.sin(ry), ffz = Math.cos(ry)
+      this.w.signSlots.push({ x: cx + ffx * (d / 2 + 0.07), z: cz + ffz * (d / 2 + 0.07), ry, sx: w / 9.6, sy: 1, y: CURB_H + 3.62, fx: cx + ffx * 7, fz: cz + ffz * 7 })
+    }
+    return H + rh
   }
 
   // KayKit rows around a block's perimeter; returns the courtyard rect

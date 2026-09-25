@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { SHARED, RES } from '../render/Materials.js'
+import { buildFacadeTextures, FACADE_LAYERS } from '../render/FacadeTextures.js'
 
 // Procedural facade material: windows, panel seams and night-lit rooms are
 // computed in the fragment shader from wall-space UVs (metres), so a whole
@@ -9,7 +10,9 @@ import { SHARED, RES } from '../render/Materials.js'
 //   uv       wall-space coords (u = metres along wall, v = metres above base)
 //   facade   vec4(floorH, winSpacing, seed, style)
 //            style 0 = plain wall, 1 = panel block, 2 = office ribbon windows,
-//                  3 = ruin (dark/broken), 4 = classical tall windows, 5 = shopfront ground floor + panel above
+//                  3 = ruin (dark/broken), 4 = classical tall windows, 5 = shopfront ground floor + panel above,
+//                  6 = loggia stack, 7 = brick with tall windows,
+//                  8 / 9 = classical / brick upper floors over a shopfront ground floor
 //   color    wall colour, emit (unused here)
 
 export class FacadeBuilder {
@@ -71,23 +74,33 @@ export class FacadeBuilder {
 }
 
 export function makeFacadeMaterial() {
-  const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0 })
-  m.envMapIntensity = 0.5
+  const tex = buildFacadeTextures()
+  const L = FACADE_LAYERS
+  // logical style slots, mirrored in the shader below
+  const order = ['plain', 'roof', 'panel', 'panelGround', 'loggia', 'loggiaGround', 'shop', 'office', 'ruin', 'classical', 'brick']
+  const fl = order.map((k) => new THREE.Vector3(L[k].first, L[k].count, L[k].avg))
+  const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.88, metalness: 0 })
+  m.envMapIntensity = 0.6
   m.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, SHARED)
     shader.uniforms.uResolution = RES
+    shader.uniforms.uFacadeTex = { value: tex }
+    shader.uniforms.uFL = { value: fl }
     shader.vertexShader = `attribute vec4 facade;
-varying vec4 vFacade;
+flat varying vec4 vFacade;
 varying vec2 vWallUv;
 varying float vViewZ;
+varying float vRoofN;
 ` + shader.vertexShader.replace('#include <uv_vertex>', `#include <uv_vertex>
   vFacade = facade;
-  vWallUv = uv;`).replace('#include <project_vertex>', `#include <project_vertex>
+  vWallUv = uv;
+  vRoofN = normal.y;`).replace('#include <project_vertex>', `#include <project_vertex>
   vViewZ = -mvPosition.z;`)
 
-    shader.fragmentShader = `varying vec4 vFacade;
+    shader.fragmentShader = `flat varying vec4 vFacade;
 varying vec2 vWallUv;
 varying float vViewZ;
+varying float vRoofN;
 uniform float uNight;
 uniform vec2 uCutCenter;
 uniform float uCutRadius;
@@ -95,7 +108,21 @@ uniform float uCutDepth;
 uniform float uCutAspect;
 uniform float uCutOn;
 uniform vec2 uResolution;
-float fh1(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+uniform highp sampler2DArray uFacadeTex;
+uniform vec3 uFL[11];
+// integer hash (pcg2d): exact per module, so a module never picks different variants pixel to pixel
+uvec2 pcg2d(uvec2 v) {
+  v = v * 1664525u + 1013904223u;
+  v.x += v.y * 1664525u; v.y += v.x * 1664525u;
+  v ^= v >> 16u;
+  v.x += v.y * 1664525u; v.y += v.x * 1664525u;
+  v ^= v >> 16u;
+  return v;
+}
+float fh1(vec2 p) {
+  uvec2 h = pcg2d(uvec2(ivec2(floor(p * 8.0)) + ivec2(1 << 20)));
+  return float(h.x & 0xffffffu) / 16777216.0;
+}
 float bayer4(vec2 p) {
   int x = int(mod(p.x, 4.0)); int y = int(mod(p.y, 4.0));
   int i = x + y * 4;
@@ -108,107 +135,72 @@ float bayer4(vec2 p) {
     vec2 sp = gl_FragCoord.xy / uResolution;
     vec2 dd = (sp - uCutCenter) * vec2(uCutAspect, 1.0);
     float r = length(dd) / uCutRadius;
-    float fade = 1.0 - smoothstep(0.55, 1.0, r);
-    float depthK = smoothstep(0.0, 6.0, uCutDepth - vViewZ);
-    if (fade * depthK * 0.92 > bayer4(gl_FragCoord.xy)) discard;
+    float fade = 1.0 - smoothstep(0.82, 1.0, r);
+    float depthK = smoothstep(0.0, 1.5, uCutDepth - vViewZ);
+    if (fade * depthK > bayer4(gl_FragCoord.xy)) discard;
   }
-  vec3 winEmit = vec3(0.0);`)
+  vec3 winEmit = vec3(0.0);
+  float glassMask = 0.0;`)
       .replace('#include <color_fragment>', `#include <color_fragment>
   {
     float style = floor(vFacade.w + 0.5);
-    if (style > 5.5) {
-      // balcony / loggia stack: every floor randomly open, railed or glazed with mismatched frames
-      float fh = vFacade.x, seed = vFacade.z;
-      float fl = floor(vWallUv.y / fh), fy = fract(vWallUv.y / fh);
-      float ra = fh1(vec2(fl, seed)), rb = fh1(vec2(fl * 3.1 + 1.0, seed + 5.0)), rc = fh1(vec2(fl * 7.7, seed + 9.0));
-      vec3 wall = diffuseColor.rgb;
-      vec3 frameC = rc < 0.3 ? vec3(0.9, 0.9, 0.88) : rc < 0.45 ? vec3(0.52, 0.4, 0.3) : rc < 0.65 ? vec3(0.7, 0.71, 0.72) : rc < 0.82 ? vec3(0.82, 0.79, 0.7) : rc < 0.92 ? vec3(0.5, 0.56, 0.62) : vec3(0.68, 0.52, 0.44);
-      vec3 parC = ra < 0.5 ? wall * 1.02 : ra < 0.75 ? mix(wall, frameC, 0.7) : vec3(0.3, 0.31, 0.33);
-      bool glazed = rb > 0.4;
-      vec3 col;
-      float winK = 0.0;
-      if (fy < 0.05 || fl < 0.5) col = wall * 0.8;
-      else if (fy < 0.4) {
-        col = parC;
-        if (ra >= 0.7) col = mix(col, vec3(0.12), step(0.5, fract(vWallUv.x * 6.0)) * 0.6); // metal railing bars
-      } else if (glazed) {
-        float mull = 1.0 - step(0.06, fract(vWallUv.x / 0.75)) ;
-        float tr = 1.0 - step(0.08, abs(fy - 0.43));
-        col = mix(vec3(0.16, 0.2, 0.26) + rb * 0.08, frameC, max(mull, tr));
-        winK = (1.0 - max(mull, tr));
-      } else {
-        col = vec3(0.09, 0.09, 0.1) + wall * 0.08; // open loggia, dark interior
-        winK = 0.6;
-      }
-      float lit = step(0.6, fh1(vec2(fl * 1.9, seed + 2.0))) * uNight;
-      vec3 em = winK * lit * mix(vec3(1.0, 0.74, 0.42), vec3(1.0, 0.9, 0.7), rc) * 1.2;
-      // distance anti-aliasing: blend toward the average look when floors get tiny on screen
-      float aaB = smoothstep(0.18, 0.5, fwidth(vWallUv.y / fh));
-      col = mix(col, mix(wall * 0.9, vec3(0.2, 0.22, 0.26), 0.35), aaB);
-      em = mix(em, vec3(1.0, 0.8, 0.5) * 0.2 * uNight, aaB);
-      diffuseColor.rgb = col;
-      winEmit = em;
-    } else if (style > 0.5) {
-      float fh = vFacade.x, ws = vFacade.y, seed = vFacade.z;
-      vec2 uvw = vWallUv;
-      float groundH = (style > 4.5) ? 4.2 : 0.0;
-      vec2 g = vec2(uvw.x / ws, (uvw.y - groundH) / fh);
-      vec2 cell = floor(g);
-      vec2 f = fract(g);
-      float r1 = fh1(cell + seed * 7.13);
-      float r2 = fh1(cell * 1.37 + seed * 3.1 + 11.0);
-      vec3 wall = diffuseColor.rgb;
-      // panel seams and slight per-panel tint variation (panel blocks)
-      if (style < 1.5 || style > 4.5) {
-        float seam = max(1.0 - smoothstep(0.0, 0.035, f.y), 1.0 - smoothstep(0.0, 0.02, fract(uvw.x / (ws * 2.0))));
-        wall *= 1.0 - 0.13 * seam;
-        wall *= 0.965 + 0.06 * fh1(floor(vec2(uvw.x / (ws * 2.0), g.y)) + seed);
-        // rust / water stains under some windows
-        float stain = step(0.82, fh1(vec2(cell.x, 0.0) + seed)) * smoothstep(0.35, 0.0, f.y) * smoothstep(0.1, 0.5, abs(f.x - 0.5));
-        wall *= 1.0 - 0.08 * stain;
-      }
-      float wx0 = 0.2, wx1 = 0.8, wy0 = 0.3, wy1 = 0.84;
-      if (style > 1.5 && style < 2.5) { wx0 = 0.03; wx1 = 0.97; wy0 = 0.25; wy1 = 0.8; }
-      if (style > 3.5 && style < 4.5) { wx0 = 0.3; wx1 = 0.7; wy0 = 0.18; wy1 = 0.9; }
-      float inX = step(wx0, f.x) * step(f.x, wx1);
-      float inY = step(wy0, f.y) * step(f.y, wy1);
-      float inWin = inX * inY * step(0.0, g.y);
-      // don't draw windows in the top parapet band
-      float top = vWallUv.y;
-      // frame: thin border around the glass
-      float fx = min(f.x - wx0, wx1 - f.x) * ws, fy = min(f.y - wy0, wy1 - f.y) * fh;
-      float frame = inWin * (1.0 - step(0.07, min(fx, fy)));
-      vec3 glass = mix(vec3(0.08, 0.1, 0.13), vec3(0.16, 0.2, 0.25), r1);
-      // curtains / different glazing
-      glass = mix(glass, vec3(0.3, 0.24, 0.2), step(0.9, r2) * 0.45);
-      float lit = step(0.52, r2) * uNight;
-      if (style > 2.5 && style < 3.5) { glass = vec3(0.03); lit = 0.0; wall *= 0.85; if (r1 > 0.7) glass = vec3(0.18, 0.16, 0.14); }
-      vec3 col = mix(wall, glass, inWin);
-      col = mix(col, mix(wall, vec3(0.92, 0.92, 0.9), 0.6), frame * 0.7);
-      // ground floor shopfront band
-      if (style > 4.5 && uvw.y < groundH) {
-        float band = step(0.6, uvw.y) * step(uvw.y, 3.4);
-        float mull = step(0.06, fract(uvw.x / 3.0));
-        col = mix(wall * 0.8, vec3(0.12, 0.16, 0.2), band * mull);
-        lit = band * mull * uNight * step(0.3, fh1(vec2(floor(uvw.x / 6.0), seed)));
-        inWin = band * mull;
-      }
-      vec3 warm = mix(vec3(1.0, 0.72, 0.4), vec3(1.0, 0.86, 0.62), r1);
-      vec3 cool = vec3(0.62, 0.78, 1.0);
-      vec3 em = inWin * (1.0 - frame) * lit * mix(warm, cool, step(0.9, r1)) * 1.35;
-      // distance anti-aliasing: fade the window grid into its average colour
-      float cellPx = max(fwidth(g.x), fwidth(g.y));
-      float aa = smoothstep(0.2, 0.55, cellPx);
-      float area = (wx1 - wx0) * (wy1 - wy0);
-      col = mix(col, mix(wall, vec3(0.12, 0.14, 0.18), area * 0.85), aa);
-      em = mix(em, vec3(1.0, 0.78, 0.5) * area * 0.55 * uNight * (style > 2.5 && style < 3.5 ? 0.0 : 1.0), aa);
-      diffuseColor.rgb = col;
-      winEmit = em;
+    float fh = vFacade.x, ws = vFacade.y, seed = vFacade.z;
+    vec2 uvw = vWallUv;
+    vec3 FL = uFL[0];
+    vec2 msz = vec2(3.2, 2.8);
+    vec2 org = vec2(0.0);
+    float litP = 0.45;
+    bool shopBand = false;
+    if (vRoofN > 0.5) { FL = uFL[1]; msz = vec2(4.0); litP = 0.0; }
+    else if (style < 0.5) { litP = 0.0; }
+    else if (style < 1.5) { FL = uFL[2]; msz = vec2(ws, fh); }
+    else if (style < 2.5) { FL = uFL[7]; msz = vec2(ws, fh); litP = 0.35; }
+    else if (style < 3.5) { FL = uFL[8]; msz = vec2(ws, fh); litP = 0.0; }
+    else if (style < 4.5) { FL = uFL[9]; msz = vec2(ws, fh); }
+    else if (style < 5.5) {
+      if (uvw.y < 4.2) { FL = uFL[6]; msz = vec2(3.0, 4.2); shopBand = true; litP = 0.75; }
+      else { FL = uFL[2]; msz = vec2(ws, fh); org.y = 4.2; }
     }
+    else if (style < 6.5) { FL = uFL[4]; msz = vec2(ws, fh); }
+    else if (style < 7.5) { FL = uFL[10]; msz = vec2(ws, fh); }
+    else {
+      if (uvw.y < 4.2) { FL = uFL[6]; msz = vec2(ws, 4.2); shopBand = true; litP = 0.75; }
+      else { FL = style < 8.5 ? uFL[9] : uFL[10]; msz = vec2(ws, fh); org.y = 4.2; }
+    }
+    vec2 g = (uvw - org) / msz;
+    vec2 cell = floor(g);
+    vec2 f = fract(g);
+    if (style > 0.5 && style < 1.5 && cell.y < 0.5) FL = uFL[3];
+    if (style > 5.5 && style < 6.5 && cell.y < 0.5) { FL = uFL[5]; litP = 0.0; }
+    float h1 = fh1(cell + seed * 7.13);
+    float h2 = fh1(cell * 1.37 + seed * 3.1 + 11.0);
+    float layer = FL.x + min(floor(h1 * FL.y), FL.y - 1.0);
+    vec2 dgx = dFdx(g), dgy = dFdy(g);
+    vec2 fu = f;
+    // mirror half the modules for variety (shop signs and graffiti excepted)
+    if (h2 > 0.5 && !shopBand) { fu.x = 1.0 - fu.x; dgx.x = -dgx.x; dgy.x = -dgy.x; }
+    vec4 tex = textureGrad(uFacadeTex, vec3(fu, layer), dgx, dgy);
+    // far away the per-module variety would sparkle: fade into the style's average module
+    float cellPx = max(length(dFdx(g)), length(dFdy(g)));
+    float far = smoothstep(0.06, 0.2, cellPx);
+    if (far > 0.001) tex = mix(tex, textureGrad(uFacadeTex, vec3(f, FL.z), dFdx(g), dFdy(g)), far);
+    float kind = tex.a;
+    float tint = smoothstep(0.84, 0.97, kind);
+    float glassK = 1.0 - smoothstep(0.3, 0.55, kind);
+    // wall areas take the building colour (texture is painted around a neutral grey)
+    diffuseColor.rgb = mix(tex.rgb, tex.rgb * diffuseColor.rgb * 2.85, tint);
+    float litCell = step(1.0 - litP, fh1(cell * 2.31 + seed + 5.0));
+    float lit = mix(litCell, litP, far) * uNight;
+    vec3 warm = mix(vec3(1.0, 0.7, 0.4), vec3(1.0, 0.86, 0.64), fh1(cell + 3.3));
+    if (shopBand) warm = vec3(1.0, 0.93, 0.8);
+    winEmit = glassK * lit * mix(warm, tex.rgb * 2.4 + warm * 0.25, 0.3) * 1.5;
+    glassMask = glassK * (1.0 - far) * (1.0 - uNight * 0.6);
   }`)
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+  roughnessFactor = mix(roughnessFactor, 0.12, glassMask);`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
   totalEmissiveRadiance += winEmit;`)
   }
-  m.customProgramCacheKey = () => 'facade-v2'
+  m.customProgramCacheKey = () => 'facade-v3'
   return m
 }

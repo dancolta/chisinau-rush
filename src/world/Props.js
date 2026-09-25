@@ -13,33 +13,95 @@ const LEAF_AUTUMN = [0xc9a23a, 0xd98a2e, 0xb8b03e]
 
 // ---------------------------------------------------------------------------
 // Trees: procedural low-poly, merged into chunk batches (tree kind = flat shaded + cutout)
+// lumpy leaf clusters: subdivided spheres pushed around by smooth noise (same noise for shared
+// vertices, so no cracks); a few variants are enough for a whole city of trees
+const BLOBS = []
+function blob(i) {
+  if (!BLOBS.length) {
+    for (let k = 0; k < 6; k++) {
+      const geo = new THREE.IcosahedronGeometry(1, 1)
+      const P = geo.attributes.position, N = geo.attributes.normal
+      const a = 2.1 + k * 0.37, b = 1.7 + k * 0.21, c = k * 1.3
+      for (let j = 0; j < P.count; j++) {
+        const px = P.getX(j), py = P.getY(j), pz = P.getZ(j)
+        const d = 1 + 0.16 * Math.sin(px * a + c) * Math.sin(py * b + c * 0.7) + 0.1 * Math.sin(pz * (a + 1.1) + py * 1.9 + c) + 0.06 * Math.sin((px + pz) * 4.3 + c)
+        P.setXYZ(j, px * d, py * d * 0.92, pz * d)
+        N.setXYZ(j, px, py, pz) // smooth radial normals (the geometry is non-indexed)
+      }
+      BLOBS.push(geo)
+    }
+  }
+  return BLOBS[i % BLOBS.length]
+}
+
+// shading baked into the vertex colours: dark underside and core, sunlit crown, a little dapple
+function foliageShade(cy, h) {
+  return (p, n) => {
+    const t = Math.min(1, Math.max(0, (p.y - (cy - h)) / (2 * h)))
+    const dapple = 0.94 + 0.12 * (Math.sin(p.x * 3.1 + p.z * 1.7) * Math.sin(p.y * 2.3 - p.x * 1.3) * 0.5 + 0.5)
+    return (0.5 + 0.62 * t) * (0.88 + 0.16 * Math.max(0, n.y)) * dapple
+  }
+}
+
 export function addTreeGeometry(g, x, z, rnd, kind = null) {
   const y = CURB_H
   const k = kind ?? (rnd() < 0.62 ? 'broad' : rnd() < 0.55 ? 'poplar' : rnd() < 0.5 ? 'small' : 'spruce')
   const s = rnd.range(0.85, 1.25)
   const autumn = rnd() < 0.12
-  const leaf = () => (autumn ? rnd.pick(LEAF_AUTUMN) : rnd.pick(LEAF))
+  const base = autumn ? rnd.pick(LEAF_AUTUMN) : rnd.pick(LEAF)
+  const leaf = () => { const c = new THREE.Color(base); const v = 0.9 + rnd() * 0.2; return c.setRGB(c.r * v, c.g * v, c.b * v).getHex() }
+  const bark = rnd.pick([0x4e3a2b, 0x5b4331, 0x463429])
+  const trunkShade = (p) => 0.7 + 0.3 * Math.min(1, (p.y - y) / 2.5)
   if (k === 'broad') {
-    g.cyl(0.18 * s, 0.28 * s, 3.2 * s, 6, { x, y, z, color: 0x5b4331 })
-    const n = 3 + Math.floor(rnd() * 2)
-    for (let i = 0; i < n; i++) {
-      const a = rnd() * Math.PI * 2, rr = rnd.range(0.6, 1.3) * s
-      g.add(ICO, { x: x + Math.cos(a) * rr, y: y + (3.6 + rnd() * 1.4) * s, z: z + Math.sin(a) * rr, sx: 2.2 * s, sy: 1.9 * s, sz: 2.2 * s, ry: rnd() * 3, color: leaf() })
+    const th = 2.7 * s
+    g.cyl(0.16 * s, 0.27 * s, th + 0.8 * s, 8, { x, y, z, color: bark, shade: trunkShade })
+    // limbs reaching into the crown
+    for (let i = 0; i < 2; i++) {
+      const a = i * 3.1 + rnd() * 0.8
+      g.cyl(0.05 * s, 0.11 * s, 1.9 * s, 5, { x: x + Math.cos(a) * 0.35 * s, y: y + th - 0.2 * s, z: z + Math.sin(a) * 0.35 * s, rx: Math.sin(a) * 0.7, rz: -Math.cos(a) * 0.7, color: bark })
     }
-    g.add(ICO, { x, y: y + 5.2 * s, z, sx: 1.8 * s, sy: 1.6 * s, sz: 1.8 * s, color: leaf() })
+    const cy = y + th + 1.9 * s, R = 2.5 * s, Hh = 1.9 * s
+    const center = { x, y: cy, z }
+    const shade = foliageShade(cy, Hh)
+    const n = 3
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + rnd() * 0.7, rr = rnd.range(0.55, 1.0) * R * 0.58
+      const bs = rnd.range(1.45, 1.85) * s
+      g.add(blob(Math.floor(rnd() * 6)), { x: x + Math.cos(a) * rr, y: cy + rnd.range(-0.5, 0.7) * s, z: z + Math.sin(a) * rr, sx: bs, sy: bs * 0.9, sz: bs, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
+    }
+    g.add(blob(Math.floor(rnd() * 6)), { x, y: cy + 0.95 * s, z, sx: 1.75 * s, sy: 1.45 * s, sz: 1.75 * s, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
   } else if (k === 'poplar') {
-    g.cyl(0.14 * s, 0.24 * s, 2.4 * s, 6, { x, y, z, color: 0x5b4331 })
-    g.add(ICO, { x, y: y + 5.4 * s, z, sx: 1.5 * s, sy: 4.2 * s, sz: 1.5 * s, ry: rnd() * 3, color: leaf() })
+    g.cyl(0.13 * s, 0.24 * s, 3.4 * s, 7, { x, y, z, color: bark, shade: trunkShade })
+    const cy = y + 5.6 * s, center = { x, y: cy, z }
+    const shade = foliageShade(cy, 3.4 * s)
+    for (let i = 0; i < 4; i++) {
+      const bs = (1.3 - Math.abs(i - 1.3) * 0.2) * s
+      g.add(blob(i + Math.floor(rnd() * 3)), { x: x + rnd.range(-0.2, 0.2) * s, y: y + (3.0 + i * 1.6) * s, z: z + rnd.range(-0.2, 0.2) * s, sx: bs, sy: bs * 1.45, sz: bs, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.7 })
+    }
   } else if (k === 'small') {
-    g.cyl(0.1 * s, 0.16 * s, 1.8 * s, 6, { x, y, z, color: 0x5b4331 })
-    g.add(ICO, { x, y: y + 2.6 * s, z, sx: 1.4 * s, sy: 1.3 * s, sz: 1.4 * s, ry: rnd() * 3, color: leaf() })
+    g.cyl(0.09 * s, 0.15 * s, 1.9 * s, 6, { x, y, z, color: bark, shade: trunkShade })
+    const cy = y + 2.6 * s, center = { x, y: cy, z }
+    const shade = foliageShade(cy, 1.1 * s)
+    for (let i = 0; i < 2; i++) {
+      const a = i * 3.1 + rnd(), rr = 0.4 * s
+      g.add(blob(Math.floor(rnd() * 6)), { x: x + Math.cos(a) * rr, y: cy + rnd.range(-0.2, 0.3) * s, z: z + Math.sin(a) * rr, sx: 1.1 * s, sy: 0.95 * s, sz: 1.1 * s, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
+    }
   } else {
-    g.cyl(0.14 * s, 0.2 * s, 1.4 * s, 6, { x, y, z, color: 0x4a3526 })
-    for (let i = 0; i < 3; i++) g.cone((2.2 - i * 0.55) * s, 2.4 * s, 7, { x, y: y + (1.2 + i * 1.5) * s, z, ry: rnd() * 3, color: i % 2 ? 0x2f5a34 : 0x2a5230 })
+    // spruce: tiers of drooping skirts, darker toward the trunk and the ground
+    g.cyl(0.13 * s, 0.2 * s, 1.6 * s, 7, { x, y, z, color: 0x46342a, shade: trunkShade })
+    const tiers = 4, top = y + 7.2 * s
+    const shade = (p, n) => (0.55 + 0.5 * Math.min(1, (p.y - y) / (7 * s))) * (0.85 + 0.2 * Math.max(0, n.y))
+    for (let i = 0; i < tiers; i++) {
+      const t = i / (tiers - 1)
+      const r = (2.3 - t * 1.75) * s * rnd.range(0.92, 1.08)
+      const h = (2.0 - t * 0.6) * s
+      const yy = y + (1.0 + t * 4.9) * s
+      g.cone(r, h, 9, { x, y: yy, z, ry: rnd() * 3, color: i % 2 ? 0x2d5733 : 0x284f2e, shade, bendTo: { x, y: yy - h, z }, bend: 0.35 })
+    }
+    g.cone(0.35 * s, 1.2 * s, 7, { x, y: top - 0.9 * s, z, color: 0x2f5b35, shade })
   }
   return k
 }
-const ICO = new THREE.IcosahedronGeometry(1, 0).toNonIndexed()
 
 export class Props {
   constructor(world) {
@@ -323,7 +385,7 @@ export class Props {
       if (rnd() < 0.45) continue
       const [label, bg, fg] = brands[i++ % brands.length]
       const rect = this.signs.sign(label, { bg, fg, w: 512, h: 96 })
-      this.signQuads.push({ x: s.x, y: CURB_H + 3.35 * s.sy, z: s.z, ry: s.ry, w: Math.min(6.4, 5.6 * s.sx), h: 0.95, rect, lit: 1 })
+      this.signQuads.push({ x: s.x, y: s.y ?? CURB_H + 3.35 * s.sy, z: s.z, ry: s.ry, w: Math.min(6.4, 5.6 * s.sx), h: 0.95, rect, lit: 1 })
       this.w.shops.push({ x: s.fx, z: s.fz, label, ry: s.ry })
     }
   }
@@ -341,7 +403,7 @@ export class Props {
         const order = f > 0 ? [0, 1, 2, 3, 4, 5] : [1, 0, 5, 1, 5, 4]
         for (const k of order) {
           let [lx, ly] = P[k]
-          const lz = f * 0.012
+          const lz = f * 0.04
           const x = q.x + lx * c + lz * s, z = q.z - lx * s + lz * c
           pos.push(x, q.y + ly, z)
           nor.push(s * f, 0, c * f)
@@ -386,6 +448,12 @@ export class Props {
     g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2))
     const m = new THREE.MeshBasicMaterial({ map: tex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0, color: 0xffb070, fog: true })
     m.polygonOffset = true; m.polygonOffsetFactor = -4
+    // near lamps get real point lights (NightLights); the painted pools only fill in the distance
+    m.onBeforeCompile = (sh) => {
+      sh.vertexShader = 'varying float vPoolDist;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n  vPoolDist = -mvPosition.z;')
+      sh.fragmentShader = 'varying float vPoolDist;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n  diffuseColor.a *= smoothstep(36.0, 58.0, vPoolDist);')
+    }
+    m.customProgramCacheKey = () => 'pools-v2'
     const mesh = new THREE.Mesh(g, m)
     mesh.renderOrder = 2
     mesh.frustumCulled = false

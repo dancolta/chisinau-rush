@@ -54,7 +54,7 @@ export function buildGround(world) {
     pave(b.ix1, b.iz0, b.x1, b.iz1)
     // curbstone strip on top edge + vertical curb face
     const cs = 0.28
-    const curbTop = (x0, z0, x1, z1) => split(x0, z0, x1, z1, (a, c, e, f) => B.flat((a + e) / 2, (c + f) / 2, 'curb', 3).rect(a, c, e, f, y + 0.002))
+    const curbTop = (x0, z0, x1, z1) => split(x0, z0, x1, z1, (a, c, e, f) => B.flat((a + e) / 2, (c + f) / 2, 'curb_o', 3).rect(a, c, e, f, y + 0.002))
     curbTop(b.x0, b.z0, b.x1, b.z0 + cs)
     curbTop(b.x0, b.z1 - cs, b.x1, b.z1)
     curbTop(b.x0, b.z0 + cs, b.x0 + cs, b.z1 - cs)
@@ -70,7 +70,7 @@ export function buildGround(world) {
   }
 
   // ---- outskirts (outside the ring roads) -----------------------------------
-  const og = (x0, z0, x1, z1) => split(x0, z0, x1, z1, (a, c, e, f) => B.flat((a + e) / 2, (c + f) / 2, 'grass', 22).rect(a, c, e, f, 0.01))
+  const og = (x0, z0, x1, z1) => split(x0, z0, x1, z1, (a, c, e, f) => B.flat((a + e) / 2, (c + f) / 2, 'grass_o', 22).rect(a, c, e, f, 0.01))
   const nEdge = hFirst.z - hFirst.w / 2, sEdge = hLast.z + hLast.w / 2
   const wEdge = vFirst.x - vFirst.w / 2, eEdge = vLast.x + vLast.w / 2
   og(WORLD.x0, WORLD.z0, WORLD.x1, nEdge - 2)
@@ -78,7 +78,7 @@ export function buildGround(world) {
   og(WORLD.x0, nEdge - 2, wEdge - 2, sEdge + 2)
   og(eEdge + 2, nEdge - 2, WORLD.x1, sEdge + 2)
   // gravel verge along the ring roads
-  const verge = (x0, z0, x1, z1) => split(x0, z0, x1, z1, (a, c, e, f) => B.flat((a + e) / 2, (c + f) / 2, 'dirt', 6).rect(a, c, e, f, 0.006))
+  const verge = (x0, z0, x1, z1) => split(x0, z0, x1, z1, (a, c, e, f) => B.flat((a + e) / 2, (c + f) / 2, 'dirt_o', 6).rect(a, c, e, f, 0.006))
   verge(wEdge - 2, nEdge - 2, eEdge + 2, nEdge)
   verge(wEdge - 2, sEdge, eEdge + 2, sEdge + 2)
   verge(wEdge - 2, nEdge, wEdge, sEdge)

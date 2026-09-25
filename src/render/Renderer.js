@@ -9,10 +9,10 @@ import { TimeOfDay } from './TimeOfDay.js'
 import { SHARED, RES } from './Materials.js'
 
 export const QUALITY = {
-  low: { label: 'Scăzută', post: false, shadows: false, shadowMap: 1024, shadowSize: 50, ao: false, bloom: false, smaa: false, maxDpr: 1, antialias: false },
-  medium: { label: 'Medie', post: true, shadows: true, shadowMap: 1024, shadowSize: 60, ao: false, bloom: true, smaa: true, maxDpr: 1.25, antialias: false },
-  high: { label: 'Înaltă', post: true, shadows: true, shadowMap: 2048, shadowSize: 70, ao: true, bloom: true, smaa: true, maxDpr: 1.5, antialias: false },
-  ultra: { label: 'Ultra', post: true, shadows: true, shadowMap: 4096, shadowSize: 90, ao: true, bloom: true, smaa: true, maxDpr: 2, antialias: false },
+  low: { label: 'Scăzută', post: false, shadows: false, shadowMap: 1024, shadowSize: 50, ao: false, bloom: false, smaa: false, maxDpr: 1, antialias: false, lamps: 0 },
+  medium: { label: 'Medie', post: true, shadows: true, shadowMap: 1024, shadowSize: 60, ao: false, bloom: true, smaa: true, maxDpr: 1.25, antialias: false, lamps: 4 },
+  high: { label: 'Înaltă', post: true, shadows: true, shadowMap: 2048, shadowSize: 70, ao: true, bloom: true, smaa: true, maxDpr: 1.5, antialias: false, lamps: 8 },
+  ultra: { label: 'Ultra', post: true, shadows: true, shadowMap: 4096, shadowSize: 90, ao: true, bloom: true, smaa: true, maxDpr: 2, antialias: false, lamps: 12 },
 }
 
 const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _mi = new THREE.Matrix4()
@@ -28,7 +28,7 @@ export class Renderer {
     const r = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false, depth: true, alpha: false, preserveDrawingBuffer: false })
     r.outputColorSpace = THREE.SRGBColorSpace
     r.shadowMap.enabled = true
-    r.shadowMap.type = THREE.PCFShadowMap
+    r.shadowMap.type = THREE.PCFSoftShadowMap
     r.setClearColor(0x0e0f13, 1)
     r.info.autoReset = false
     container.appendChild(r.domElement)
@@ -36,7 +36,7 @@ export class Renderer {
     this.renderer = r
 
     this.scene = new THREE.Scene()
-    this.camera = new THREE.PerspectiveCamera(42, 16 / 9, 0.4, 2600)
+    this.camera = new THREE.PerspectiveCamera(42, 16 / 9, 0.7, 2400)
     this.camera.position.set(0, 40, 40)
 
     // sky + time of day
@@ -139,19 +139,23 @@ export class Renderer {
   trackFrame(dtMs) {
     if (!this.settings.autoRes) return
     this.frameTimes.push(dtMs)
-    if (this.frameTimes.length < 90) return
+    if (this.frameTimes.length < 120) return
     const sorted = [...this.frameTimes].sort((a, b) => a - b)
     const p75 = sorted[Math.floor(sorted.length * 0.75)]
     this.frameTimes.length = 0
+    // needs two slow windows in a row to drop, four fast ones to climb back, so the
+    // resolution settles instead of pumping (a visible shimmer on its own)
+    this.slowN = p75 > 24 ? (this.slowN || 0) + 1 : 0
+    this.fastN = p75 < 13 ? (this.fastN || 0) + 1 : 0
     let s = this.dynScale
-    if (p75 > 21) s = Math.max(0.55, s - 0.1)
-    else if (p75 < 14.5 && s < 1) s = Math.min(1, s + 0.05)
+    if (this.slowN >= 2) { s = Math.max(0.6, s - 0.1); this.slowN = 0 }
+    else if (this.fastN >= 4 && s < 1) { s = Math.min(1, s + 0.1); this.fastN = 0 }
     if (s !== this.dynScale) { this.dynScale = s; this.resize() }
   }
 
   updateEnvironment(force = false) {
     const h = this.tod.hour
-    if (!force && Math.abs(h - this._envHour) < 0.25) return
+    if (!force && Math.abs(h - this._envHour) < 0.04) return
     this._envHour = h
     const old = this.envRT
     this.envRT = this.pmrem.fromScene(this.envScene, 0.04, 1, 3000)
@@ -177,11 +181,15 @@ export class Renderer {
     this.weather?.apply(this)
   }
 
-  // keep the shadow frustum centred on the action, snapped to texels to avoid shimmer
+  // keep the shadow frustum centred on the action, snapped to texels to avoid shimmer.
+  // The sun's direction only moves in small steps: re-aiming the shadow map every frame
+  // makes every shadow edge in the city crawl.
   updateShadowFocus(focus) {
     this.focus.copy(focus)
     const L = this.sun
-    const dir = this.tod.lightDir
+    this.shadowDir ||= this.tod.lightDir.clone()
+    if (this.shadowDir.angleTo(this.tod.lightDir) > 0.006) this.shadowDir.copy(this.tod.lightDir)
+    const dir = this.shadowDir
     const size = this.q.shadowSize * 2
     const texel = size / this.q.shadowMap
     _m.lookAt(_v.set(0, 0, 0), _v.copy(dir).negate(), THREE.Object3D.DEFAULT_UP)
