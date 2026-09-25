@@ -28,16 +28,16 @@ class SkinBuilder extends GeoBuilder {
   }
 }
 
-const SPHERE = new THREE.SphereGeometry(1, 12, 9).toNonIndexed()
-const SPHERE_LO = new THREE.SphereGeometry(1, 8, 6).toNonIndexed()
-const DOME = new THREE.SphereGeometry(1, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.55).toNonIndexed()
-const CAP = new THREE.SphereGeometry(1, 12, 5, 0, Math.PI * 2, 0, Math.PI * 0.36).toNonIndexed()
-const CYL8 = new THREE.CylinderGeometry(1, 1, 1, 8).toNonIndexed()
+const SPHERE = new THREE.SphereGeometry(1, 16, 12).toNonIndexed()
+const SPHERE_LO = new THREE.SphereGeometry(1, 10, 8).toNonIndexed()
+const DOME = new THREE.SphereGeometry(1, 16, 7, 0, Math.PI * 2, 0, Math.PI * 0.55).toNonIndexed()
+const CAP = new THREE.SphereGeometry(1, 16, 6, 0, Math.PI * 2, 0, Math.PI * 0.36).toNonIndexed()
+const CYL8 = new THREE.CylinderGeometry(1, 1, 1, 14).toNonIndexed()
 const CYL6 = new THREE.CylinderGeometry(1, 1, 1, 6).toNonIndexed()
 const BOX = new THREE.BoxGeometry(1, 1, 1).toNonIndexed()
 const CONE = new THREE.ConeGeometry(1, 1, 8).toNonIndexed()
 
-function tapered(rTop, rBot, seg = 8) {
+function tapered(rTop, rBot, seg = 14) {
   const k = `${rTop}:${rBot}:${seg}`
   if (!tapered.cache.has(k)) tapered.cache.set(k, new THREE.CylinderGeometry(rTop, rBot, 1, seg).toNonIndexed())
   return tapered.cache.get(k)
@@ -66,12 +66,12 @@ export function buildCharacter(spec) {
   const legC = bottom.style === 'skirt' || bottom.style === 'dress' ? (spec.stockings ?? skin) : bottom.color
   for (const [side, legB, shinB] of [[1, BONE.legL, BONE.shinL], [-1, BONE.legR, BONE.shinR]]) {
     const x = side * lx
-    b.bone(legB).add(tapered(0.1 * Wd, 0.082 * Wd), { x, y: (yHip + yKnee) / 2, z: 0, sy: yHip - yKnee, color: legC })
-    b.bone(shinB).add(tapered(0.08 * Wd, 0.066 * Wd), { x, y: (yKnee + yAnkle) / 2 + 0.02, z: 0, sy: yKnee - yAnkle, color: legC })
+    b.bone(legB).add(tapered(0.108 * Wd, 0.088 * Wd), { x, y: (yHip + yKnee) / 2, z: 0, sy: yHip - yKnee, color: legC })
+    b.bone(shinB).add(tapered(0.086 * Wd, 0.07 * Wd), { x, y: (yKnee + yAnkle) / 2 + 0.02, z: 0, sy: yKnee - yAnkle, color: legC })
     b.add(SPHERE_LO, { x, y: yKnee, z: 0, sx: 0.084 * Wd, sy: 0.08, sz: 0.084 * Wd, color: legC })
-    // shoe
-    b.add(BOX, { x, y: 0.05, z: 0.05, sx: 0.13 * Wd, sy: 0.1, sz: 0.27, color: shoes })
-    b.add(BOX, { x, y: 0.005, z: 0.05, sx: 0.135 * Wd, sy: 0.02, sz: 0.28, color: shadeHex(shoes, 0.6) })
+    // shoe: rounded upper on a flat sole
+    b.add(SPHERE, { x, y: 0.07, z: 0.06, sx: 0.068 * Wd, sy: 0.07, sz: 0.145, color: shoes })
+    b.add(BOX, { x, y: 0.0, z: 0.055, sx: 0.13 * Wd, sy: 0.035, sz: 0.28, color: shadeHex(shoes, 0.6) })
     if (bottom.stripes) {
       b.bone(legB).add(BOX, { x: x + side * 0.097 * Wd, y: (yHip + yKnee) / 2, z: 0, sx: 0.012, sy: yHip - yKnee, sz: 0.03, color: bottom.stripes })
       b.bone(shinB).add(BOX, { x: x + side * 0.078 * Wd, y: (yKnee + yAnkle) / 2 + 0.03, z: 0, sx: 0.012, sy: yKnee - yAnkle - 0.02, sz: 0.03, color: bottom.stripes })
@@ -126,9 +126,9 @@ export function buildCharacter(spec) {
   for (const [s, armB, foreB] of [[1, BONE.armL, BONE.foreL], [-1, BONE.armR, BONE.foreR]]) {
     const x = s * sx
     const yE = yShoulder - 0.29 * H, yW = yE - 0.27 * H
-    b.bone(armB).add(tapered(0.078 * Wd, 0.066 * Wd), { x, y: (yShoulder + yE) / 2, z: 0, sy: yShoulder - yE, color: sleeveC })
+    b.bone(armB).add(tapered(0.084 * Wd, 0.071 * Wd), { x, y: (yShoulder + yE) / 2, z: 0, sy: yShoulder - yE, color: sleeveC })
     if (top.stripes || top.style === 'tracksuit') b.add(BOX, { x: x + s * 0.075 * Wd, y: (yShoulder + yE) / 2, z: 0, sx: 0.012, sy: yShoulder - yE, sz: 0.028, color: top.stripes ?? 0xf2f2f2 })
-    b.bone(foreB).add(tapered(0.066 * Wd, 0.056 * Wd), { x, y: (yE + yW) / 2, z: 0, sy: yE - yW, color: forearmC })
+    b.bone(foreB).add(tapered(0.07 * Wd, 0.06 * Wd), { x, y: (yE + yW) / 2, z: 0, sy: yE - yW, color: forearmC })
     b.add(SPHERE_LO, { x, y: yE, z: 0, sx: 0.07 * Wd, sy: 0.06, sz: 0.07 * Wd, color: sleeveC })
     b.add(SPHERE_LO, { x, y: yW - 0.055, z: 0.005, sx: 0.064, sy: 0.08, sz: 0.056, color: skin }) // hand
     if (top.stripes || top.style === 'tracksuit') b.add(BOX, { x: x + s * 0.064 * Wd, y: (yE + yW) / 2, z: 0, sx: 0.012, sy: yE - yW, sz: 0.026, color: top.stripes ?? 0xf2f2f2 })
@@ -251,6 +251,16 @@ export function sharedMaterial() {
   if (!_mat) {
     _mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, metalness: 0 })
     _mat.envMapIntensity = 0.6
+    // soft rim light keeps people readable against any background, day or night
+    _mat.onBeforeCompile = (sh) => {
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+  {
+    float rim = pow(1.0 - clamp(dot(normalize(vNormal), normalize(vViewPosition)), 0.0, 1.0), 3.0);
+    totalEmissiveRadiance += diffuseColor.rgb * rim * 0.22 + vec3(0.55, 0.62, 0.8) * rim * 0.05;
+  }`)
+    }
+    _mat.customProgramCacheKey = () => 'char-v2'
   }
   return _mat
 }

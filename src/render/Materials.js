@@ -85,8 +85,11 @@ float bayer4(vec2 p) {
   }`)
     }
     if (emissiveAttr) {
+      // emit < 0 marks glass: smooth and reflective, never glowing
       fs = fs.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-  totalEmissiveRadiance += diffuseColor.rgb * vEmit * uNight * 2.2;`)
+  totalEmissiveRadiance += diffuseColor.rgb * max(vEmit, 0.0) * uNight * 2.2;`)
+      fs = fs.replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+  if (vEmit < -0.5) roughnessFactor = 0.07;`)
     }
     if (nightEmissiveMap) {
       fs = fs.replace('#include <emissivemap_fragment>', `#ifdef USE_EMISSIVEMAP

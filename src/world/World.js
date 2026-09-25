@@ -91,6 +91,17 @@ export class World {
       o.polygonOffset = true; o.polygonOffsetFactor = -1; o.polygonOffsetUnits = -2
       base[k + '_o'] = o
     }
+    // grass tiles over 22 m, so close up it needs a finer second sample of itself
+    for (const m of [base.grass, base.grass_o]) {
+      m.onBeforeCompile = (sh) => {
+        sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+  {
+    vec3 det = texture2D(map, vMapUv * 8.7 + vec2(0.31, 0.17)).rgb;
+    diffuseColor.rgb *= clamp(0.45 + 1.8 * dot(det, vec3(0.3333)), 0.7, 1.35);
+  }`)
+      }
+      m.customProgramCacheKey = () => 'grass-detail'
+    }
     return base
   }
 
