@@ -8,9 +8,14 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --port 4173",
-    "play": "node tools/play.mjs"
+    "play": "node tools/play.mjs",
+    "api": "node tools/api-dev.mjs",
+    "db:migrate": "node tools/db-migrate.mjs",
+    "test:api": "node tools/api-test.mjs && node tools/api-test.mjs --neon",
+    "test:account": "node tools/account.mjs"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "playwright": "^1.56.1",
     "vite": "^7.3.6"
   },
@@ -20,6 +25,7 @@
     "@fontsource/bungee": "^5.3.0",
     "@fontsource/paytone-one": "^5.3.0",
     "@fontsource/rubik": "^5.3.0",
+    "@neondatabase/serverless": "^1.1.0",
     "n8ao": "^2.0.1",
     "postprocessing": "^6.39.5",
     "three": "^0.186.0"
