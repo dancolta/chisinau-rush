@@ -113,7 +113,8 @@ export class Director {
     const p = g.player
     p.control = false
     if (p.vehicle) p.vehicle.throttle = 0
-    p.char.anim.set('handsup')
+    // a held pose: the player's own animation state is rewritten every frame
+    if (!p.vehicle) p.char.anim.play('surrender')
     g.audio?.sting('busted')
     const sgt = { name: 'Sergentul', role: 'Poliția Chișinău', spec: CAST.cop, id: 'cop_generic', voice: { pitch: 0.85, type: 'gruff' } }
     const bribe = Math.round((30 + lvl * 45) * (pr.tier('pol') >= 3 ? 0.5 : 1))
@@ -154,7 +155,7 @@ export class Director {
   release() {
     const p = this.game.player
     p.control = true
-    p.char.anim.set('idle')
+    p.char.anim.stop('surrender')
     this.game.input.clear()
   }
 

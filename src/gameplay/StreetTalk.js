@@ -1,7 +1,7 @@
 import { pickLine, TOUGH_ANGRY } from '../entities/NPC.js'
 import { angleDiff } from '../entities/Character.js'
 import { streetName } from '../world/CityLayout.js'
-import { GOP, BAB, CIV, COP, VEND, CARDS, WED, CREW, NAMES, ROLES } from '../data/streettalk.js'
+import { GOP, BAB, CIV, COP, VEND, CARDS, WED, CREW, NAMES, ROLES, HOOD, KID, CROWD } from '../data/streettalk.js'
 import { fill } from '../story/hero.js'
 
 // Walk up to almost anyone on the street and press E: gopniks (make friends, buy them seeds,
@@ -12,7 +12,7 @@ import { fill } from '../story/hero.js'
 const pick = (a) => a[Math.floor(Math.random() * a.length)]
 const BYE = {
   gopnik: 'Nimic. Pa, pacani.', babushka: 'Pa, bunică. Sănătate!', civilian: 'Nimic, scuzați.', cop: 'Nimic, șefu\'. Spor la treabă.',
-  vendor: 'Nimic, mersi.', cards: 'Altă dată, moșule.', wedding: 'Casă de piatră! Pa.', crew: 'Nimic, hai.',
+  vendor: 'Nimic, mersi.', cards: 'Altă dată, moșule.', wedding: 'Casă de piatră! Pa.', crew: 'Nimic, hai.', kid: 'Pa! Fii cuminte.',
 }
 const BREAD = /pâine|franzel|chifl|covrig|cozonac/i
 // respect the story earns you on the street
@@ -34,6 +34,14 @@ export class StreetTalk {
       label: () => this.label(this.cand), enabled: () => !!this.cand && !this.talking,
       onInteract: () => this.talk(this.cand),
     })
+    // wanted, next to a cop: hands up and talk (a fine, a bribe, giving up)
+    const pol = () => game.police.surrenderTo()
+    game.interaction.add({
+      id: 'police_surrender', r: 3.4, priority: 3,
+      x: () => pol()?.pos.x ?? 1e9, z: () => pol()?.pos.z ?? 1e9,
+      label: () => game.police.surrenderLabel(), enabled: () => !!pol(),
+      onInteract: () => game.police.surrender(),
+    })
     game.events.on('mission:pass', (def) => { const r = STORY_GAIN[def?.id]; if (r) for (const [k, n] of Object.entries(r)) game.progress.addRespect(k, n) })
     game.events.on('shop:buy', ({ item }) => {
       const e = this.errand
@@ -45,6 +53,14 @@ export class StreetTalk {
   }
 
   fill(s, vars) { return fill(this.game, s, vars) }
+  // a line from a pool that you haven't just heard (small talk that doesn't repeat itself)
+  fresh(pool) {
+    const seen = (this.heard ||= new Map()).get(pool) || []
+    const left = pool.filter((l) => !seen.includes(l))
+    const l = pick(left.length ? left : pool)
+    this.heard.set(pool, [...seen, l].slice(-Math.max(1, Math.floor(pool.length / 2))))
+    return l
+  }
 
   // ---- game days and daily caps ------------------------------------------------------------------
   tickDay() {
@@ -91,6 +107,8 @@ export class StreetTalk {
     for (const n of g.peds.list) test(n)
     for (const n of g.ambient.npcs) test(n)
     for (const n of g.crew.list) test(n)
+    // officers walking back to their car after a chase can be talked to too
+    for (const n of g.police.officers) if (n.cop?.mode === 'return') test(n)
     if (!best || this.underAttack()) return
     // right against a car door, E gets you in the car
     if (g.vehicles.nearestEnterable(p.pos.x, p.pos.z, 0.9)) return
@@ -103,14 +121,14 @@ export class StreetTalk {
     if (a === 'crew') return `Vorbește cu ${n.stName || 'omul tău'}`
     if (a === 'cards') return 'Joacă o tură de cărți cu moșnegii'
     if (a === 'wedding') return 'Felicită mirii'
-    const who = { gopnik: 'gopnicul', babushka: 'bunica', cop: 'polițistul', vendor: 'vânzătoarea' }[a] || (n.voice?.type === 'female' ? 'trecătoarea' : 'trecătorul')
+    const who = { gopnik: 'gopnicul', babushka: 'bunica', cop: 'polițistul', vendor: 'vânzătoarea', kid: 'copilul' }[a] || (n.voice?.type === 'female' ? 'trecătoarea' : 'trecătorul')
     return `Vorbește cu ${who}`
   }
 
   name(n) {
     if (n.stName) return n.stName
     const a = this.arch(n)
-    const pool = a === 'gopnik' || a === 'crew' ? NAMES.gopnik : a === 'babushka' ? NAMES.babushka : a === 'cop' ? NAMES.cop : a === 'vendor' ? NAMES.vendor
+    const pool = a === 'gopnik' || a === 'crew' ? NAMES.gopnik : a === 'babushka' ? NAMES.babushka : a === 'cop' ? NAMES.cop : a === 'vendor' ? NAMES.vendor : a === 'kid' ? NAMES.kid
       : a === 'cards' ? NAMES.oldman : n.voice?.type === 'female' ? NAMES.woman : NAMES.man
     n.stName = pick(pool)
     return n.stName
@@ -182,11 +200,16 @@ export class StreetTalk {
       if (e && e.npc === n) return this.fill(e.bought ? 'A, ai adus pâinea, maică? Ce bun ești!' : BAB.errandWait)
       return this.fill(pick(BAB.greet))
     }
-    if (a === 'cop') return this.fill(pick(COP.greet))
+    if (a === 'cop') {
+      if (n.chased && !this.mem(n, true).metAfter) { this.mem(n, true).metAfter = true; return this.fill(COP.afterChase) }
+      if (pr.tier('pol') >= 3) return this.fill(pick(COP.salute))
+      return this.fill(pick(COP.greet))
+    }
     if (a === 'vendor') return this.fill(pick(VEND.greet))
     if (a === 'cards') return this.fill(pick(CARDS.greet))
     if (a === 'wedding') return this.fill(pick(WED.greet))
     if (a === 'crew') return this.fill(pick(CREW.greet))
+    if (a === 'kid') return this.fill(pick(KID.greet))
     return this.fill(pick(CIV.greet))
   }
 
@@ -212,7 +235,7 @@ export class StreetTalk {
       const t = this.tipDosar()
       if (t) { st.tipDay = this.day; return { line: pick(GOP.tip), vars: { place: t } } }
     }
-    return { line: pick(GOP.chat) }
+    return { line: this.fresh(GOP.chat) }
   }
 
   gopSeeds(n, cost) {
@@ -255,7 +278,7 @@ export class StreetTalk {
     const out = []
     if (e && e.npc === n) out.push(e.bought ? { text: 'Poftiți pâinea, bunică.', run: () => this.errandDone(n) } : { text: 'Încă n-am luat pâinea…', run: () => ({ line: BAB.errandWait }) })
     out.push({ text: 'Sărut-mâna! Ce se mai aude?', run: () => this.babGossip(n) })
-    out.push({ text: 'Pensia v-o venit?', run: () => ({ line: pick(BAB.pension) }) })
+    out.push({ text: 'Pensia v-o venit?', run: () => ({ line: this.fresh(BAB.pension) }) })
     if (!e && n.ambient && n.spot) out.push({ text: 'Vă ajut cu ceva?', run: () => this.errandStart(n) })
     if (pr.type === 'badanta' && !st.badanta) out.push({ text: 'Și eu am fost badantă, doamnă. Doișpe ani.', run: () => this.babBadanta(n) })
     if (pr.perk.pickpocket) out.push({ text: '(Buzunărește sacoșa)', cost: 'hoț', run: () => this.pickpocket(n, 'babushka') })
@@ -271,7 +294,7 @@ export class StreetTalk {
       const t = hole ? this.tipPothole() : this.tipDosar()
       if (t) { st.tipDay = this.day; return { line: hole ? BAB.tipPothole : BAB.tipDosar, vars: { place: t } } }
     }
-    return { line: pick(BAB.gossip) }
+    return { line: this.fresh(BAB.gossip) }
   }
 
   babBadanta(n) {
@@ -307,6 +330,7 @@ export class StreetTalk {
 
   errandDone(n) {
     const pr = this.game.progress
+    this.mem(n, true).helped = true
     this.endErrand()
     pr.feed(0.3); pr.heal(10)
     pr.addCivic(3)
@@ -338,6 +362,8 @@ export class StreetTalk {
   civilian(n) {
     const pr = this.game.progress, st = this.mem(n, true)
     return [
+      n.calling ? { text: CROWD.callStop, cost: '20 lei', disabled: pr.lei < 20, run: () => ({ end: true, line: this.game.crowd.hushCaller(n) || '…', secs: 3.2 }) } : null,
+      n.debtor ? { text: HOOD.favor.datornic.ask, cost: '💸', run: () => ({ end: true, line: this.game.hood.debtorPaid(n) || '…', secs: 3.6 }) } : null,
       { text: 'Ce mai faceți?', run: () => this.civChat() },
       { text: 'Unde-i ceva de văzut prin oraș?', run: () => this.civWhere() },
       { text: 'Împrumutați-mi zece lei de rutieră?', run: () => this.civLend(n) },
@@ -349,7 +375,7 @@ export class StreetTalk {
 
   civChat() {
     if (this.cap('civXp', 8)) this.game.progress.addXp(5)
-    return { line: pick(CIV.chat) }
+    return { line: this.fresh(CIV.chat) }
   }
 
   civWhere() {
@@ -371,7 +397,9 @@ export class StreetTalk {
   civGive(n) {
     const pr = this.game.progress
     if (!pr.spend(20)) return { line: '…' }
-    this.mem(n, true).given = true
+    const st = this.mem(n, true)
+    st.given = true
+    st.helped = true   // greets you next time, maybe with a tip; a tough one has your back
     pr.addCivic(2)
     if (this.cap('give', 5)) pr.addXp(10, 'Omenie')
     return { line: pr.type === 'badanta' ? CIV.giveBadanta : CIV.give }
@@ -410,21 +438,85 @@ export class StreetTalk {
     return { end: true, line: CIV.pickFail, secs: 2.4 }
   }
 
+  // ---- kids from the blocks -------------------------------------------------------------------------------------------
+  kid(n) {
+    const pr = this.game.progress, st = this.mem(n, true)
+    const ice = pr.price(5)
+    return [
+      { text: 'Ce faci, măi copile?', run: () => this.kidJoke() },
+      !st.icecream ? { text: 'Uite cinci lei de înghețată.', cost: `${ice} lei`, disabled: pr.lei < ice, run: () => this.kidIce(n, ice) } : null,
+      { text: 'Știi vreun secret de-al cartierului?', cost: '📍', run: () => this.kidSecret(n) },
+    ]
+  }
+
+  kidJoke() {
+    if (this.cap('kidJoke', 5)) this.game.progress.addXp(3)
+    return { line: this.fresh(KID.joke) }
+  }
+
+  // the grannies hear about it by evening
+  kidIce(n, cost) {
+    const pr = this.game.progress, st = this.mem(n, true)
+    if (!pr.spend(cost)) return { line: '…' }
+    st.icecream = true; st.helped = true
+    pr.addCivic(1)
+    pr.addRespect('bab', 2, 'ai cumpărat înghețată unui copil')
+    n.char.anim.play('cheer')
+    return { line: KID.icecream }
+  }
+
+  kidSecret(n) {
+    const st = this.mem(n, true)
+    if (!st.icecream || st.secret) return { line: KID.noSecret }
+    st.secret = true
+    const t = this.tipDosar() || this.tipPothole()
+    return t ? { line: KID.secret, vars: { place: t } } : { line: this.fresh(KID.joke) }
+  }
+
   // ---- patrol cops -------------------------------------------------------------------------------------------------
   cop(n) {
-    const pr = this.game.progress
+    const g = this.game, pr = g.progress
     const coffee = pr.price(20)
+    const inc = g.life.openIncident()
     return [
       { text: 'Totul liniștit, șefu\'?', run: () => this.copChat() },
       { text: 'O cafea, șefu\'? Din partea mea.', cost: `${coffee} lei`, disabled: pr.lei < coffee, run: () => this.copCoffee(n, coffee) },
       { text: 'Știu unde stau gopnicii…', cost: '−respect gopnici', run: () => this.copSnitch() },
       { text: 'Ce te uiți, gabor?', cost: '★', run: () => this.copInsult(n) },
+      { text: 'Mă puteți îndruma, șefu\'?', cost: '📍', run: () => this.copWhere() },
+      inc ? { text: COP.reportAsk, cost: '+respect poliție', run: () => this.copReport(inc) } : null,
     ]
   }
 
   copChat() {
+    // the chat always gives something: a nod from the force, or at least a joke
     if (this.cap('polChat', 3)) this.game.progress.addRespect('pol', 1)
-    return { line: pick(COP.chat) }
+    else if (this.cap('polJoke', 6)) this.game.progress.addXp(3)
+    return { line: this.fresh(COP.chat) }
+  }
+
+  // where you're headed (the waypoint), or somewhere worth seeing
+  copWhere() {
+    const g = this.game, P = g.player.pos, mk = g.ui.marker
+    let q = mk && Math.hypot(mk.x - P.x, mk.z - P.z) > 30 ? { x: mk.x, z: mk.z, name: mk.label || 'acolo' } : null
+    if (!q) {
+      const L = Object.values(g.world.places).filter((p) => p.kind === 'landmark' && Math.hypot(p.x - P.x, p.z - P.z) > 60)
+      q = pick(L.length ? L : Object.values(g.world.places).filter((p) => p.kind === 'landmark'))
+    }
+    this.addTip(q.x, q.z, q.name, '📍', false)
+    return { end: true, line: COP.where, vars: { place: q.name }, secs: 4.2 }
+  }
+
+  copReport(inc) {
+    const g = this.game, pr = g.progress
+    inc.reported = true
+    pr.addRespect('pol', 4, 'ai raportat')
+    pr.addCivic(2)
+    pr.addXp(10, 'Cetățean vigilent')
+    let line = COP.report[inc.kind] || COP.report.any
+    // a cop who trusts you gets your money back from the lads
+    if (inc.kind === 'shake' && inc.lei && pr.tier('pol') >= 2) { pr.addLei(inc.lei, 'Banii înapoi, „găsiți" de poliție'); line += ' ' + COP.reportRefund }
+    return { line }
   }
 
   copCoffee(n, cost) {
@@ -461,21 +553,23 @@ export class StreetTalk {
   // ---- the market --------------------------------------------------------------------------------------------------
   vendor(n) {
     const pr = this.game.progress, st = this.mem(n, true)
-    const price = st.cheap ? 5 : pr.price(10)
+    // word gets around the market: the grannies' favourite pays less
+    const fav = pr.tier('bab') >= 2
+    const price = st.cheap || fav ? 5 : pr.price(10)
     return [
-      { text: 'Un kil de roșii, vă rog.', cost: `${price} lei`, disabled: pr.lei < price, run: () => this.vendBuy(price) },
+      { text: 'Un kil de roșii, vă rog.', cost: `${price} lei`, disabled: pr.lei < price, run: () => this.vendBuy(price, fav && !st.cheap) },
       !st.haggled ? { text: 'Dă mai ieftin!', run: () => this.vendHaggle(n) } : null,
-      { text: 'Ce se aude prin piață?', run: () => ({ line: pick(VEND.gossip) }) },
+      { text: 'Ce se aude prin piață?', run: () => ({ line: this.fresh(VEND.gossip) }) },
       { text: 'Iau un măr și fug.', cost: '🍎', run: () => this.vendSteal(n) },
     ]
   }
 
-  vendBuy(price) {
+  vendBuy(price, fav = false) {
     const g = this.game, pr = g.progress
     if (!pr.spend(price)) return { line: '…' }
     pr.feed(0.15); pr.heal(5)
     g.audio?.sfx('pickup', { bus: 'ui' })
-    return { line: VEND.buy }
+    return { line: fav ? VEND.babDiscount : VEND.buy }
   }
 
   vendHaggle(n) {
@@ -501,7 +595,7 @@ export class StreetTalk {
     const pr = this.game.progress, stake = 20
     return [
       { text: 'Intru și eu la o tură.', cost: `${stake} lei`, disabled: pr.lei < stake, run: () => this.cardsPlay(stake) },
-      { text: 'Cine câștigă azi?', run: () => ({ line: pick(CARDS.chat) }) },
+      { text: 'Cine câștigă azi?', run: () => ({ line: this.fresh(CARDS.chat) }) },
     ]
   }
 
@@ -598,6 +692,6 @@ export class StreetTalk {
     this.tips = this.tips.filter((t) => now < t.until && Math.hypot(t.x - P.x, t.z - P.z) > 7)
   }
 
-  tags() { return this.tips.map((t) => ({ x: t.x, y: t.y, z: t.z, icon: t.icon, label: t.label })) }
-  blips() { return this.tips.map((t) => ({ kind: 'icon', x: t.x, z: t.z, icon: t.icon })) }
+  tags() { return this.tips.map((t) => ({ x: t.x, y: t.y, z: t.z, icon: t.icon, label: t.label })).concat(this.game.hood?.tags() || []) }
+  blips() { return this.tips.map((t) => ({ kind: 'icon', x: t.x, z: t.z, icon: t.icon })).concat(this.game.hood?.blips() || []) }
 }
