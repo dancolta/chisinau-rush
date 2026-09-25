@@ -70,6 +70,7 @@ export class Progress {
     this.stats = { km: 0, ko: 0, cars: 0, fares: 0, bribes: 0, busted: 0, fainted: 0, eaten: 0, races: 0, talks: 0, recruits: 0, fights: 0 }
     this.hour = 17.6
     this.passiveAcc = 0
+    this.side = null           // aura, challenges, stunt records (src/side fills it in)
   }
 
   get rank() { return RANKS[this.rankIdx] }
@@ -170,7 +171,7 @@ export class Progress {
       v: 3, name: this.name, type: this.type, lei: this.lei, hp: this.hp, maxHp: this.maxHp, hunger: this.hunger,
       xp: this.xp, rankIdx: this.rankIdx, cred: this.cred, civic: this.civic, weapons: this.weapons, weapon: this.weapon,
       flags: this.flags, story: this.story, dosare: this.dosare, potholes: this.potholes, stats: this.stats, respect: this.respect,
-      carry: this.carry, outfit: this.outfit, clothes: this.clothes,
+      carry: this.carry, outfit: this.outfit, clothes: this.clothes, side: this.side,
       hour: g.renderer.tod.hour, pos: p ? { x: p.pos.x, z: p.pos.z } : null, t: Date.now(),
     }
   }
@@ -188,7 +189,7 @@ export class Progress {
   load(d) {
     this.reset({ name: d.name, type: d.type })
     const fresh = this.respect
-    for (const k of ['lei', 'hp', 'maxHp', 'hunger', 'xp', 'rankIdx', 'cred', 'civic', 'weapons', 'weapon', 'flags', 'story', 'dosare', 'potholes', 'stats', 'hour', 'respect', 'carry', 'clothes']) if (d[k] !== undefined) this[k] = d[k]
+    for (const k of ['lei', 'hp', 'maxHp', 'hunger', 'xp', 'rankIdx', 'cred', 'civic', 'weapons', 'weapon', 'flags', 'story', 'dosare', 'potholes', 'stats', 'hour', 'respect', 'carry', 'clothes', 'side']) if (d[k] !== undefined) this[k] = d[k]
     // older saves: carry what you own (up to the limit), wear what you came in
     if (!Array.isArray(d.carry)) this.carry = WEAPON_ORDER.filter((k) => k !== 'fist' && this.weapons.includes(k)).slice(0, CARRY_MAX)
     this.carry = this.carry.filter((k) => this.weapons.includes(k))

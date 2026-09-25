@@ -53,7 +53,7 @@ export class Menus {
         <div class="mm-logo">CHIȘINĂU<span>RUSH</span></div>
         <div class="mm-tag">De la <b class="y">plecat peste hotare</b> la <b class="y">primar</b>. Un oraș, o sută de gropi, un primar care vorbește prea des la telefon.</div>
         <div class="mm-btns"></div>
-        ${save ? `<div class="mm-save">Salvare: ${save.name} · ${RANKS[save.rankIdx || 0].name} · ${new Date(save.t).toLocaleString('ro-RO')}</div>` : ''}
+        ${save ? `<div class="mm-save">Salvare: ${save.name} · ${RANKS[save.rankIdx || 0].name}${save.side?.aura?.level > 1 ? ` · aură nivel ${save.side.aura.level}` : ''} · ${new Date(save.t).toLocaleString('ro-RO')}</div>` : ''}
         <div class="mm-foot">WASD mișcare · Shift sprint · E acțiune · Click/J lovește · Space sari / frână de mână · Q armă · M hartă · Esc pauză<br>Asset-uri CC0: KayKit (Kay Lousberg), Kenney. Satiră. Orice asemănare cu primari reali e… lucrăm la asta.</div>
       </div><div></div>`)
     const btns = m.querySelector('.mm-btns')
@@ -187,7 +187,7 @@ export class Menus {
     g.audio?.duck(0.35, 0.3)
     const m = el('div', 'pause', `
       <div class="top"><h1>PAUZĂ</h1><div class="tabs">
-        <button data-t="map">Hartă</button><button data-t="missions">Misiuni</button><button data-t="char">Personaj</button><button data-t="controls">Controale</button><button data-t="settings">Setări</button></div></div>
+        <button data-t="map">Hartă</button><button data-t="missions">Misiuni</button><button data-t="char">Personaj</button><button data-t="aura">Aură</button><button data-t="controls">Controale</button><button data-t="settings">Setări</button></div></div>
       <div class="body"></div>
       <div class="foot"><button class="btn primary resume">▶ Continuă</button><button class="btn save">💾 Salvează</button><button class="btn danger quit">Meniu principal</button></div>`)
     this.layer.appendChild(m)
@@ -200,6 +200,7 @@ export class Menus {
       if (t === 'map') this.renderMap(body)
       else if (t === 'missions') this.renderMissions(body)
       else if (t === 'char') this.renderChar(body)
+      else if (t === 'aura') g.side?.renderPause(body)
       else if (t === 'controls') this.renderControls(body)
       else this.renderSettings(body)
       g.audio?.sfx('click', { bus: 'ui' })
