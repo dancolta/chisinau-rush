@@ -36,7 +36,7 @@ export class Buildings {
     const color = o.color ?? rnd.pick(PANEL_COLORS)
     const fh = 2.8, h = floors * fh + 0.7
     const fb = this.B.facade(cx, cz)
-    fb.box(cx, cz, len, depth, y0, h, ry, color, [fh, 3.2, rnd() * 100, shop ? 5 : 1], 0x57534e, [1, 0, 1, 0])
+    fb.box(cx, cz, len, depth, y0, h, ry, color, [fh, 3.2, rnd() * 100, shop ? 5 : 1], 0x57534e, [1, 0, 1, 0], 10)
     const g = this.B.vcol(cx, cz, 'bld')
     const W = this.frame(cx, cz, ry)
     g.box(len + 0.3, 0.75, depth + 0.3, { x: cx, y: y0, z: cz, ry, color: shade(color, 0.6) })

@@ -12,7 +12,8 @@ import { buildFacadeTextures, FACADE_LAYERS } from '../render/FacadeTextures.js'
 //            style 0 = plain wall, 1 = panel block, 2 = office ribbon windows,
 //                  3 = ruin (dark/broken), 4 = classical tall windows, 5 = shopfront ground floor + panel above,
 //                  6 = loggia stack, 7 = brick with tall windows,
-//                  8 / 9 = classical / brick upper floors over a shopfront ground floor
+//                  8 / 9 = classical / brick upper floors over a shopfront ground floor,
+//                  10 = bare panel gable end
 //   color    wall colour, emit (unused here)
 
 export class FacadeBuilder {
@@ -41,13 +42,13 @@ export class FacadeBuilder {
 
   // oriented box building: centre (cx,cz), size (w along local x, d along local z), height h, rotation ry
   // windows on all four walls; roof flat
-  box(cx, cz, w, d, y0, h, ry, color, params, roofColor = 0x77736c, sides = [1, 1, 1, 1]) {
+  box(cx, cz, w, d, y0, h, ry, color, params, roofColor = 0x77736c, sides = [1, 1, 1, 1], plainStyle = 0) {
     const c = Math.cos(ry), s = Math.sin(ry)
     const P = (lx, lz) => [cx + lx * c + lz * s, cz - lx * s + lz * c]
     const hw = w / 2, hd = d / 2
     // corners clockwise seen from above (+y): front-left, front-right... walls face outward
     const A = P(-hw, hd), B = P(hw, hd), C = P(hw, -hd), D = P(-hw, -hd)
-    const plain = [params[0], params[1], params[2], 0]
+    const plain = [params[0], params[1], params[2], plainStyle]
     // A->B->C->D->A keeps every wall's normal pointing outward (front, right, back, left)
     this.wall(A[0], A[1], B[0], B[1], y0, h, color, sides[0] ? params : plain)
     this.wall(B[0], B[1], C[0], C[1], y0, h, color, sides[1] ? params : plain)
@@ -77,7 +78,7 @@ export function makeFacadeMaterial() {
   const tex = buildFacadeTextures()
   const L = FACADE_LAYERS
   // logical style slots, mirrored in the shader below
-  const order = ['plain', 'roof', 'panel', 'panelGround', 'loggia', 'loggiaGround', 'shop', 'office', 'ruin', 'classical', 'brick']
+  const order = ['plain', 'roof', 'panel', 'panelGround', 'loggia', 'loggiaGround', 'shop', 'office', 'ruin', 'classical', 'brick', 'panelEnd']
   const fl = order.map((k) => new THREE.Vector3(L[k].first, L[k].count, L[k].avg))
   const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.88, metalness: 0 })
   m.envMapIntensity = 0.6
@@ -109,7 +110,7 @@ uniform float uCutAspect;
 uniform float uCutOn;
 uniform vec2 uResolution;
 uniform highp sampler2DArray uFacadeTex;
-uniform vec3 uFL[11];
+uniform vec3 uFL[12];
 // integer hash (pcg2d): exact per module, so a module never picks different variants pixel to pixel
 uvec2 pcg2d(uvec2 v) {
   v = v * 1664525u + 1013904223u;
@@ -163,6 +164,7 @@ float bayer4(vec2 p) {
     }
     else if (style < 6.5) { FL = uFL[4]; msz = vec2(ws, fh); }
     else if (style < 7.5) { FL = uFL[10]; msz = vec2(ws, fh); }
+    else if (style > 9.5) { FL = uFL[11]; msz = vec2(3.2, fh); litP = 0.0; }
     else {
       if (uvw.y < 4.2) { FL = uFL[6]; msz = vec2(ws, 4.2); shopBand = true; litP = 0.75; }
       else { FL = style < 8.5 ? uFL[9] : uFL[10]; msz = vec2(ws, fh); org.y = 4.2; }

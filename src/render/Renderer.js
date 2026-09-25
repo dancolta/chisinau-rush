@@ -106,8 +106,10 @@ export class Renderer {
       }
       this.toneMap = new ToneMappingEffect({ mode: ToneMappingMode.AGX })
       effects.push(this.toneMap)
-      this.hueSat = new HueSaturationEffect({ saturation: 0.12 })
-      this.bc = new BrightnessContrastEffect({ contrast: 0.06, brightness: 0.0 })
+      // AgX keeps highlights graceful and night shadows readable; it also greys things out,
+      // so the grade puts saturation and contrast back
+      this.hueSat = new HueSaturationEffect({ saturation: 0.3 })
+      this.bc = new BrightnessContrastEffect({ contrast: 0.13, brightness: 0.0 })
       this.vignette = new VignetteEffect({ darkness: 0.42, offset: 0.32 })
       effects.push(this.hueSat, this.bc, this.vignette)
       composer.addPass(new EffectPass(this.camera, ...effects))

@@ -397,6 +397,14 @@ function classical(seed, o) {
 
 function plain(seed) { const p = new Painter(3.2, 2.8, seed); concreteWall(p, { seams: false, stains: 0.3 }); return p }
 
+// gable end of a panel block: bare panels with sealed joints and weather streaks
+function panelEnd(seed) {
+  const p = new Painter(3.2, 2.8, seed)
+  concreteWall(p, { seams: true, stains: 0.7 })
+  if (p.r() < 0.4) p.streak(0.2 + p.r() * 2.8, 2.8, 1.4, 0.15, 0.1)
+  return p
+}
+
 function roof(seed) {
   const p = new Painter(4, 4, seed)
   p.rect(0, 0, 4, 4, NEUTRAL, WALL)
@@ -422,6 +430,7 @@ export function buildFacadeTextures() {
   let sd = 1
   const s = () => sd++ * 7919
   style('plain', [plain(s())])
+  style('panelEnd', [panelEnd(s()), panelEnd(s()), panelEnd(s())])
   style('roof', [roof(s())])
   style('panel', [
     panelWindow(s(), { frame: 'pvc', behind: 'tulle' }),
