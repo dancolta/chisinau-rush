@@ -123,8 +123,25 @@ export class Menus {
       g.director.newGame({ name: (name || 'Ion').trim().slice(0, 16) || 'Ion', type: PLAYER_TYPES[sel].key })
     }
     m.querySelector('.back').onclick = () => { this.clearPreview(); this.showMain() }
+    // turn the character round: drag on the right half, or the arrow keys when not typing
+    const stage = m.children[1]
+    stage.classList.add('turntable')
+    stage.innerHTML = '<div class="turn-hint">⟲ Trage ca să-l rotești · ← →</div>'
+    let dragX = null
+    stage.addEventListener('pointerdown', (e) => { dragX = e.clientX; stage.setPointerCapture?.(e.pointerId) })
+    stage.addEventListener('pointermove', (e) => { if (dragX === null) return; this.turnPreview((e.clientX - dragX) * 0.012); dragX = e.clientX })
+    const endDrag = () => { dragX = null }
+    stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag)
+    const onKey = (e) => {
+      if (!document.body.contains(m)) { window.removeEventListener('keydown', onKey); return }
+      if (e.target === input) return
+      if (e.code === 'ArrowLeft') { this.turnPreview(-0.25); e.preventDefault() }
+      if (e.code === 'ArrowRight') { this.turnPreview(0.25); e.preventDefault() }
+    }
+    window.addEventListener('keydown', onKey)
     this.layer.appendChild(m)
     this.open = m
+    this.previewYaw = null
     setTimeout(() => input.focus(), 50)
     paint()
   }
@@ -134,10 +151,21 @@ export class Menus {
     this.clearPreview()
     const pm = g.world.places.pman
     const x = pm.x + 2, z = pm.z + 20
-    this.previewChar = new Character(g, CAST[type], { x, z, ry: Math.PI * 0.85 })
+    // facing the camera (it ends up at x-1.9, z+3.6); drag or arrow keys turn them round
+    const ry = this.previewYaw ?? Math.atan2(-1.9, 3.6)
+    this.previewYaw = ry
+    this.previewChar = new Character(g, CAST[type], { x, z, ry })
     g.npcs.push(this.previewChar)
     this.previewChar.anim.play('wave')
     g.cameraRig.shot({ from: [x - 2.6, 1.9, z + 4.2], to: [x - 1.9, 1.7, z + 3.6], look: [x - 0.6, 1.15, z], dur: 30, ease: 'out' })
+  }
+
+  turnPreview(d) {
+    const c = this.previewChar
+    if (!c) return
+    this.previewYaw = (this.previewYaw ?? c.heading) + d
+    c.heading = c.prevHeading = this.previewYaw
+    c.syncNow?.()
   }
 
   clearPreview() {
