@@ -5,8 +5,12 @@ export const SKIN = [0xf1c7a4, 0xe7b48f, 0xdca37c, 0xc98b64, 0xb37552, 0xf3d0b5]
 const HAIR = [0x2a1c12, 0x3a2a1c, 0x5a3a22, 0x7a5a3a, 0x1a1a1a, 0x8a7a6a, 0xb8a888, 0xc8a060]
 
 export const CAST = {
-  // ---- playable types (from the original character creator) -----------------
-  patan: { skin: 0xe7b48f, top: { style: 'tracksuit', color: 0x14161c, stripes: 0xf2f2f2 }, bottom: { style: 'tracksuit', color: 0x14161c, stripes: 0xf2f2f2 }, shoes: 0xf2f2f2, hat: { style: 'kepka', color: 0x1c1c22 }, hair: { style: 'short', color: 0x2a1c12 }, angry: true },
+  // ---- playable: the four who came back from "afară" ----------------------------
+  stroitor: { skin: 0xdca37c, top: { style: 'vest', color: 0x4a5a6a, vest: 0xe4e030, short: true }, bottom: { color: 0x3a3f4a }, shoes: 0x5a4028, hat: { style: 'hardhat', color: 0xf0b21e }, hair: { style: 'short', color: 0x3a2a1c }, mustache: 0x3a2a1c, width: 1.12, belly: 0.3 },
+  badanta: { skin: 0xf1c7a4, height: 0.95, width: 1.02, belly: 0.3, top: { style: 'coat', color: 0xa8286a, lapel: 0x7a1a4a }, bottom: { style: 'skirt', color: 0x1e1a22 }, stockings: 0x3a3030, shoes: 0x1a1a1e, hair: { style: 'bun', color: 0xd8b25a }, sunglasses: true, chain: true, hold: 'bag', handbag: 0xc9a24a },
+  hot: { skin: 0xe7b48f, top: { style: 'jacket', color: 0x23262e, shirt: 0x5a5e66 }, bottom: { color: 0x2a3548 }, shoes: 0xf2f2f2, hat: { style: 'beanie', color: 0x16171c }, hair: { style: 'short', color: 0x2a1c12 }, bag: 0x2a2a2e, hold: 'phone' },
+  // ---- older playable types (still valid in old saves; also used for NPCs) -----------
+  patan: { skin: 0xe7b48f, top: { style: 'tracksuit', color: 0x14161c, stripes: 0xf2f2f2 }, bottom: { style: 'tracksuit', color: 0x14161c, stripes: 0xf2f2f2 }, shoes: 0xf2f2f2, hat: { style: 'kepka', color: 0x1c1c22 }, hair: { style: 'short', color: 0x2a1c12 }, angry: true, chain: true, hold: 'seeds' },
   taxist: { skin: 0xdca37c, top: { style: 'jacket', color: 0x5a3a24, shirt: 0xd9c9a8 }, bottom: { color: 0x2a3548 }, hat: { style: 'kepka', color: 0x4a4a4a }, mustache: 0x2a1c12, hair: { style: 'short', color: 0x2a1c12 }, belly: 0.5 },
   conductor: { skin: 0xe7b48f, top: { style: 'vest', color: 0x5a7a9a, vest: 0x39485c, short: false }, bottom: { color: 0x2d2f36 }, hat: { style: 'police', color: 0x39485c, band: 0x2f7d5c }, bag: 0x5a3a24, hair: { style: 'short', color: 0x5a3a22 } },
   agent: { skin: 0xf1c7a4, top: { style: 'suit', color: 0x1f2c48, shirt: 0xf2f2f2 }, bottom: { color: 0x1f2c48 }, shoes: 0x3a2a1c, hair: { style: 'slick', color: 0x1a1a1a }, sunglasses: true, hold: 'phone' },
@@ -36,12 +40,10 @@ export const CAST = {
 
 // playable-type metadata (names/perks follow the original game)
 export const PLAYER_TYPES = [
-  { key: 'patan', name: 'Pațan de pe Raioncik', blurb: 'Crescut la Ciocana. Lovește tare, vorbește puțin.', perk: 'Pumni mult mai grei · respect pe stradă din start' },
-  { key: 'taxist', name: 'Taxistul', blurb: 'Loganul lui știe fiecare groapă din Centru pe nume.', perk: '+30 lei la start · bani în plus din curse' },
-  { key: 'conductor', name: 'Conductorul', blurb: 'Rupe biletul pe troleibuzul 22 cu autoritate.', perk: 'Venit pasiv mic · poliția te iartă mai des' },
-  { key: 'agent', name: 'Agentul Imobiliar', blurb: '„Studio cu amplasare reușită" = un balcon în Râșcani.', perk: 'Vinzi hârtiile mai scump la Borea' },
-  { key: 'director', name: 'Directorul de Fabrică', blurb: 'Fabrică de mobilă nenumită, BMW cu numere lituaniene.', perk: 'Portofel gros la start (+160 lei)' },
-  { key: 'ionel', name: 'Venit din Briceni', blurb: 'A venit cu un sac de plăcinte de la mama.', perk: 'Mai mult HP · foamea vine mai încet' },
+  { key: 'stroitor', name: 'Vasea „Stroika"', defName: 'Vasea', blurb: 'Opt ani pe șantiere la Londra și Moscova. Cară saci de ciment cum cară alții semințe.', perk: 'Stamina de fier · mai multă viață · pumni de betonist' },
+  { key: 'badanta', name: 'Tanti Valea, badanta', defName: 'Valea', female: true, blurb: 'Doisprezece ani la Padova, lângă Signor Giuseppe. Giuseppe s-o dus. Averea a rămas… la ea.', perk: 'Moștenirea (+1500 lei) · se tocmește: -20% peste tot · babele o respectă' },
+  { key: 'hot', name: 'Marcel „Scoțianu\'"', defName: 'Marcel', blurb: 'Zice că a lucrat în Anglia „la logistică". Logistica ieșea din magazin fără casă de marcat.', perk: 'Fură mașini fără scandal · buzunărește · poliția îl uită repede' },
+  { key: 'patan', name: 'Vitalik, pațanul de pe raion', defName: 'Vitalik', blurb: 'Trei ani la o spălătorie din Portugalia. S-a întors cu treningul, lanțul și respectul intacte.', perk: 'Pumni grei · gopnicii îl știu din start · semințe din belșug' },
 ]
 
 // ---- civilians ---------------------------------------------------------------

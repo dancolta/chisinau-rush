@@ -9,10 +9,10 @@ import { TimeOfDay } from './TimeOfDay.js'
 import { SHARED, RES } from './Materials.js'
 
 export const QUALITY = {
-  low: { label: 'Scăzută', post: false, shadows: false, shadowMap: 1024, shadowSize: 50, ao: false, bloom: false, smaa: false, maxDpr: 1, antialias: false, lamps: 2 },
-  medium: { label: 'Medie', post: true, shadows: true, shadowMap: 1024, shadowSize: 60, ao: false, bloom: true, smaa: true, maxDpr: 1.25, antialias: false, lamps: 4 },
-  high: { label: 'Înaltă', post: true, shadows: true, shadowMap: 2048, shadowSize: 70, ao: true, bloom: true, smaa: true, maxDpr: 1.5, antialias: false, lamps: 8 },
-  ultra: { label: 'Ultra', post: true, shadows: true, shadowMap: 4096, shadowSize: 90, ao: true, bloom: true, smaa: true, maxDpr: 2, antialias: false, lamps: 12 },
+  low: { label: 'Scăzută', post: false, shadows: false, shadowMap: 1024, shadowSize: 50, ao: false, bloom: false, smaa: false, maxDpr: 1, antialias: false, lamps: 2, msaa: 0 },
+  medium: { label: 'Medie', post: true, shadows: true, shadowMap: 1024, shadowSize: 60, ao: false, bloom: true, smaa: true, maxDpr: 1.25, antialias: false, lamps: 4, msaa: 2 },
+  high: { label: 'Înaltă', post: true, shadows: true, shadowMap: 2048, shadowSize: 70, ao: true, bloom: true, smaa: true, maxDpr: 1.5, antialias: false, lamps: 8, msaa: 4 },
+  ultra: { label: 'Ultra', post: true, shadows: true, shadowMap: 4096, shadowSize: 90, ao: true, bloom: true, smaa: true, maxDpr: 2, antialias: false, lamps: 12, msaa: 4 },
 }
 
 const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _mi = new THREE.Matrix4()
@@ -86,7 +86,9 @@ export class Renderer {
     if (this.composer) { this.composer.dispose(); this.composer = null }
     if (q.post) {
       r.toneMapping = THREE.NoToneMapping
-      const composer = new EffectComposer(r, { frameBufferType: THREE.HalfFloatType, multisampling: 0 })
+      // hardware multisampling: thin poles, fins, wires and window frames stop shimmering as the
+      // camera moves (SMAA alone can't hold sub-pixel geometry steady)
+      const composer = new EffectComposer(r, { frameBufferType: THREE.HalfFloatType, multisampling: Math.min(q.msaa ?? 0, r.capabilities.maxSamples || 0) })
       composer.addPass(new RenderPass(this.scene, this.camera))
       if (q.ao) {
         const ao = new N8AOPostPass(this.scene, this.camera, 1, 1)

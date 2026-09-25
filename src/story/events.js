@@ -1,3 +1,4 @@
+import { gen } from './hero.js'
 import { CAST, randomCivilian } from '../data/outfits.js'
 import { dist, pickOne, rand } from './missions/common.js'
 
@@ -30,7 +31,7 @@ const TROLLEY = {
     m.marker(back, 'Coarnele')
     await m.until(() => done)
     d.stalled = false
-    await m.talk('vatman', 'Merge! Bravo, băiete! Pasagerii te aplaudă. În gând.', 3)
+    await m.talk('vatman', `Merge! Bravo, ${gen(m.game, 'băiete', 'fată')}! Pasagerii te aplaudă. În gând.`, 3)
     m.reward({ lei: 40, civic: 5, xp: 40 }, 'Troleibuzul merge din nou')
     vat.walkTo(v.pos.x + Math.sin(v.heading) * 5, v.pos.z + Math.cos(v.heading) * 5)
     await m.wait(1.5)

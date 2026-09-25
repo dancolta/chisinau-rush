@@ -177,15 +177,18 @@ float bayer4(vec2 p) {
     float h1 = fh1(cell + seed * 7.13);
     float h2 = fh1(cell * 1.37 + seed * 3.1 + 11.0);
     float layer = FL.x + min(floor(h1 * FL.y), FL.y - 1.0);
-    vec2 dgx = dFdx(g), dgy = dFdy(g);
+    // a touch of extra blur (about half a mip level): windows a few pixels wide are periodic
+    // detail right at the pixel grid, and without it they crawl as soon as the camera moves
+    vec2 dgx = dFdx(g) * 1.45, dgy = dFdy(g) * 1.45;
     vec2 fu = f;
     // mirror half the modules for variety (shop signs and graffiti excepted)
     if (h2 > 0.5 && !shopBand) { fu.x = 1.0 - fu.x; dgx.x = -dgx.x; dgy.x = -dgy.x; }
     vec4 tex = textureGrad(uFacadeTex, vec3(fu, layer), dgx, dgy);
     // far away the per-module variety would sparkle: fade into the style's average module
     float cellPx = max(length(dFdx(g)), length(dFdy(g)));
-    float far = smoothstep(0.06, 0.2, cellPx);
-    if (far > 0.001) tex = mix(tex, textureGrad(uFacadeTex, vec3(f, FL.z), dFdx(g), dFdy(g)), far);
+    // (starts early: window frames a few pixels wide shimmer as soon as the camera moves)
+    float far = smoothstep(0.035, 0.12, cellPx);
+    if (far > 0.001) tex = mix(tex, textureGrad(uFacadeTex, vec3(f, FL.z), dFdx(g) * 1.45, dFdy(g) * 1.45), far);
     float kind = tex.a;
     float tint = smoothstep(0.84, 0.97, kind);
     float glassK = 1.0 - smoothstep(0.3, 0.55, kind);
@@ -196,13 +199,15 @@ float bayer4(vec2 p) {
     vec3 warm = mix(vec3(1.0, 0.7, 0.4), vec3(1.0, 0.86, 0.64), fh1(cell + 3.3));
     if (shopBand) warm = vec3(1.0, 0.93, 0.8);
     winEmit = glassK * lit * mix(warm, tex.rgb * 2.4 + warm * 0.25, 0.3) * 1.5;
-    glassMask = glassK * (1.0 - far) * (1.0 - uNight * 0.6);
+    // glass is only glossy up close: small panes reflecting a bright sky next to dark frames are
+    // the worst sparkle there is
+    glassMask = glassK * (1.0 - smoothstep(0.012, 0.035, cellPx)) * (1.0 - uNight * 0.6);
   }`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
-  roughnessFactor = mix(roughnessFactor, 0.12, glassMask);`)
+  roughnessFactor = mix(roughnessFactor, 0.22, glassMask);`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
   totalEmissiveRadiance += winEmit;`)
   }
-  m.customProgramCacheKey = () => 'facade-v3'
+  m.customProgramCacheKey = () => 'facade-v5'
   return m
 }

@@ -125,7 +125,9 @@ export class Vehicles {
       // carjack: yank the driver out
       const ai = v.driver
       if (ai && ai.eject) ai.eject()
-      game.events.emit('crime', { type: 'carjack', x: v.pos.x, z: v.pos.z, severity: v.def.police ? 3 : 1 })
+      // Marcel „Scoțianu'" does it so smoothly nobody calls the police (a police car still counts)
+      if (!game.progress?.perk?.steal || v.def.police) game.events.emit('crime', { type: 'carjack', x: v.pos.x, z: v.pos.z, severity: v.def.police ? 3 : 1 })
+      else game.ui?.notify?.('Ca-n Anglia: nici n-o observat.', 2)
     }
     game.input.consume('interact')
     v.driver = 'player'

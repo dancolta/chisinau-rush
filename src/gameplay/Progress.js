@@ -11,7 +11,10 @@ export const RANKS = [
 ]
 
 export const PERKS = {
-  patan: { dmg: 1.6, cred: 25, lei: 0 },
+  stroitor: { stamina: 3, maxHp: 140, dmg: 1.3 },
+  badanta: { lei: 1500, discount: 0.8, female: true, bab: 30 },
+  hot: { steal: true, pickpocket: true, heatDecay: 1.8 },
+  patan: { dmg: 1.6, cred: 25, lei: 0, gop: 40 },
   taxist: { lei: 30, fareBonus: 1.5 },
   conductor: { passive: 0.25, heatDecay: 1.6 },
   agent: { lei: 20, sell: 1.4 },
@@ -27,9 +30,9 @@ export class Progress {
     this.reset()
   }
 
-  reset(player = { name: 'Ion', type: 'patan' }) {
-    this.name = player.name || 'Ion'
-    this.type = player.type || 'patan'
+  reset(player = { name: 'Vasea', type: 'stroitor' }) {
+    this.name = player.name || 'Vasea'
+    this.type = player.type || 'stroitor'
     const perk = PERKS[this.type] || {}
     this.perk = perk
     this.lei = 45 + (perk.lei || 0)
@@ -54,6 +57,8 @@ export class Progress {
   get rank() { return RANKS[this.rankIdx] }
   get nextRank() { return RANKS[this.rankIdx + 1] || null }
   get dmgMul() { return this.perk.dmg || 1 }
+  // what something costs this character (the badanta haggles everything down)
+  price(n) { return n > 0 ? Math.max(1, Math.round(n * (this.perk.discount || 1))) : n }
 
   addLei(n, reason = '') {
     n = Math.round(n)

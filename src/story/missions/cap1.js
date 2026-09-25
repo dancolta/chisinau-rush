@@ -1,6 +1,7 @@
 import { CAST } from '../../data/outfits.js'
 import { Train, pathThrough } from '../Kit.js'
 import { dist, rand, banner, crowd, cheerAll, taxiFare, freeSpot } from './common.js'
+import { hero, gen } from '../hero.js'
 
 const CH1 = 'Capitolul 1'
 
@@ -8,7 +9,7 @@ const CH1 = 'Capitolul 1'
 // PROLOG · Acasă — the train, Nea Grișa's taxi, Tanti Zina's bench
 export const sosire = {
   id: 'sosire', chapterName: 'Prolog', title: 'Acasă',
-  desc: 'Te întorci la Chișinău după șapte ani „afară". Orașul te-a așteptat. Gropile, la fel.',
+  desc: 'Te întorci la Chișinău după ani de muncă „afară". Orașul te-a așteptat. Gropile, la fel.',
   giver: { place: 'peron', label: 'Peronul 1', auto: true, r: 8 },
   // the chapter card plays over the opening aerial shot (see the script)
   silentStart: true,
@@ -42,7 +43,7 @@ export const sosire = {
       g.cameraRig.shot({ from: [304, 3.2, 300.5], to: [306.5, 2.5, 301.2], look: [319.5, 1.4, 306], dur: 6, ease: 'inout' })
       await m.playerWalk(318.5, 302.8, 2.1)
       m.hold({ from: [312.4, 1.95, 297.2], look: [318.6, 1.45, 303], dur: 60 })
-      await m.talk('player', 'Șapte ani la Milano. Și gara tot aceeași.', 3.2)
+      await m.talk('player', `${hero(g).years} ${hero(g).where}. Și gara tot aceeași.`, 3.4)
       await m.talk('player', 'Mama zicea: „vino acasă, că aici e mai bine". Hai să vedem.', 3.6)
       train.depart()
       // hand over facing the way out, toward Nea Grișa and the taxi
@@ -54,7 +55,7 @@ export const sosire = {
     await m.reach(grisaPos, 3.2, { text: 'Ieși din gară. {y}Nea Grișa{/y} te așteaptă cu taxiul peste drum.', label: 'Nea Grișa' })
     grisa.char.anim.play('wave')
     await m.say('grisa', [
-      'Tu ești băiatul Mariei? Maică-ta mi-a zis să te iau de la tren. Hai, urcă, că-i ora de vârf.',
+      `Tu ești ${gen(g, 'băiatul', 'fata')} Mariei? Maică-ta mi-a zis să te iau de la tren. Hai, urcă, că-i ora de vârf.`,
       { who: 'player', text: 'Mersi, nea Grișa. La Botanica, la Blocul 7.' },
       'Știu, știu. Toată lumea știe unde-i Blocul 7. E ăla cu gaura în asfalt de la Brejnev.',
     ])
@@ -72,7 +73,7 @@ export const sosire = {
     m.objective('Stai comod. Nea Grișa te duce acasă.', { sub: 'Mouse / [Z][X]: te uiți la oraș' })
     const G = { name: 'Nea Grișa', voice: { pitch: 0.9, type: 'male' }, spec: CAST.taxist }
     const ride = m.chatter([
-      [2, G, 'Șapte ani, zici? S-o schimbat multe. Gropile s-au mărit. Prețurile la fel.'],
+      [2, G, `${hero(g).years}, zici? S-o schimbat multe. Gropile s-au mărit. Prețurile la fel.`],
       [1.2, G, 'Primarul nostru, Ceon Eban… omul taie panglici cum taie alții semințe. Ieri o inaugurat un stâlp.'],
       [1.2, G, 'Și vorbește la telefon. Mereu. Tot în rusă. Zice că-i cu „investitorii".'],
       [1.5, G, 'Ține-te! Groapa asta o știu de pe vremea lui Snegur!', 2.6],
@@ -108,7 +109,7 @@ export const sosire = {
       const z = m.story.cast.zina
       if (z) m.hold({ from: [z.pos.x + 3.6, 1.9, z.pos.z - 3.4], look: [z.pos.x - 0.4, 1.0, z.pos.z + 0.2], dur: 60 })
       await m.say('zina', [
-        'Ia te uită cine-o venit! Băiatul Mariei! Cât ai crescut, maică… și cât ai slăbit. Nu v-o dat de mâncare în Italia?',
+        `Ia te uită cine-o venit! ${gen(g, 'Băiatul', 'Fata')} Mariei! Cât ai crescut, maică… și cât ai slăbit. Nu v-o dat de mâncare în ${hero(g).country}? Numa' ${hero(g).food}?`,
         { who: 'player', text: 'Bună seara, tanti Zina. Mama unde-i?' },
         'La țară, la Hâncești, cu roșiile. Te-o lăsat pe mâna mea. Și cheile de la garaj, de la unchiu\' Vasile.',
       ])
