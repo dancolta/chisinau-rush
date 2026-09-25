@@ -92,12 +92,12 @@ export function makeAsphalt() {
   }
   // aggregate: fine, low contrast (no bright specks: they sparkle)
   grainPair(x, hx, r, S, 16000, 60)
-  // sealed cracks: thin dark lines that sink into the height map
-  for (let i = 0; i < 10; i++) {
-    let px = r() * S, py = r() * S
+  // sealed cracks: long, gently meandering tar lines (short zigzags read as scribbles when tiled)
+  for (let i = 0; i < 5; i++) {
+    let px = r() * S, py = r() * S, a = r() * Math.PI * 2
     const pts = [[px, py]]
-    for (let k = 0; k < 8; k++) { px += (r() - 0.5) * 44; py += (r() - 0.5) * 44; pts.push([px, py]) }
-    for (const [ctx, col, w] of [[x, 'rgba(22,22,24,0.55)', 1.4], [hx, 'rgba(0,0,0,0.6)', 2]]) {
+    for (let k = 0; k < 46; k++) { a += (r() - 0.5) * 0.45; px += Math.cos(a) * 5 + (r() - 0.5) * 1.6; py += Math.sin(a) * 5 + (r() - 0.5) * 1.6; pts.push([px, py]) }
+    for (const [ctx, col, w] of [[x, 'rgba(26,26,29,0.32)', 2.2], [x, 'rgba(18,18,20,0.4)', 0.9], [hx, 'rgba(0,0,0,0.3)', 1.6]]) {
       ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1])
       for (const q of pts) ctx.lineTo(q[0], q[1])
       ctx.stroke()
