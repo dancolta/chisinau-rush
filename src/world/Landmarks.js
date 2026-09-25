@@ -729,10 +729,11 @@ export class Landmarks {
     let u = 0
     const pt = (k) => { const a = (k / N) * Math.PI * 2; return [tx + Math.sin(a) * R(a), tz + Math.cos(a) * R(a)] }
     for (let k = 0; k < N; k++) {
-      // clockwise from above, so every wall faces out (see FacadeBuilder.wall)
-      const [x1, z1] = pt(N - k), [x0, z0] = pt(N - k - 1)
-      fb.wall(x1, z1, x0, z0, y0, H, 0xd8d2c4, params, u)
-      u += Math.hypot(x0 - x1, z0 - z1)
+      // walking round with the angle (sin a, cos a) keeps every wall's normal pointing out
+      // (FacadeBuilder.wall faces the right-hand side of start -> end)
+      const [x0, z0] = pt(k), [x1, z1] = pt(k + 1)
+      fb.wall(x0, z0, x1, z1, y0, H, 0xd8d2c4, params, u)
+      u += Math.hypot(x1 - x0, z1 - z0)
     }
     // slab edges every floor: the "corn cob" rings
     for (let f = 0; f <= floors; f++) g.cyl(8.95, 8.95, 0.22, 48, { x: tx, y: y0 + f * fh - 0.11, z: tz, color: f % 4 ? CONC : CONC_D })
