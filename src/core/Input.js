@@ -70,7 +70,7 @@ export class Input {
     window.addEventListener('keydown', (e) => {
       if (isTypingTarget(e.target)) return
       if (['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Backquote'].includes(e.code)) e.preventDefault()
-      if (!this.down.has(e.code)) this.pressedSet.add(e.code)
+      if (!e.repeat && !this.down.has(e.code)) this.pressedSet.add(e.code)
       this.down.add(e.code)
       this.lastDevice = 'kb'
     })
@@ -91,6 +91,11 @@ export class Input {
     })
     dom.addEventListener('mousedown', (e) => {
       const code = 'Mouse' + e.button
+      // the click that grabs the mouse for camera look isn't a punch
+      if (e.button === 0 && this.wantLock && this.wantLock() && !this.locked) {
+        try { dom.requestPointerLock?.()?.catch?.(() => {}) } catch (err) { /* not allowed here */ }
+        return
+      }
       if (!this.down.has(code)) this.pressedSet.add(code)
       this.down.add(code)
       this.lastDevice = 'kb'
@@ -100,7 +105,13 @@ export class Input {
       this.down.delete(code)
       this.releasedSet.add(code)
     })
-    dom.addEventListener('wheel', (e) => { this.mouse.wheel += Math.sign(e.deltaY) }, { passive: true })
+    let lastWheel = 0
+    dom.addEventListener('wheel', (e) => {
+      const now = performance.now()
+      if (now - lastWheel < 70 || Math.abs(e.deltaY) < 1) return
+      lastWheel = now
+      this.mouse.wheel += Math.sign(e.deltaY)
+    }, { passive: true })
 
     window.addEventListener('gamepadconnected', (e) => { this.pad = e.gamepad; this.lastDevice = 'pad' })
     window.addEventListener('gamepaddisconnected', () => { this.pad = null })
@@ -134,6 +145,8 @@ export class Input {
   act(action) { if (!this.enabled) return false; return this.codes(action).some((c) => this.down.has(c)) }
   pressed(action) { if (!this.enabled) return false; return this.codes(action).some((c) => this.pressedSet.has(c)) }
   released(action) { return this.codes(action).some((c) => this.releasedSet.has(c)) }
+  // a press that did its job this frame: nobody else gets to react to it
+  consume(action) { for (const c of this.codes(action)) this.pressedSet.delete(c) }
   key(code) { return this.down.has(code) }
   keyPressed(code) { return this.pressedSet.has(code) }
 
@@ -183,5 +196,7 @@ export class Input {
     this.mouse.dx = 0; this.mouse.dy = 0; this.mouse.wheel = 0
   }
 
-  clear() { this.down.clear(); this.pressedSet.clear(); this.releasedSet.clear(); this.virtual.x = this.virtual.y = 0 }
+  // forget presses that belong to a closing menu/dialogue; keys still physically held stay held
+  clear() { this.pressedSet.clear(); this.releasedSet.clear(); this.mouse.dx = 0; this.mouse.dy = 0; this.mouse.wheel = 0 }
+  get locked() { return typeof document !== 'undefined' && document.pointerLockElement === this.dom }
 }

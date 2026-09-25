@@ -64,6 +64,15 @@ export class Game {
     this.scene = this.renderer.scene
     this.camera = this.renderer.camera
     this.input = new Input(this.renderer.renderer.domElement)
+    // mouse look: a click in the game grabs the mouse; menus, dialogues and cutscenes let it go
+    this.input.wantLock = () => this.state === 'play' && !this.paused && !this.ui?.modalOpen && !this.cutscene && this.settings.mouseLook !== false && !this.touch
+    document.addEventListener('pointerlockchange', () => {
+      if (!this.input.locked && !this.unlockExpected && this.state === 'play' && !this.paused && !this.ui?.modalOpen && !this.cutscene) {
+        this.pauseGuardUntil = performance.now() + 350
+        this.menus?.showPause()
+      }
+      this.unlockExpected = false
+    })
     this.materials = new Materials()
     progress(0.04, 'Sunet…')
     this.audio = new AudioEngine(this)
@@ -206,7 +215,10 @@ export class Game {
 
   handleGlobalInput() {
     const i = this.input
+    // the mouse is released whenever the game isn't in plain control
+    if (i.locked && !i.wantLock()) { this.unlockExpected = true; document.exitPointerLock?.() }
     if (this.state !== 'play') return
+    if (performance.now() < (this.pauseGuardUntil || 0)) i.consume('pause')
     if (this.photoMode && (i.pressed('photo') || i.pressed('pause'))) { this.setPhotoMode(false); return }
     if (i.pressed('photo') && !this.paused && !this.ui.modalOpen && !this.cutscene) { this.setPhotoMode(true); return }
     if (i.pressed('pause') && !this.cutscene) {
@@ -237,6 +249,7 @@ export class Game {
   }
 
   update(dt, rawDt) {
+    this.rawDt = rawDt
     const playing = this.state === 'play'
     if (!this.paused) {
       this.safe('player', () => { if (this.player) { this.player.update(dt); this.player.sync(this.alpha) } })

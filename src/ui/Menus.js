@@ -123,8 +123,25 @@ export class Menus {
       g.director.newGame({ name: (name || 'Ion').trim().slice(0, 16) || 'Ion', type: PLAYER_TYPES[sel].key })
     }
     m.querySelector('.back').onclick = () => { this.clearPreview(); this.showMain() }
+    // turn the character round: drag on the right half, or the arrow keys when not typing
+    const stage = m.children[1]
+    stage.classList.add('turntable')
+    stage.innerHTML = '<div class="turn-hint">⟲ Trage ca să-l rotești · ← →</div>'
+    let dragX = null
+    stage.addEventListener('pointerdown', (e) => { dragX = e.clientX; stage.setPointerCapture?.(e.pointerId) })
+    stage.addEventListener('pointermove', (e) => { if (dragX === null) return; this.turnPreview((e.clientX - dragX) * 0.012); dragX = e.clientX })
+    const endDrag = () => { dragX = null }
+    stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag)
+    const onKey = (e) => {
+      if (!document.body.contains(m)) { window.removeEventListener('keydown', onKey); return }
+      if (e.target === input) return
+      if (e.code === 'ArrowLeft') { this.turnPreview(-0.25); e.preventDefault() }
+      if (e.code === 'ArrowRight') { this.turnPreview(0.25); e.preventDefault() }
+    }
+    window.addEventListener('keydown', onKey)
     this.layer.appendChild(m)
     this.open = m
+    this.previewYaw = null
     setTimeout(() => input.focus(), 50)
     paint()
   }
@@ -134,10 +151,21 @@ export class Menus {
     this.clearPreview()
     const pm = g.world.places.pman
     const x = pm.x + 2, z = pm.z + 20
-    this.previewChar = new Character(g, CAST[type], { x, z, ry: Math.PI * 0.85 })
+    // facing the camera (it ends up at x-1.9, z+3.6); drag or arrow keys turn them round
+    const ry = this.previewYaw ?? Math.atan2(-1.9, 3.6)
+    this.previewYaw = ry
+    this.previewChar = new Character(g, CAST[type], { x, z, ry })
     g.npcs.push(this.previewChar)
     this.previewChar.anim.play('wave')
     g.cameraRig.shot({ from: [x - 2.6, 1.9, z + 4.2], to: [x - 1.9, 1.7, z + 3.6], look: [x - 0.6, 1.15, z], dur: 30, ease: 'out' })
+  }
+
+  turnPreview(d) {
+    const c = this.previewChar
+    if (!c) return
+    this.previewYaw = (this.previewYaw ?? c.heading) + d
+    c.heading = c.prevHeading = this.previewYaw
+    c.syncNow?.()
   }
 
   clearPreview() {
@@ -327,13 +355,15 @@ export class Menus {
 
   renderControls(body) {
     const rows = [
-      ['Mers / condus', 'W A S D · săgeți', 'stick stânga · RT/LT', 'joystick stânga'],
+      ['Mers pe jos', 'W/S înainte-înapoi · A/D rotire (ține) · săgeți', 'stick stânga', 'joystick stânga'],
+      ['Condus', 'W accelerează · S frânează (ține: marșarier) · A/D volan', 'RT/LT · stick stânga', 'joystick stânga'],
       ['Fugi repede / nitro', 'ține Shift', 'ține B', '» / 🔥'],
       ['Lovește', 'Click · J · K', 'X', '👊'],
       ['Sari / frână de mână', 'Space', 'A', '⤒ / ⤓'],
       ['Acțiune, urcă/coboară, vorbește', 'E', 'Y', 'E'],
       ['Schimbă arma', 'Q', 'LB', 'Q'],
-      ['Rotește camera', 'click dreapta + mouse · Z/X', 'stick dreapta', 'trage în dreapta'],
+      ['Rotește camera', 'click pe joc + mouse (Esc eliberează) · Z/X', 'stick dreapta', 'trage în dreapta'],
+      ['Coboară / sari din mașină', 'E (în mers: sari)', 'Y', 'E'],
       ['Zoom', 'rotița', '', ''],
       ['Claxon', 'H', 'R3', '📯'],
       ['Privește înapoi (în mașină)', 'C', 'R3', ''],
@@ -357,6 +387,13 @@ export class Menus {
     row('Calitate grafică', sel)
     const chk = (key, label) => { const c = el('input'); c.type = 'checkbox'; c.checked = !!s[key]; c.onchange = () => { s[key] = c.checked; saveSettings(s); if (key === 'autoRes') g.renderer.dynScale = 1 }; row(label, c) }
     chk('autoRes', 'Rezoluție adaptivă (FPS stabil)')
+    const mm = el('select')
+    mm.appendChild(new Option('A/D te rotesc (ține apăsat)', 'steer', false, s.moveMode !== 'camera'))
+    mm.appendChild(new Option('Direcții relative la cameră', 'camera', false, s.moveMode === 'camera'))
+    mm.onchange = () => { s.moveMode = mm.value; saveSettings(s) }
+    row('Mers pe jos (tastatură)', mm)
+    chk('mouseLook', 'Cameră cu mouse-ul (click pe joc, Esc eliberează)')
+    chk('invertCam', 'Inversează axa verticală a camerei')
     const slider = (key, label, min, max, step, apply) => {
       const r = el('input'); r.type = 'range'; r.min = min; r.max = max; r.step = step; r.value = s[key]
       r.oninput = () => { s[key] = parseFloat(r.value); apply?.(); saveSettings(s) }
@@ -370,6 +407,7 @@ export class Menus {
     slider('shake', 'Tremurat cameră', 0, 1.5, 0.1)
     slider('fov', 'Câmp vizual (FOV)', 34, 60, 1, () => { g.cameraRig.baseFov = s.fov })
     slider('camSensitivity', 'Sensibilitate cameră', 0.3, 2.5, 0.1)
+    slider('brightness', 'Luminozitate', 0.8, 1.6, 0.05)
   }
 
   showSettingsOnly() {

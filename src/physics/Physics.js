@@ -11,26 +11,28 @@ export const GROUP = {
   PROP: 0x0020,
   SENSOR: 0x0040,
   DEBRIS: 0x0080,
+  THIN: 0x0100,   // poles, tree trunks: solid to bodies, invisible to the camera and ground probes
 }
 const ALL = 0xffff
 export const groups = (member, filter) => ((member & 0xffff) << 16) | (filter & 0xffff)
 
 export const FILTER = {
   STATIC: groups(GROUP.STATIC, ALL & ~GROUP.SENSOR),
+  THIN: groups(GROUP.THIN, ALL & ~GROUP.SENSOR),
   GROUND: groups(GROUP.GROUND, ALL & ~GROUP.SENSOR),
   VEHICLE: groups(GROUP.VEHICLE, ALL & ~GROUP.SENSOR),
-  PLAYER: groups(GROUP.PLAYER, GROUP.STATIC | GROUP.GROUND | GROUP.VEHICLE | GROUP.PROP | GROUP.PED),
+  PLAYER: groups(GROUP.PLAYER, GROUP.STATIC | GROUP.THIN | GROUP.GROUND | GROUP.VEHICLE | GROUP.PROP | GROUP.PED),
   // peds don't physically block cars (hits are resolved in code so nobody becomes a concrete wall)
-  PED: groups(GROUP.PED, GROUP.STATIC | GROUP.GROUND | GROUP.PLAYER),
+  PED: groups(GROUP.PED, GROUP.STATIC | GROUP.THIN | GROUP.GROUND | GROUP.PLAYER),
   PROP: groups(GROUP.PROP, ALL & ~GROUP.SENSOR),
-  DEBRIS: groups(GROUP.DEBRIS, GROUP.STATIC | GROUP.GROUND),
+  DEBRIS: groups(GROUP.DEBRIS, GROUP.STATIC | GROUP.THIN | GROUP.GROUND),
   // queries
   Q_GROUND: groups(ALL, GROUP.GROUND | GROUP.STATIC),
   Q_FLOOR: groups(ALL, GROUP.GROUND),
-  Q_WORLD: groups(ALL, GROUP.GROUND | GROUP.STATIC | GROUP.PROP),
-  Q_SOLID: groups(ALL, GROUP.STATIC | GROUP.VEHICLE | GROUP.PROP),
+  Q_WORLD: groups(ALL, GROUP.GROUND | GROUP.STATIC | GROUP.THIN | GROUP.PROP),
+  Q_SOLID: groups(ALL, GROUP.STATIC | GROUP.THIN | GROUP.VEHICLE | GROUP.PROP),
   Q_CAMERA: groups(ALL, GROUP.STATIC),
-  Q_CHAR_MOVE: groups(GROUP.PLAYER, GROUP.STATIC | GROUP.GROUND | GROUP.VEHICLE | GROUP.PROP),
+  Q_CHAR_MOVE: groups(GROUP.PLAYER, GROUP.STATIC | GROUP.THIN | GROUP.GROUND | GROUP.VEHICLE | GROUP.PROP),
 }
 
 export class Physics {
@@ -72,7 +74,7 @@ export class Physics {
     const d = RAPIER.ColliderDesc.cylinder(halfH, r)
       .setTranslation(x, y, z)
       .setFriction(opts.friction ?? 0.5)
-      .setCollisionGroups(opts.groups ?? FILTER.STATIC)
+      .setCollisionGroups(opts.groups ?? (r < 0.45 ? FILTER.THIN : FILTER.STATIC))
     const c = this.world.createCollider(d, this.fixed)
     if (opts.user) this.user.set(c.handle, opts.user)
     return c

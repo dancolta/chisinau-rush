@@ -135,11 +135,12 @@ export class Animator {
     this.hipTgt = br * 0.2
   }
 
-  locomotion(dt, speed) {
+  locomotion(dt, speedIn) {
+    const dir = speedIn < 0 ? -1 : 1, speed = Math.abs(speedIn)
     const run = clamp01((speed - 2.4) / 2.6)
     const sprint = clamp01((speed - 5.2) / 2)
     const stride = 1.45 + run * 1.1 + sprint * 0.5 + clamp01((speed - 7.2) / 2) * 0.55
-    this.phase = (this.phase + (speed / stride) * TAU * dt) % TAU
+    this.phase = (this.phase + dir * (speed / stride) * TAU * dt + TAU) % TAU
     const ph = this.phase
     const sn = Math.sin(ph), cs = Math.cos(ph)
     const walkK = clamp01(speed / 1.5)

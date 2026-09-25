@@ -11,6 +11,9 @@ const DEFAULTS = {
   subtitles: true,
   invertCam: false,
   camSensitivity: 1,
+  moveMode: 'steer',   // keyboard on foot: 'steer' (A/D keep turning you) or 'camera' (camera-relative)
+  mouseLook: true,     // a click in the game grabs the mouse for camera look
+  brightness: 1,       // exposure multiplier (nights too dark on some screens)
   fov: 50,
   v: 2,
 }

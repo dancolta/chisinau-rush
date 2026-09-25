@@ -50,7 +50,7 @@ export const sosire = {
       m.endYaw = p.char.heading
     })
     // ---- to the taxi --------------------------------------------------------------------
-    m.tip('{y}[W][A][S][D]{/y} sau {y}săgețile{/y}: mergi · ține {y}[⇧]{/y}: fugi repede · {y}Click dreapta{/y} / {y}[Z][X]{/y}: rotește camera', 10)
+    m.tip('{y}[W]{/y}/{y}[S]{/y} mergi · ține {y}[A]{/y}/{y}[D]{/y} te rotești · ține {y}[⇧]{/y} fugi repede · {y}click{/y} pe joc: camera cu mouse-ul', 11)
     await m.reach(grisaPos, 3.2, { text: 'Ieși din gară. {y}Nea Grișa{/y} te așteaptă cu taxiul peste drum.', label: 'Nea Grișa' })
     grisa.char.anim.play('wave')
     await m.say('grisa', [
