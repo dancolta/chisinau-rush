@@ -19,24 +19,32 @@ export class Combat {
     return out
   }
 
-  // where the player swings: toward the mouse if it was used recently, else soft lock-on
-  aimYaw(p) {
-    const g = this.game, input = g.input
+  // soft lock-on: the best target roughly where you're pushing (or facing), close ones and the
+  // ones already fighting you first
+  aimTarget(p) {
+    const g = this.game
+    let dir = p.char.heading
+    const m = g.input.move()
+    if (!p.steering && (m.x || m.y) && g.cameraRig) {
+      const yaw = g.cameraRig.yaw
+      dir = Math.atan2(Math.sin(yaw) * m.y - Math.cos(yaw) * m.x, Math.cos(yaw) * m.y + Math.sin(yaw) * m.x)
+    }
     let best = null, bs = 1e9
     for (const t of this.targets()) {
-      if (t.char.ko) continue
+      if (t.char.ko || t.state === 'knocked' || t.ally) continue
       const dx = t.pos.x - p.pos.x, dz = t.pos.z - p.pos.z, d = Math.hypot(dx, dz)
-      if (d > 4.5) continue
-      const da = Math.abs(angleDiff(p.char.heading, Math.atan2(dx, dz)))
-      const score = d + da * 2.2 + (t.hostile ? -2 : 0)
-      if (da < 1.4 && score < bs) { bs = score; best = t }
+      if (d > 4 || Math.abs(t.pos.y - p.pos.y) > 1.6) continue
+      const da = Math.abs(angleDiff(dir, Math.atan2(dx, dz)))
+      if (da > 1.3) continue
+      const score = d + da * 2.4 + (t.hostile ? -2 : 0)
+      if (score < bs) { bs = score; best = t }
     }
-    if (best) return Math.atan2(best.pos.x - p.pos.x, best.pos.z - p.pos.z)
-    if (input.lastDevice === 'kb' && performance.now() - input.mouse.moved < 2500) {
-      const gp = g.cameraRig?.mouseGround(p.pos.y + 0.9)
-      if (gp) return Math.atan2(gp.x - p.pos.x, gp.z - p.pos.z)
-    }
-    return p.char.heading
+    return best
+  }
+
+  aimYaw(p) {
+    const t = this.aimTarget(p)
+    return t ? Math.atan2(t.pos.x - p.pos.x, t.pos.z - p.pos.z) : p.char.heading
   }
 
   strike(p, w) {
@@ -75,7 +83,7 @@ export class Combat {
     if (hits || propHit) {
       const heavy = w.heavy || w.key !== 'fist'
       g.audio?.sfx(w.key === 'sticla' ? 'glass' : heavy ? 'punch_heavy' : 'punch', { at: p.pos, pitch: 0.9 + Math.random() * 0.25 })
-      g.cameraRig?.shake(heavy ? 0.22 : 0.12)
+      g.cameraRig?.shake(heavy ? 0.5 : 0.33)
       g.hitstop?.(heavy ? 70 : 45)
       if (hits && Math.random() < 0.55) g.ui?.pow(p.pos.x + fx * 1.1, p.pos.y + 1.5, p.pos.z + fz * 1.1, POW[Math.floor(Math.random() * POW.length)])
     }
@@ -123,12 +131,13 @@ export class Combat {
     g.progress.hurt(Math.min(60, speed * 3))
     p.char.ko = true
     p.char.anim.play('knockdown')
-    p.hitStun = 2.2
+    // back up on game time (pausing pauses it); control returns when the get-up has played
+    p.bailT = 2
+    p.hitStun = 2.8
     p.vel.x = kx; p.vel.z = kz; p.vy = 4
     g.cameraRig?.shake(0.6)
     g.ui?.damageFlash(0.8)
     g.audio?.sfx('hit_body', { vol: 1 })
-    setTimeout(() => { if (p.char.ko && g.progress.hp > 0) { p.char.ko = false; p.char.anim.play('getup') } }, 2000)
   }
 
   cycleWeapon(p) {

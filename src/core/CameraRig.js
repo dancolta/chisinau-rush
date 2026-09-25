@@ -26,23 +26,38 @@ export class CameraRig {
     this.cut = null           // active cutscene shot
     this.userYawT = 0
     this.userTurnT = 0        // > 0 right after the player turned the camera themselves
+    this.pivot = new THREE.Vector3()   // the hero's head, eased: what the camera orbits
+    this.pitchOff = 0         // tilt the player added (mouse / right stick)
+    this.pitchT = 0
+    this.pitchLift = 0        // automatic tilt when a wall leaves no room behind
+    this.enterT = 0           // just got into a car: swing behind it quickly
+    this.lastCar = null
     this.lookAhead = new THREE.Vector3()
     this.noiseT = 0
   }
 
   shake(amount) { this.trauma = Math.min(1, this.trauma + amount * (this.game.settings.shake ?? 1)) }
 
+  // jump straight to the resting position behind the hero (after teleports and cutscenes)
   snap() {
-    this.smoothTarget.copy(this.target)
+    const p = this.game.player
+    if (p) {
+      const car = p.vehicle
+      const o = car ? car.pos : p.pos
+      this.pivot.set(o.x, o.y + (car ? 1.7 : 1.65), o.z)
+    } else this.pivot.copy(this.target)
+    this.lookAhead.set(0, 0, 0)
+    this.pitchOff = 0; this.pitchLift = 0
+    this.smoothTarget.copy(this.pivot)
     this.computeDesired(_v)
     this.collide(_v)
     this.pos.copy(_v)
   }
 
-  computeDesired(out) {
+  computeDesired(out, yaw = this.yaw) {
     const d = this.dist * this.zoom
     const hd = Math.cos(this.pitch) * d, vd = Math.sin(this.pitch) * d
-    out.set(this.smoothTarget.x - Math.sin(this.yaw) * hd, this.smoothTarget.y + vd, this.smoothTarget.z - Math.cos(this.yaw) * hd)
+    out.set(this.pivot.x - Math.sin(yaw) * hd, this.pivot.y + vd, this.pivot.z - Math.cos(yaw) * hd)
     return out
   }
 
@@ -78,62 +93,90 @@ export class CameraRig {
     const p = game.player
     if (!p) return
     const car = p.vehicle
-    // ---- user orbit controls -----------------------------------------------------
+    if (car !== this.lastCar) { if (car) this.enterT = 0.9; this.lastCar = car }
+    // ---- user look controls: mouse (locked pointer, or right/middle drag), right stick, Z/X ---------
     const sens = game.settings.camSensitivity ?? 1
+    const inv = game.settings.invertCam ? -1 : 1
     const turned = () => { this.userYawT = 2.5; this.userTurnT = 0.12 }
     if (this.userTurnT > 0) this.userTurnT -= rawDt
-    if (input.key('Mouse2') || input.key('Mouse1') || input.touchCam) { this.yaw -= input.mouse.dx * 0.0055 * sens; if (input.mouse.dx) turned() }
+    const locked = input.locked
+    if (locked || input.key('Mouse2') || input.key('Mouse1') || input.touchCam) {
+      const k = locked ? 0.0026 : 0.0055
+      if (input.mouse.dx) { this.yaw -= input.mouse.dx * k * sens; turned() }
+      if (input.mouse.dy) { this.pitchOff = THREE.MathUtils.clamp(this.pitchOff + input.mouse.dy * k * 0.8 * sens * inv, -0.3, 0.95); this.pitchT = 2.5 }
+    }
     const look = input.lookAxes()
     if (Math.abs(look.x) > 0) { this.yaw -= look.x * 2.4 * rawDt * sens; turned() }
+    if (Math.abs(look.y) > 0) { this.pitchOff = THREE.MathUtils.clamp(this.pitchOff + look.y * 1.5 * rawDt * sens * inv, -0.3, 0.95); this.pitchT = 2.5 }
     if (input.act('camLeft')) { this.yaw += 1.8 * rawDt; turned() }
     if (input.act('camRight')) { this.yaw -= 1.8 * rawDt; turned() }
     if (input.mouse.wheel) this.zoom = THREE.MathUtils.clamp(this.zoom * (input.mouse.wheel > 0 ? 1.12 : 0.89), 0.7, 2.2)
     if (this.userYawT > 0) this.userYawT -= rawDt
+    // a tilt you gave it eases back after a while, like the yaw
+    if (this.pitchT > 0) this.pitchT -= rawDt
+    else this.pitchOff *= Math.exp(-1.6 * rawDt)
 
-    // ---- follow target -------------------------------------------------------------
-    let speed = 0
+    // ---- follow ------------------------------------------------------------------------------
+    let speed = 0, wantDist, basePitch
+    const lookBack = !!car && input.act('lookBack')
     if (car) {
       const cp = car.mesh.position
       speed = Math.abs(car.speed || 0)
-      this.lookAhead.set(Math.sin(car.heading), 0, Math.cos(car.heading)).multiplyScalar(Math.min(14, speed * 0.45) * Math.sign(car.speed || 1))
-      this.target.set(cp.x, cp.y + 1.7, cp.z).add(this.lookAhead)
-      // swing behind the car unless the player is steering the camera
-      if (this.userYawT <= 0 && speed > 2) {
-        const want = car.speed >= 0 ? car.heading : car.heading
-        this.yaw += wrap(want - this.yaw) * (1 - Math.exp(-1.6 * rawDt))
+      _t.set(cp.x, cp.y + 1.7, cp.z)
+      // look a little ahead along the motion (never more than 5 m, eased so spins and crashes
+      // don't whip the view around)
+      _look.set(Math.sin(car.heading), 0, Math.cos(car.heading)).multiplyScalar(Math.min(5, speed * 0.2) * Math.sign(car.speed || 1))
+      this.lookAhead.lerp(_look, 1 - Math.exp(-2.2 * rawDt))
+      // swing in behind the car: briskly right after you get in, then more the faster you go
+      if (this.userYawT <= 0) {
+        const rate = this.enterT > 0 ? 6 : speed > 1.5 ? 1.1 + Math.min(1.6, speed * 0.06) : 0
+        if (rate) this.yaw += wrap(car.heading - this.yaw) * (1 - Math.exp(-rate * rawDt))
       }
-      const lookBack = input.act('lookBack')
-      if (lookBack) this.yaw = car.heading + Math.PI
-      const wantDist = 8.2 + Math.min(4.5, speed * 0.12)
-      this.dist += (wantDist - this.dist) * (1 - Math.exp(-2 * rawDt))
-      this.pitch += (this.wantPitch(0.2) - this.pitch) * (1 - Math.exp(-2 * rawDt))
+      wantDist = 7.8 + Math.min(4, speed * 0.11)
+      basePitch = 0.2
     } else {
       const cp = p.char.mesh.position
-      speed = p.char.speed
-      this.lookAhead.lerp(_t.set(p.vel.x, 0, p.vel.z).multiplyScalar(0.25), 1 - Math.exp(-3 * rawDt))
-      this.target.set(cp.x, cp.y + 1.65, cp.z).add(this.lookAhead)
-      this.dist += (5.8 - this.dist) * (1 - Math.exp(-2 * rawDt))
-      this.pitch += (this.wantPitch(0.24) - this.pitch) * (1 - Math.exp(-2 * rawDt))
-      // on foot the camera swings in behind you as you run. With keys the run direction is held
-      // while the camera turns, so it can follow any heading except straight at the lens; a
-      // stick reads the camera continuously, so there it only drifts while you run roughly ahead
-      if (this.userYawT <= 0 && speed > 1.5 && game.settings.camFollow !== false) {
-        const diff = wrap(Math.atan2(p.vel.x, p.vel.z) - this.yaw)
-        const keys = p.moveKey != null
-        if (Math.abs(diff) < (keys ? 2.2 : 0.9)) this.yaw += diff * (1 - Math.exp(-(keys ? 1.8 + speed * 0.08 : 0.8) * rawDt))
+      speed = Math.abs(p.char.speed)
+      _t.set(cp.x, cp.y + 1.65, cp.z)
+      _look.set(p.vel.x, 0, p.vel.z).multiplyScalar(0.16)
+      this.lookAhead.lerp(_look, 1 - Math.exp(-3 * rawDt))
+      wantDist = 5.8
+      basePitch = 0.24
+      if (this.userYawT <= 0 && game.settings.camFollow !== false) {
+        if (p.steering) {
+          // steering: stay behind the way the hero faces (lazier while standing still)
+          const moving = speed > 0.5 || Math.abs(p.turnV) > 0.1
+          this.yaw += wrap(p.char.heading - this.yaw) * (1 - Math.exp(-(moving ? 3.4 : 1.2) * rawDt))
+        } else if (speed > 1.5) {
+          // camera-relative: swing in behind the run. With keys the run direction is held while
+          // the camera turns, so it can follow any heading except straight at the lens; a stick
+          // reads the camera continuously, so there it only drifts while you run roughly ahead
+          const diff = wrap(Math.atan2(p.vel.x, p.vel.z) - this.yaw)
+          const keys = p.moveKey != null
+          if (Math.abs(diff) < (keys ? 2.2 : 0.9)) this.yaw += diff * (1 - Math.exp(-(keys ? 1.8 + speed * 0.08 : 0.8) * rawDt))
+        }
       }
     }
-    const follow = car ? 7 : 9
-    this.smoothTarget.lerp(this.target, 1 - Math.exp(-follow * rawDt))
-    this.computeDesired(_v)
-    // walls between the player and the camera pull it in (instantly), then it eases back out
-    const pulled = this.collide(_v)
-    const dNow = this.pos.distanceTo(this.smoothTarget), dWant = _v.distanceTo(this.smoothTarget)
-    if (pulled && dWant < dNow) this.pos.copy(_v)
-    else this.pos.lerp(_v, 1 - Math.exp(-12 * rawDt))
+    if (this.enterT > 0) this.enterT -= rawDt
+    this.dist += (wantDist - this.dist) * (1 - Math.exp(-2 * rawDt))
+    this.pitch += (this.wantPitch(basePitch) + this.pitchOff + this.pitchLift - this.pitch) * (1 - Math.exp(-4 * rawDt))
+    // the camera orbits the hero's head (no look-ahead in the orbit, so it can't swing wide)
+    this.pivot.lerp(_t, 1 - Math.exp(-(car ? 10 : 14) * rawDt))
+    this.target.copy(_t)
+    this.smoothTarget.copy(this.pivot)
+    const yawView = lookBack ? car.heading + Math.PI : this.yaw
+    this.computeDesired(_v, yawView)
+    // walls between the hero and the camera pull it in at once; it eases back out, and when there's
+    // hardly any room it rises to look over the shoulder instead
+    const free = this.collide(_v)
+    const dNow = this.pos.distanceTo(this.pivot), dWant = _v.distanceTo(this.pivot)
+    if (free !== null && dWant < dNow) this.pos.copy(_v)
+    else this.pos.lerp(_v, 1 - Math.exp(-(lookBack ? 30 : 5) * rawDt))
+    this.pitchLift += ((free !== null && free < 2.2 ? 0.5 : 0) - this.pitchLift) * (1 - Math.exp(-3 * rawDt))
     this.cam.position.copy(this.pos)
     this.applyShake(rawDt)
-    this.cam.lookAt(this.smoothTarget)
+    _look.copy(this.pivot).add(this.lookAhead)
+    this.cam.lookAt(_look)
 
     // speed FOV kick
     const kick = car ? Math.min(12, Math.max(0, speed - 12) * 0.35) : p.sprinting ? 6.5 : 0
@@ -149,17 +192,20 @@ export class CameraRig {
     return base + z * 0.6
   }
 
+  // cast from the hero's head (never from a look-ahead point that may be inside a building);
+  // poles and trunks don't count. Returns the free distance when something is in the way.
   collide(out) {
     const P = this.game.physics
-    if (!P) return false
-    const t = this.smoothTarget
+    if (!P) return null
+    const t = this.pivot
     const dx = out.x - t.x, dy = out.y - t.y, dz = out.z - t.z, L = Math.hypot(dx, dy, dz)
-    if (L < 0.01) return false
+    if (L < 0.01) return null
     const hit = P.raycast(t.x, t.y, t.z, dx / L, dy / L, dz / L, L + 0.3, FILTER.Q_CAMERA)
-    if (!hit) return false
-    const k = Math.max(1.1, hit.dist - 0.35) / L
+    if (!hit) return null
+    const free = Math.max(1.1, hit.dist - 0.35)
+    const k = free / L
     out.set(t.x + dx * k, t.y + dy * k, t.z + dz * k)
-    return true
+    return free
   }
 
   applyShake(dt) {

@@ -51,7 +51,7 @@ export class Interaction {
     if (!p || g.state !== 'play' || g.ui.modalOpen || g.paused || !p.control || g.cutscene) { g.ui.prompt(null); this.current = null; this.holdT = 0; return }
     if (p.vehicle) {
       const v = p.vehicle
-      g.ui.prompt(!p.passenger && Math.abs(v.speed) < 8 ? 'Coboară din mașină' : null)
+      g.ui.prompt(p.passenger ? null : Math.abs(v.speed) < 8 ? 'Coboară din mașină' : 'Sari din mașină')
       return
     }
     let best = null, bs = 1e9
@@ -64,7 +64,9 @@ export class Interaction {
       if (score < bs) { bs = score; best = it }
     }
     let veh = null
-    if (!best) veh = g.vehicles.nearestEnterable(p.pos.x, p.pos.z, 1.6)
+    // just stepped out: don't offer the same car straight back for a moment
+    const justOut = performance.now() - (g.vehicles.exitedAt || -1e9) < 450
+    if (!best && !justOut) veh = g.vehicles.nearestEnterable(p.pos.x, p.pos.z, 1.6)
     if (best !== this.current?.item) this.holdT = 0
     this.current = best ? { item: best, onInteract: best.onInteract } : veh ? { vehicle: veh } : null
     const label = best ? (typeof best.label === 'function' ? best.label() : best.label) : null
@@ -84,12 +86,16 @@ export class Interaction {
     if (best) g.ui.prompt(label)
     else if (veh) g.ui.prompt(veh.driver && veh.driver !== 'player' ? `Fură mașina (${veh.def.name})` : `Urcă în ${veh.def.name}`)
     else g.ui.prompt(null)
-    if (g.input.pressed('interact') && !this.busy) {
+    if (g.input.pressed('interact') && !this.busy && !p.char.ko) {
       const cur = this.current
       if (!cur) return
+      g.input.consume('interact')
       if (cur.vehicle) { g.vehicles.enter(cur.vehicle); if (cur.vehicle.driver === 'player') g.progress.stats.cars++; return }
+      // a press only blocks E for a beat: whatever it opened (dialogue, shop) guards itself with
+      // modalOpen, and a mission it started can run for minutes while E must keep working
       this.busy = true
-      Promise.resolve(cur.onInteract()).finally(() => { this.busy = false })
+      setTimeout(() => { this.busy = false }, 250)
+      try { Promise.resolve(cur.onInteract()).catch((e) => console.error(e)) } catch (e) { console.error(e) }
     }
   }
 }

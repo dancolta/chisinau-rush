@@ -178,7 +178,7 @@ export class Renderer {
     this.sun.color.copy(t.lightColor); this.sun.intensity = t.lightIntensity
     this.renderer.setClearColor(s.fog)
     SHARED.uNight.value = s.lamps
-    this.renderer.toneMappingExposure = s.exposure
+    this.renderer.toneMappingExposure = s.exposure * (this.settings?.brightness ?? 1)
     this.scene.fog.far = 900
     this.weather?.apply(this)
   }

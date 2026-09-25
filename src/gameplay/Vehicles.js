@@ -127,6 +127,7 @@ export class Vehicles {
       if (ai && ai.eject) ai.eject()
       game.events.emit('crime', { type: 'carjack', x: v.pos.x, z: v.pos.z, severity: v.def.police ? 3 : 1 })
     }
+    game.input.consume('interact')
     v.driver = 'player'
     v.parked = false
     v.body.wakeUp()
@@ -143,7 +144,8 @@ export class Vehicles {
   exit(force = false) {
     const game = this.game, p = game.player, v = p.vehicle
     if (!v) return
-    if (!force && Math.abs(v.speed) > 8) return
+    // too fast to step out: bail out (you tumble, the car rolls on without you)
+    const bail = !force && Math.abs(v.speed) > 8
     const wasPassenger = p.passenger
     p.passenger = false
     // driver door is on the left (+x local); try left, right, behind, front
@@ -167,7 +169,22 @@ export class Vehicles {
     p.char.setVisible(true)
     p.enableCollider(true)
     v.siren = false
+    this.exitedAt = performance.now()
+    game.input.consume('interact')
     game.audio?.sfx('door', { vol: 0.6 })
+    if (bail) {
+      v.handbrake = false
+      const k = Math.min(1, Math.abs(v.speed) / 30)
+      p.vel.set(Math.sin(v.heading) * v.speed * 0.35, 0, Math.cos(v.heading) * v.speed * 0.35)
+      p.char.ko = true
+      p.bailT = 0.8 + k * 0.7
+      p.hitStun = p.bailT + 0.7
+      p.char.anim.play('knockdown')
+      game.progress?.hurt?.(Math.round(4 + k * 10))
+      game.cameraRig?.shake(0.35 + k * 0.3)
+      game.audio?.sfx('land', { vol: 0.8 })
+      game.fx?.dust(x, y + 0.2, z, 12)
+    }
     game.events.emit('vehicle:exit', v)
   }
 

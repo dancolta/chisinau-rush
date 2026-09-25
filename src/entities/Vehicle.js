@@ -174,29 +174,42 @@ export class Vehicle {
     const v = b.linvel()
     let vf = v.x * fx + v.z * fz
     let vr = v.x * rx + v.z * rz
-    const throttle = this.broken || this.stalled ? 0 : this.throttle
+    const human = this.driver === 'player'
+    let throttle = this.broken || this.stalled ? 0 : this.throttle
+    // keys are all-or-nothing: for the player the pedals travel in over ~0.1 s, and reverse only
+    // engages once the brake has been held at a standstill (so stopping at a light isn't backing up)
+    if (human) {
+      this.pedal = (this.pedal || 0) + (throttle - (this.pedal || 0)) * (1 - Math.exp(-(Math.abs(throttle) > Math.abs(this.pedal || 0) ? 10 : 16) * h))
+      throttle = this.pedal
+      if (throttle < -0.02 && Math.abs(vf) < 0.6) this.revT = (this.revT || 0) + h
+      else if (throttle >= -0.02) this.revT = 0
+    }
+    const brakeDecel = human ? 17 : 28
     const steer = this.steer
     this.braking = false
     // longitudinal
     const maxF = d.maxSpeed * (this.boost ? 1.18 : 1)
     if (throttle > 0.02) {
-      if (vf < -0.5) { vf += 26 * throttle * h; this.braking = true }
+      if (vf < -0.5) { vf += (human ? 17 : 26) * throttle * h; this.braking = true }
       else vf += d.accel * throttle * (1 - Math.min(1, Math.max(0, vf) / maxF) ** 2) * h * (this.boost ? 1.35 : 1)
     } else if (throttle < -0.02) {
-      if (vf > 0.5) { vf -= 28 * -throttle * h; this.braking = true }
-      else vf = Math.max(-d.maxSpeed * 0.3, vf - d.accel * 0.7 * -throttle * h)
+      if (vf > 0.5) { vf -= brakeDecel * -throttle * h; this.braking = true }
+      else if (!human || this.revT > 0.3) vf = Math.max(-d.maxSpeed * 0.3, vf - d.accel * 0.7 * -throttle * h)
+      else { vf *= Math.exp(-8 * h); this.braking = true }
     } else {
       vf -= vf * (0.22 + (this.driver ? 0 : 1.5)) * h
       if (Math.abs(vf) < 0.2) vf = 0
     }
     if (this.handbrake) { vf -= Math.sign(vf) * Math.min(Math.abs(vf), 9 * h); this.braking = true }
     // lateral grip (low grip + handbrake = drift)
-    const grip = this.handbrake ? 1.3 : d.grip * (Math.abs(vf) > 25 ? 0.85 : 1)
+    // grip comes back gradually after a handbrake slide instead of snapping the car straight
+    const fullGrip = d.grip * (Math.abs(vf) > 25 ? 0.85 : 1)
+    this.gripK = this.handbrake ? 0 : Math.min(1, (this.gripK ?? 1) + h / 0.35)
+    const grip = this.handbrake ? 1.3 : 1.3 + (fullGrip - 1.3) * this.gripK
     vr *= Math.exp(-grip * h)
     this.lateral = vr
     // steering: bicycle model, less lock at speed
     const lock = d.steer / (1 + Math.abs(vf) / 22)
-    const human = this.driver === 'player'
     // keys are all-or-nothing, so for the player the wheel eases in and snaps back to centre
     const rate = !human ? 10 : Math.abs(steer * lock) > Math.abs(this.steerVis) ? 6 : 12
     this.steerVis += (steer * lock - this.steerVis) * (1 - Math.exp(-rate * h))

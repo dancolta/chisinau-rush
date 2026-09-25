@@ -327,13 +327,15 @@ export class Menus {
 
   renderControls(body) {
     const rows = [
-      ['Mers / condus', 'W A S D · săgeți', 'stick stânga · RT/LT', 'joystick stânga'],
+      ['Mers pe jos', 'W/S înainte-înapoi · A/D rotire (ține) · săgeți', 'stick stânga', 'joystick stânga'],
+      ['Condus', 'W accelerează · S frânează (ține: marșarier) · A/D volan', 'RT/LT · stick stânga', 'joystick stânga'],
       ['Fugi repede / nitro', 'ține Shift', 'ține B', '» / 🔥'],
       ['Lovește', 'Click · J · K', 'X', '👊'],
       ['Sari / frână de mână', 'Space', 'A', '⤒ / ⤓'],
       ['Acțiune, urcă/coboară, vorbește', 'E', 'Y', 'E'],
       ['Schimbă arma', 'Q', 'LB', 'Q'],
-      ['Rotește camera', 'click dreapta + mouse · Z/X', 'stick dreapta', 'trage în dreapta'],
+      ['Rotește camera', 'click pe joc + mouse (Esc eliberează) · Z/X', 'stick dreapta', 'trage în dreapta'],
+      ['Coboară / sari din mașină', 'E (în mers: sari)', 'Y', 'E'],
       ['Zoom', 'rotița', '', ''],
       ['Claxon', 'H', 'R3', '📯'],
       ['Privește înapoi (în mașină)', 'C', 'R3', ''],
@@ -357,6 +359,13 @@ export class Menus {
     row('Calitate grafică', sel)
     const chk = (key, label) => { const c = el('input'); c.type = 'checkbox'; c.checked = !!s[key]; c.onchange = () => { s[key] = c.checked; saveSettings(s); if (key === 'autoRes') g.renderer.dynScale = 1 }; row(label, c) }
     chk('autoRes', 'Rezoluție adaptivă (FPS stabil)')
+    const mm = el('select')
+    mm.appendChild(new Option('A/D te rotesc (ține apăsat)', 'steer', false, s.moveMode !== 'camera'))
+    mm.appendChild(new Option('Direcții relative la cameră', 'camera', false, s.moveMode === 'camera'))
+    mm.onchange = () => { s.moveMode = mm.value; saveSettings(s) }
+    row('Mers pe jos (tastatură)', mm)
+    chk('mouseLook', 'Cameră cu mouse-ul (click pe joc, Esc eliberează)')
+    chk('invertCam', 'Inversează axa verticală a camerei')
     const slider = (key, label, min, max, step, apply) => {
       const r = el('input'); r.type = 'range'; r.min = min; r.max = max; r.step = step; r.value = s[key]
       r.oninput = () => { s[key] = parseFloat(r.value); apply?.(); saveSettings(s) }
@@ -370,6 +379,7 @@ export class Menus {
     slider('shake', 'Tremurat cameră', 0, 1.5, 0.1)
     slider('fov', 'Câmp vizual (FOV)', 34, 60, 1, () => { g.cameraRig.baseFov = s.fov })
     slider('camSensitivity', 'Sensibilitate cameră', 0.3, 2.5, 0.1)
+    slider('brightness', 'Luminozitate', 0.8, 1.6, 0.05)
   }
 
   showSettingsOnly() {
