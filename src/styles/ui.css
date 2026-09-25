@@ -54,14 +54,15 @@
 .objective .sub { font-size: 12.5px; color: #cfc8bb; margin-top: 4px; }
 .objective .timer { font-family: var(--num); font-size: 22px; color: #fff; float: right; margin-left: 10px; }
 .objective .timer.warn { color: #ff6b5f; animation: lowpulse 0.6s infinite; }
-.objective.flash { animation: objflash 0.9s ease; }
+/* (not .flash: that's the full-screen colour flash, which would pin the panel to a 0-height box) */
+.objective.obj-in { animation: objflash 0.9s ease; }
 @keyframes objflash { 0% { transform: translateX(-12px); opacity: 0; } 30% { opacity: 1; transform: none; box-shadow: 0 0 0 2px rgba(255,207,74,0.6); } 100% { box-shadow: none; } }
 .tip { background: rgba(10,8,14,0.82); border-radius: 10px; padding: 10px 14px; font-size: 13.5px; line-height: 1.45; color: #efe9dd; border: 1px solid rgba(255,255,255,0.08); animation: tipin 0.35s ease; }
 @keyframes tipin { from { opacity: 0; transform: translateY(-6px); } }
 .key { display: inline-block; min-width: 22px; text-align: center; font-family: var(--display); font-size: 11px; color: #111; background: #f2eee6; border-radius: 4px; padding: 2px 5px; margin: 0 2px; box-shadow: 0 2px 0 #8a8479; vertical-align: 1px; }
 
 /* ---- notifications (right side, under money) ---- */
-.toasts { position: absolute; top: 130px; right: 22px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.toasts { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; margin-top: 6px; }
 .toast { background: rgba(12,10,18,0.86); border-right: 3px solid var(--teal); color: #f3eee4; font-size: 13.5px; padding: 8px 12px; border-radius: 8px 3px 3px 8px; max-width: 340px; animation: toastin 0.3s ease; }
 .toast.gold { border-color: var(--gold); } .toast.red { border-color: #ff4d4d; } .toast.green { border-color: #5fd06a; }
 .toast.out { opacity: 0; transform: translateX(20px); transition: all 0.4s ease; }
@@ -78,6 +79,11 @@
 /* ---- prompt, subtitles ---- */
 .prompt { position: absolute; left: 50%; bottom: calc(var(--edge-y) + 150px); transform: translateX(-50%); background: rgba(10,8,14,0.85); color: #fff; padding: 8px 14px 8px 10px; border-radius: 22px; font-size: 14.5px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,207,74,0.35); animation: tipin 0.2s ease; white-space: nowrap; }
 .prompt .key { font-size: 13px; padding: 3px 8px; }
+.district-banner { position: absolute; left: 50%; bottom: calc(var(--edge-y) + 26px); transform: translateX(-50%); text-align: center; pointer-events: none; z-index: 30; animation: distin 0.6s ease; }
+.district-banner .n { font-family: var(--title); font-size: clamp(30px, 4.2vw, 52px); letter-spacing: 3px; color: #fff; -webkit-text-stroke: 1.5px #000; text-shadow: 0 4px 0 #000, 0 0 18px rgba(0,0,0,0.6); line-height: 1; }
+.district-banner .s { font-family: var(--display); font-size: 12px; letter-spacing: 3px; color: var(--gold); text-shadow: 0 1px 3px #000; margin-top: 6px; }
+.district-banner.out { opacity: 0; transform: translate(-50%, 8px); transition: all 0.6s ease; }
+@keyframes distin { from { opacity: 0; transform: translate(-50%, 10px); } }
 .subtitle { position: absolute; left: 50%; bottom: calc(var(--edge-y) + 96px); transform: translateX(-50%); width: min(820px, 86vw); text-align: center; font-size: 19px; line-height: 1.4; color: #fff; text-shadow: 0 2px 4px #000, 0 0 12px rgba(0,0,0,0.9); font-weight: 500; }
 .subtitle b { color: var(--gold); font-weight: 700; margin-right: 6px; }
 

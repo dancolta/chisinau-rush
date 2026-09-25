@@ -135,7 +135,7 @@ class MissionContext {
   tip(text, secs) { this.ui.tip(text, secs) }
   notify(text, secs, color) { this.ui.notify(text, secs, color) }
 
-  async reach(pos, r = 3, { text = null, label = '', inVehicle = null, vehicle = null, stop = false, sub = '' } = {}) {
+  async reach(pos, r = 3, { text = null, label = '', inVehicle = null, vehicle = null, stop = false, sub = '', brokenText = '' } = {}) {
     const target = typeof pos === 'string' ? this.places[pos] : pos
     if (text) this.objective(text, { sub })
     this.marker(target, label)
@@ -156,6 +156,9 @@ class MissionContext {
     }
     await this.until(() => {
       const p = this.player
+      // the car this step needs is a wreck: say so and end it (otherwise the marker would point
+      // at a car that can't drive, and walking up to the goal would do nothing)
+      if (vehicle && vehicle.broken) { this.fail(brokenText || `${vehicle.def.name} e praf. Mai încearcă.`); return false }
       if (inVehicle === true && (!p.vehicle || p.passenger)) return false
       if (inVehicle === false && p.vehicle) return false
       if (vehicle && p.vehicle !== vehicle) return false

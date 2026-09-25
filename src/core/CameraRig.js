@@ -1,10 +1,16 @@
 import * as THREE from 'three'
 import { SHARED } from '../render/Materials.js'
 import { FILTER } from '../physics/Physics.js'
+import { saveSettings } from './Settings.js'
 
 const _v = new THREE.Vector3(), _t = new THREE.Vector3(), _look = new THREE.Vector3()
 const TAU = Math.PI * 2
 const wrap = (a) => { a %= TAU; if (a > Math.PI) a -= TAU; if (a < -Math.PI) a += TAU; return a }
+
+// [V] / d-pad up: how far back the camera sits. On foot and in a car each remember their own.
+// Car distances grow a little with speed (k per m/s).
+export const FOOT_CAM = [{ d: 4.5, p: 0.2, name: 'aproape' }, { d: 5.8, p: 0.24, name: 'departe' }, { d: 8.6, p: 0.34, name: 'foarte departe' }]
+export const CAR_CAM = [{ d: 6.2, k: 0.07, p: 0.15, name: 'aproape' }, { d: 8.4, k: 0.1, p: 0.21, name: 'departe' }, { d: 12.8, k: 0.12, p: 0.3, name: 'foarte departe' }]
 
 // Angled third-person camera (Chinatown-Wars style) with car chase mode,
 // cutscene paths, trauma shake and the building see-through cutout.
@@ -50,6 +56,7 @@ export class CameraRig {
     } else this.pivot.copy(this.target)
     this.lookAhead.set(0, 0, 0)
     this.pitchOff = 0; this.pitchLift = 0
+    this.footHeading = this.carHeading = null
     this.smoothTarget.copy(this.pivot)
     this.computeDesired(_v)
     this.collide(_v)
@@ -74,6 +81,13 @@ export class CameraRig {
     const game = this.game
     const input = game.input
     this.noiseT += rawDt
+    if (input.pressed('camMode') && !game.ui?.modalOpen && !this.cut && !this.room && game.player) {
+      const s = game.settings, car = !!game.player.vehicle && !game.player.passenger
+      const key = car ? 'camCar' : 'camFoot', list = car ? CAR_CAM : FOOT_CAM
+      s[key] = ((s[key] ?? 1) + 1) % list.length
+      saveSettings(s)
+      game.ui?.notify(`Cameră: ${list[s[key]].name}`, 1.2)
+    }
     // ---- cutscene camera -------------------------------------------------------
     if (this.cut) {
       const c = this.cut
@@ -132,28 +146,39 @@ export class CameraRig {
       // don't whip the view around)
       _look.set(Math.sin(car.heading), 0, Math.cos(car.heading)).multiplyScalar(Math.min(5, speed * 0.2) * Math.sign(car.speed || 1))
       this.lookAhead.lerp(_look, 1 - Math.exp(-(ride ? 1.2 : 2.2) * rawDt))
-      // swing in behind the car: briskly right after you get in, then more the faster you go.
-      // A passenger gets a lazy three-quarter view from the kerb side, so the city goes by
+      // the camera turns with the car (same rate, so nothing keeps swinging after you straighten
+      // up), and a spring settles it in behind: briskly right after you get in, gently while you
+      // drive. A passenger gets a lazy three-quarter view from the kerb side, so the city goes by
+      const rh = car.mesh.rotation.y
       if (this.userYawT <= 0) {
-        const want = car.heading + (ride ? 0.32 : 0)
-        const rate = this.enterT > 0 ? 6 : ride ? (speed > 0.5 ? 0.9 : 0) : speed > 1.5 ? 1.1 + Math.min(1.6, speed * 0.06) : 0
+        const dh = this.carHeading == null ? 0 : wrap(rh - this.carHeading)
+        if (Math.abs(dh) < 0.5) this.yaw += dh * (ride ? 0.8 : 0.92)
+        const want = rh + (ride ? 0.32 : 0)
+        const rate = this.enterT > 0 ? 6 : ride ? (speed > 0.5 ? 0.9 : 0) : speed > 1 ? 3.2 : 0
         if (rate) this.yaw += wrap(want - this.yaw) * (1 - Math.exp(-rate * rawDt))
       }
-      wantDist = ride ? 6.6 + Math.min(2, speed * 0.06) : 7.8 + Math.min(4, speed * 0.11)
-      basePitch = ride ? 0.14 : 0.2
+      this.carHeading = rh
+      const cc = CAR_CAM[game.settings.camCar ?? 1]
+      wantDist = ride ? 6.6 + Math.min(2, speed * 0.06) : cc.d + Math.min(4, speed * cc.k)
+      basePitch = ride ? 0.14 : cc.p
     } else {
       const cp = p.char.mesh.position
       speed = Math.abs(p.char.speed)
       _t.set(cp.x, cp.y + 1.65, cp.z)
       _look.set(p.vel.x, 0, p.vel.z).multiplyScalar(0.16)
       this.lookAhead.lerp(_look, 1 - Math.exp(-3 * rawDt))
-      wantDist = 5.8
-      basePitch = 0.24
+      const fc = FOOT_CAM[game.settings.camFoot ?? 1]
+      wantDist = fc.d
+      basePitch = fc.p
+      const rh = p.char.mesh.rotation.y
       if (this.userYawT <= 0 && game.settings.camFollow !== false) {
         if (p.steering) {
-          // steering: stay behind the way the hero faces (lazier while standing still)
-          const moving = speed > 0.5 || Math.abs(p.turnV) > 0.1
-          this.yaw += wrap(p.char.heading - this.yaw) * (1 - Math.exp(-(moving ? 3.4 : 1.2) * rawDt))
+          // steering: the camera turns with the hero at the hero's own rate, so it starts and
+          // stops turning exactly when you do (still smooth: the turn itself eases in and out),
+          // and a quick spring takes out any offset that's left
+          const dh = this.footHeading == null ? 0 : wrap(rh - this.footHeading)
+          if (Math.abs(dh) < 0.5) this.yaw += dh
+          this.yaw += wrap(rh - this.yaw) * (1 - Math.exp(-6 * rawDt))
         } else if (speed > 1.5) {
           // camera-relative: swing in behind the run. With keys the run direction is held while
           // the camera turns, so it can follow any heading except straight at the lens; a stick
@@ -163,7 +188,10 @@ export class CameraRig {
           if (Math.abs(diff) < (keys ? 2.2 : 0.9)) this.yaw += diff * (1 - Math.exp(-(keys ? 1.8 + speed * 0.08 : 0.8) * rawDt))
         }
       }
+      this.footHeading = rh
+      this.carHeading = null
     }
+    if (car) this.footHeading = null
     if (this.enterT > 0) this.enterT -= rawDt
     this.dist += (wantDist - this.dist) * (1 - Math.exp(-2 * rawDt))
     this.pitch += (this.wantPitch(basePitch) + this.pitchOff + this.pitchLift - this.pitch) * (1 - Math.exp(-4 * rawDt))

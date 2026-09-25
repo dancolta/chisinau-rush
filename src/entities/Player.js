@@ -7,6 +7,7 @@ import { angleDiff } from './Character.js'
 
 const HALF_H = 0.55, RADIUS = 0.3
 const CAP_Y = HALF_H + RADIUS // capsule centre above the feet
+const STEP_MAX = 0.42 // kerbs, entrance steps, low planters: walked up, never jumped
 
 export class Player {
   constructor(game, spec, opts = {}) {
@@ -106,7 +107,8 @@ export class Player {
         const turn = -Math.sign(m.x) // +1 = left
         const fwd = Math.sign(m.y)
         const rate = fwd === 0 ? 3.4 : this.sprinting ? 2.3 : 2.9
-        this.turnV += (turn * rate - this.turnV) * (1 - Math.exp(-12 * h))
+        // spins up smoothly, and stops almost at once when you let go (no drifting on after)
+        this.turnV += (turn * rate - this.turnV) * (1 - Math.exp(-(turn ? 12 : 22) * h))
         if (Math.abs(this.turnV) > 0.002) c.heading += this.turnV * h
         if (fwd > 0 && rig && rig.userYawT > 0 && turn === 0) c.heading += angleDiff(c.heading, rig.yaw) * (1 - Math.exp(-7 * h))
         this.backward = fwd < 0
@@ -158,6 +160,21 @@ export class Player {
     if (this.grounded && this.vy < 0) this.vy = -2
 
     const desired = { x: this.vel.x * h, y: this.vy * h, z: this.vel.z * h }
+    // Step assist: the controller's autostep misses kerbs at some angles and you stop dead at a
+    // 16 cm kerb as if at an invisible wall. Look ahead at ankle height where you're heading: if
+    // something low is in the way and there's floor on top of it within reach, lift onto it.
+    const iv = Math.hypot(tvx, tvz)
+    if (this.grounded && iv > 0.5 && this.vy <= 0) {
+      const fx = tvx / iv, fz = tvz / iv
+      const t = this.body.translation(), footY = t.y - CAP_Y
+      const P = game.physics, reach = RADIUS + 0.22
+      const low = P.raycast(t.x, footY + 0.05, t.z, fx, 0, fz, reach, FILTER.Q_GROUND)
+      if (low && Math.abs(low.normal.y) < 0.6 && !P.raycast(t.x, footY + STEP_MAX + 0.04, t.z, fx, 0, fz, reach + 0.1, FILTER.Q_GROUND)) {
+        const top = P.raycast(t.x + fx * (low.dist + 0.12), footY + STEP_MAX + 0.04, t.z + fz * (low.dist + 0.12), 0, -1, 0, STEP_MAX + 0.1, FILTER.Q_GROUND)
+        const dh = top && top.normal.y > 0.7 ? top.point.y - footY : 0
+        if (dh > 0.02 && dh <= STEP_MAX) desired.y = dh + 0.02
+      }
+    }
     this.cc.computeColliderMovement(this.collider, desired, undefined, FILTER.PLAYER)
     const mv = this.cc.computedMovement()
     const t = this.body.translation()

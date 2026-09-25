@@ -166,6 +166,14 @@ export class Vehicle {
   fixedUpdate(h) {
     if (this.disposed) return
     this.prev.copy(this.pos); this.prevHeading = this.heading
+    // crash bookkeeping (see Vehicles.onContact): close the impact window, then a short cooldown
+    if (this.hitCool > 0) this.hitCool -= h
+    if (this.impact && (this.impact.t -= h) <= 0) {
+      const hit = this.impact
+      this.impact = null
+      this.hitCool = 0.3
+      this.game.vehicles?.crashed(this, hit)
+    }
     const b = this.body
     if (b.isSleeping() && !this.driver) return
     const d = this.def
@@ -229,6 +237,8 @@ export class Vehicle {
     if (gy !== null) vy = (gy - t.y) * 18
     else vy = -6
     b.setLinvel({ x: fx * vf + rx * vr, y: vy, z: fz * vf + rz * vr }, true)
+    // what we asked for: a crash is the difference between this and what the solver hands back
+    this.setVel = { x: fx * vf + rx * vr, z: fz * vf + rz * vr }
     b.setAngvel({ x: 0, y: wy, z: 0 }, true)
     this.speed = vf
     // curb bump for visuals
@@ -277,6 +287,9 @@ export class Vehicle {
 
   damage(amount) {
     if (this.broken) return
+    // a car you're riding in as a passenger (a scripted ride) can't be wrecked out from under you
+    const p = this.game.player
+    if (p && p.passenger && p.vehicle === this) return
     this.health = Math.max(0, this.health - amount)
     if (this.health <= 0) { this.broken = true; this.game.events.emit('vehicle:broken', this) }
   }

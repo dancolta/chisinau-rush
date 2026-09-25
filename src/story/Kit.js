@@ -326,7 +326,7 @@ export class RouteDriver {
     const e = target - v.speed
     v.throttle = e > 0 ? Math.min(1, e * 0.5 + 0.25) : Math.max(-1, e * 0.3)
     // and drive like there's a passenger: gentle on both pedals
-    if (this.chauffeur) v.throttle = clamp(v.throttle, -0.35, 0.6)
+    if (this.chauffeur) v.throttle = clamp(v.throttle, -0.35, 0.72)
     v.handbrake = chauffeur && target < 0.3 && Math.abs(v.speed) < 0.6
     // stuck behind slow or stopped traffic on a straight: pull out and pass when the next lane is
     // clear (Nea Grișa has never waited for anyone), then tuck back in once past
@@ -354,9 +354,10 @@ export class RouteDriver {
     } else this.stuck = 0
     // keep the road ahead clear of traffic the camera can't see
     if ((this.clearT -= h) <= 0) { this.clearT = 1; this.clearAhead() }
-    // no progress for a long time (wedged on a kerb, boxed in): hop to the next waypoint
+    // no progress for a long time (wedged on a kerb, boxed in): hop to the next waypoint. With the
+    // hero in the back it's a scripted ride, so a few seconds' stall already becomes a jump cut
     if (d2 < this.best - 1.5 || (w.speed ?? this.speed) * this.speedMul <= 3) { this.best = Math.min(this.best, d2); this.noProgT = 0 }
-    else if ((this.noProgT += h) > 12) this.rescue(w)
+    else if ((this.noProgT += h) > (chauffeur ? 4 : 12)) this.rescue(w)
   }
   // no vehicle (or walker in the road) in the lane `off` metres left of the route, from `back`
   // metres behind us to `ahead` metres in front
@@ -379,10 +380,21 @@ export class RouteDriver {
     this.noProgT = 0; this.best = Infinity
     if (!this.chauffeur && g.traffic?.visible(v.pos.x, v.pos.z)) return
     const go = () => {
-      const nx = this.points[this.i + 1] || w
-      const ry = Math.atan2(nx.x - w.x, nx.z - w.z) || v.heading
-      g.vehicles.clearSpot?.(w.x, w.z, 7)
-      v.teleport(w.x, (g.physics.groundHeight(w.x, w.z, 3) ?? v.pos.y) + 0.3, w.z, ry)
+      let x = w.x, z = w.z
+      let ry = Math.atan2((this.points[this.i + 1] || w).x - w.x, (this.points[this.i + 1] || w).z - w.z) || v.heading
+      if (this.chauffeur) {
+        // a jump cut just past whatever is in the way (not a hop across town), on a spot where
+        // nothing is parked (the trolleybus can't be cleared away, so it's stepped over)
+        const dx = w.x - v.pos.x, dz = w.z - v.pos.z, d = Math.hypot(dx, dz) || 1
+        ry = Math.atan2(dx, dz)
+        for (let s = 30; s <= d; s += 12) {
+          x = v.pos.x + dx / d * s; z = v.pos.z + dz / d * s
+          if (!g.vehicles.list.some((o) => o !== v && Math.hypot(o.pos.x - x, o.pos.z - z) < 4 + o.def.dims[2])) break
+          x = w.x; z = w.z
+        }
+      }
+      g.vehicles.clearSpot?.(x, z, 7)
+      v.teleport(x, (g.physics.groundHeight(x, z, 3) ?? v.pos.y) + 0.3, z, ry)
       // the passenger's camera lands behind the cab, not somewhere across town
       if (this.chauffeur && g.cameraRig) g.cameraRig.yaw = ry
     }

@@ -2,7 +2,7 @@ import { H_ROADS, V_ROADS, BLOCKS, WORLD, RAIL_Z } from '../world/CityLayout.js'
 
 const ZONE_FILL = {
   soviet: '#3a3d38', acasa: '#3d3a33', garaje: '#3a3834', linella: '#3a3d38',
-  catedrala: '#2f4a2c', gradina: '#2c4a2a', guvern: '#4a4538', piata: '#4a4034', autogara: '#3e3f44', gara: '#4a4538', circ: '#48443a', ambasada: '#3a3a34',
+  catedrala: '#2f4a2c', gradina: '#2c4a2a', romasca: '#2c4a2a', guvern: '#4a4538', piata: '#4a4034', autogara: '#3e3f44', gara: '#4a4538', circ: '#48443a', ambasada: '#3a3a34',
 }
 const PX = 1.2 // static map pixels per metre
 
@@ -20,7 +20,7 @@ export function renderStaticMap(world) {
     x.fillRect(X(b.ix0), Z(b.iz0), (b.ix1 - b.ix0) * PX, (b.iz1 - b.iz0) * PX)
   }
   // parks greener
-  for (const b of BLOCKS) if (b.zone === 'gradina' || b.zone === 'catedrala') { x.fillStyle = '#35602f'; x.fillRect(X(b.ix0), Z(b.iz0), (b.ix1 - b.ix0) * PX, (b.iz1 - b.iz0) * PX) }
+  for (const b of BLOCKS) if (b.zone === 'gradina' || b.zone === 'catedrala' || b.zone === 'romasca') { x.fillStyle = '#35602f'; x.fillRect(X(b.ix0), Z(b.iz0), (b.ix1 - b.ix0) * PX, (b.iz1 - b.iz0) * PX) }
   // building footprints
   x.fillStyle = '#8e8a82'
   for (const f of world.footprints) {

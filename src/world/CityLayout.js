@@ -30,7 +30,7 @@ export const ZONES = [
   ['soviet', 'circ', 'soviet', 'soviet', 'soviet', 'soviet', 'ambasada'],
   ['hotel', 'opera', 'primaria', 'guvern', 'parlament', 'presedintia', 'usm'],
   ['teatru', 'muzeu', 'istoric', 'catedrala', 'gradina', 'piata', 'autogara'],
-  ['soviet', 'garaje', 'soviet', 'acasa', 'linella', 'soviet', 'gara'],
+  ['soviet', 'garaje', 'soviet', 'acasa', 'linella', 'romasca', 'gara'],
 ]
 
 export function blockRect(col, row) {

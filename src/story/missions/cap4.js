@@ -181,7 +181,7 @@ export const cortegiul = {
     if (g.progress.flags.nitro) m.tip('{y}[⇧]{/y} Nitro! Borea ți l-a montat „aproape legal".', 6)
     m.tip('Lovește G-Wagonul cu mașina până îl oprești. {y}Nu-l pierde!{/y}', 7)
     // ---- the chase ---------------------------------------------------------------------------------------
-    const off = g.events.on('player:crash', (e) => { if (e.other === gw && !gw.broken) { gw.damage(7 + e.force * 0.28); g.cameraRig.shake(0.35); g.audio?.sfx('metal_hit', { vol: 1 }) } })
+    const off = g.events.on('player:crash', (e) => { if (e.other === gw && !gw.broken) { gw.damage(12 + e.force * 0.3); g.cameraRig.shake(0.35); g.audio?.sfx('metal_hit', { vol: 1 }) } })
     m.track({ dispose: off })
     const bar = (v) => { const k = Math.round(clamp(v, 0, 100) / 10); return '▰'.repeat(k) + '▱'.repeat(10 - k) }
     let lostT = 0, noCarT = 0, escorts = false

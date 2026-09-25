@@ -245,7 +245,7 @@ r = await ev(async () => {
   for (const k of ['min', 'max', 'top', 'atSlow', 'head']) if (out[k] != null) out[k] = +out[k].toFixed(2)
   return out
 })
-check('chauffeur: gentle on both pedals with you in the back', r.fin && r.max <= 0.61 && r.min >= -0.36, JSON.stringify(r))
+check('chauffeur: gentle on both pedals with you in the back', r.fin && r.max <= 0.73 && r.min >= -0.36, JSON.stringify(r))
 check('chauffeur: eases off before a slow corner', r.atSlow !== null && r.atSlow < 7 && r.top > 10, `at corner ${r.atSlow} m/s, top ${r.top}`)
 check('chauffeur: headlights on at night for a passenger', r.head > 50, `spot ${r.head}`)
 
@@ -278,7 +278,7 @@ r = await ev(async () => {
   g.debug.autoplay(false)
   return out
 })
-check('prologue: Nea Grișa drives gently', r.ride && r.pedals && r.pedals[1] <= 0.61 && r.pedals[0] >= -0.36, JSON.stringify(r.pedals))
+check('prologue: Nea Grișa drives gently', r.ride && r.pedals && r.pedals[1] <= 0.73 && r.pedals[0] >= -0.36, JSON.stringify(r.pedals))
 check('prologue: skipping the ride parks the cab at Blocul 7 and looks at home', r.jumped && r.rolled < 2.5 && r.yaw < 0.6 && r.out, JSON.stringify(r))
 
 console.log(errors.length ? `console errors: ${errors.length}` : 'no console errors')

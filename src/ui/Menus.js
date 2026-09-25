@@ -54,7 +54,7 @@ export class Menus {
         <div class="mm-tag">De la <b class="y">plecat peste hotare</b> la <b class="y">primar</b>. Un oraș, o sută de gropi, un primar care vorbește prea des la telefon.</div>
         <div class="mm-btns"></div>
         ${save ? `<div class="mm-save">Salvare: ${save.name} · ${RANKS[save.rankIdx || 0].name} · ${new Date(save.t).toLocaleString('ro-RO')}</div>` : ''}
-        <div class="mm-foot">WASD mișcare · Shift sprint · E acțiune · Click/J lovește · Space sari / frână de mână · Q armă · M hartă · Esc pauză<br>Asset-uri CC0: KayKit (Kay Lousberg), Kenney. Satiră. Orice asemănare cu primari reali e… lucrăm la asta.</div>
+        <div class="mm-foot">W/S mers · A/D rotire · Shift sprint · E acțiune · Click/J lovește · Space sari / frână · Q armă · V cameră · M hartă · Esc pauză<br>Asset-uri CC0: KayKit (Kay Lousberg), Kenney. Satiră. Orice asemănare cu primari reali e… lucrăm la asta.</div>
       </div><div></div>`)
     const btns = m.querySelector('.mm-btns')
     const add = (label, cls, fn) => { const b = el('button', 'btn ' + cls, label); b.onclick = () => { g.audio?.resume(); g.audio?.sfx('confirm', { bus: 'ui' }); fn() }; b.onmouseenter = () => g.audio?.sfx('hover', { bus: 'ui', vol: 0.4 }); btns.appendChild(b); return b }
@@ -367,9 +367,10 @@ export class Menus {
       ['Acțiune, urcă/coboară, vorbește', 'E', 'Y', 'E'],
       ['Schimbă arma', 'Q', 'LB', 'Q'],
       ['Rotește camera', 'click pe joc + mouse (Esc eliberează) · Z/X', 'stick dreapta', 'trage în dreapta'],
+      ['Camera: aproape / departe / foarte departe', 'V', 'cruce sus', ''],
       ['Coboară / sari din mașină', 'E (în mers: sari)', 'Y', 'E'],
       ['Zoom', 'rotița', '', ''],
-      ['Claxon', 'H', 'R3', '📯'],
+      ['Claxon', 'H', 'L3', '📯'],
       ['Privește înapoi (în mașină)', 'C', 'R3', ''],
       ['Tura de taxi (în taxi)', 'T', '', 'T'],
       ['Hartă / pauză', 'M / Esc', 'Back / Start', '🗺 / ❚❚'],

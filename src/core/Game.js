@@ -200,7 +200,8 @@ export class Game {
     if (dt > 0.1) dt = 0.1
     dt *= this.turbo
     this.frame++
-    this.renderer.trackFrame(dt * 1000)
+    // (menus hold their resolution: a flyover whose load changes shot to shot would pump it)
+    if (this.state === 'play') this.renderer.trackFrame(dt * 1000)
     this.input.pollGamepad()
     this.handleGlobalInput()
 
@@ -219,7 +220,9 @@ export class Game {
     this.alpha = this.acc / STEP
 
     this.update(scaled, dt)
-    if (!this.paused) this.renderer.tod.update(scaled)
+    // the clock only runs in play: on the title screen a moving sun re-aims the shadow map every
+    // couple of seconds, and at golden hour the long shadows jump metres (the "flicker")
+    if (!this.paused && this.state === 'play') this.renderer.tod.update(scaled)
     this.renderer.applyTimeOfDay()
     this.renderer.updateEnvironment()
     if (this.world.poolMesh) this.world.poolMesh.material.opacity = SHARED.uNight.value * 0.22

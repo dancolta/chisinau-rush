@@ -70,15 +70,16 @@ export const sosire = {
     await m.fade(0, 420)
     const route = [
       { x: 296, z: 268.25 }, { x: 200, z: 268.25 }, { x: 100, z: 268.25 }, { x: 0, z: 268.25 },
-      { x: -44, z: 268.25, speed: 9 }, { x: -52, z: 266.8, speed: 7, r: 4 }, { x: -56.8, z: 262, speed: 7, r: 4 },
-      { x: -58.25, z: 252, speed: 11 }, { x: -58.25, z: 204, speed: 11 }, { x: -56.5, z: 191, speed: 5, r: 4 }, { x: -55.25, z: 182, speed: 2.2, r: 2.5 },
+      { x: -44, z: 268.25, speed: 10 }, { x: -52, z: 266.8, speed: 8, r: 4 }, { x: -56.8, z: 262, speed: 8, r: 4 },
+      { x: -58.25, z: 252, speed: 12.5 }, { x: -58.25, z: 204, speed: 12.5 }, { x: -56.5, z: 191, speed: 6, r: 4 }, { x: -55.25, z: 182, speed: 3, r: 2.5 },
     ]
     g.vehicles.clearSpot(-55.25, 182, 9)
     const drv = m.driver(taxi, route, { speed: 14.5 })
     m.objective('Stai comod. Nea Grișa te duce acasă.', { sub: 'Mouse / [Z][X]: te uiți la oraș' })
     const G = { name: 'Nea Grișa', voice: { pitch: 0.9, type: 'male' }, spec: CAST.taxist }
     const ride = m.chatter([
-      [2, G, `${hero(g).years}, zici? S-o schimbat multe. Gropile s-au mărit. Prețurile la fel.`],
+      [1.2, G, 'Uite-o pe Romașca. Floarea de piatră! Pe vremuri era cea mai înaltă casă din Chișinău. Acum e cea mai înaltă casă cu liftul stricat.', 4.4],
+      [1.4, G, `${hero(g).years}, zici? S-o schimbat multe. Gropile s-au mărit. Prețurile la fel.`],
       [1.2, G, 'Primarul nostru, Ceon Eban… omul taie panglici cum taie alții semințe. Ieri o inaugurat un stâlp.'],
       [1.2, G, 'Și vorbește la telefon. Mereu. Tot în rusă. Zice că-i cu „investitorii".'],
       [1.5, G, 'Ține-te! Groapa asta o știu de pe vremea lui Snegur!', 2.6],
@@ -89,7 +90,7 @@ export const sosire = {
     // a ride that drags on (traffic, a wrong turn) just cuts to the arrival instead of failing
     let rideT = 0
     m.track({ update: (dt) => { rideT += dt } })
-    await m.until(() => drv.done || dist(taxi.pos, route[route.length - 1]) < 3.2 || m.skipFlag || rideT > 120)
+    await m.until(() => drv.done || dist(taxi.pos, route[route.length - 1]) < 3.2 || m.skipFlag || rideT > 75)
     m.skippable = false
     ride.stop()
     if (m.skipFlag || (!drv.done && dist(taxi.pos, route[route.length - 1]) >= 3.2)) {
@@ -213,8 +214,11 @@ export const jiguli = {
   next: 'auto',
   async script(m) {
     const g = m.game, p = m.player
+    // a retry starts with one Jiguli in the garage, not a second one next to the last attempt's
+    for (const v of g.vehicles.list.filter((v) => v.unchiJig && p.vehicle !== v)) g.vehicles.remove(v)
     g.vehicles.clearSpot(-44, 242, 7)
     const jig = m.vehicle('jiguli', -36, 240.6, -Math.PI / 2, { color: 0xd8c9a0, persist: true })
+    jig.unchiJig = true
     jig.stalled = true
     m.data.jig = jig
     await m.cutscene(async () => {
@@ -332,7 +336,7 @@ export const jiguli = {
       }
       m.objective('Du Jiguliul la {y}Vova{/y}, la Auto Service.')
     }
-    await m.reach(vova, 10, { vehicle: jig, stop: true, label: 'Auto Service „La Vova"' })
+    await m.reach(vova, 10, { vehicle: jig, stop: true, label: 'Auto Service „La Vova"', brokenText: 'Ai terminat Jiguliul. Vasile o să plângă.' })
     if (jig.broken) m.fail('Ai terminat Jiguliul. Vasile o să plângă.')
     // ---- Vova ----------------------------------------------------------------------------------
     await m.cutscene(async () => {
