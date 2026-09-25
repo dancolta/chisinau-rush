@@ -37,6 +37,9 @@ export class Police {
     if (c.type === 'runover' && near < 60) add += 10
     if (!add) return
     add *= g.progress.perk.heatDecay ? 0.8 : 1
+    // cops who know you look the other way on small stuff; a coffee buys a quiet afternoon
+    if (sev <= 1 && this.level === 0 && (g.progress.respect?.pol || 0) >= 40) add *= 0.5
+    if (performance.now() < (this.coffeeUntil || 0)) add *= 0.5
     this.addHeat(add)
   }
 
@@ -50,7 +53,7 @@ export class Police {
     this.escaping = false
     if (this.level > prev) {
       this.game.audio?.sting('wanted')
-      if (prev === 0) this.game.ui?.notify('{r}Poliția te caută!{/r} Rupe contactul vizual ca să scapi.', 4, 'red')
+      if (prev === 0) { this.game.ui?.notify('{r}Poliția te caută!{/r} Rupe contactul vizual ca să scapi.', 4, 'red'); this.adoptPatrol() }
     }
   }
 
@@ -70,8 +73,9 @@ export class Police {
     let d = 1e9
     for (const o of this.officers) if (!o.char.ko) d = Math.min(d, Math.hypot(o.pos.x - x, o.pos.z - z))
     for (const c of this.cars) d = Math.min(d, Math.hypot(c.v.pos.x - x, c.v.pos.z - z))
-    // parked story cops count too
+    // parked story cops and the patrol on foot count too
     for (const n of this.game.story?.npcs || []) if (n.personality === 'cop') d = Math.min(d, Math.hypot(n.pos.x - x, n.pos.z - z))
+    for (const n of this.game.peds?.list || []) if (n.personality === 'cop' && !n.char.ko) d = Math.min(d, Math.hypot(n.pos.x - x, n.pos.z - z))
     return d
   }
 
@@ -116,6 +120,23 @@ export class Police {
     c.eject = () => { const i = this.cars.indexOf(c); if (i >= 0) this.cars.splice(i, 1); v.siren = false; this.spawnOfficerAt(v.pos.x + 2, v.pos.z) }
     this.cars.push(c)
     return c
+  }
+
+  // a cop on the beat joins the chase
+  adoptOfficer(n) {
+    const g = this.game
+    const i = g.peds.list.indexOf(n)
+    if (i >= 0) g.peds.list.splice(i, 1)
+    n.personality = 'cop'; n.hostile = true; n.state = 'fight'; n.target = g.player; n.path = []
+    n.maxHp = Math.max(n.maxHp, 70); n.hp = Math.max(n.hp, 50); n.runSpeed = 5.6
+    if (!this.officers.includes(n)) this.officers.push(n)
+  }
+
+  adoptPatrol() {
+    const g = this.game, p = g.player
+    if (!p) return
+    const pos = p.vehicle ? p.vehicle.pos : p.pos
+    for (const n of [...(g.peds?.list || [])]) if (n.personality === 'cop' && !n.char.ko && Math.hypot(n.pos.x - pos.x, n.pos.z - pos.z) < 60) this.adoptOfficer(n)
   }
 
   spawnOfficerAt(x, z) {

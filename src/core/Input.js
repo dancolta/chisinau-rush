@@ -136,6 +136,14 @@ export class Input {
     this.padPrev = now
   }
 
+  // raw pad state for menus that track their own button edges (the frame loop clears
+  // pressed buttons before a dialogue's timer would ever see them)
+  padState() {
+    const pads = navigator.getGamepads ? navigator.getGamepads() : []
+    for (const p of pads) if (p && p.connected) return { b: p.buttons.map((x) => x.pressed), y: p.axes[1] || 0 }
+    return null
+  }
+
   codes(action) {
     const k = KEYMAP[action] || []
     const p = (PADMAP[action] || []).map((i) => 'Pad' + i)

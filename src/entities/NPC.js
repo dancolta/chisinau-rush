@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { Character } from './Character.js'
+import { Character, angleDiff } from './Character.js'
 import { FILTER } from '../physics/Physics.js'
 import { onRoad } from '../world/CityLayout.js'
 
@@ -157,6 +157,8 @@ export class NPC {
         this.state = this.hostile ? 'fight' : this.personality === 'story' ? 'idle' : 'flee'
         if (this.state === 'flee' && !this.fleeFrom) this.fleeFrom = { x: c.pos.x - Math.sin(c.heading), z: c.pos.z - Math.cos(c.heading) }
         this.stateT = 5
+        // whoever knocked them down may have plans for when they're up (back to the bench…)
+        if (this.onGetUp) { const f = this.onGetUp; this.onGetUp = null; f(this) }
       }
       c.speed = 0
       this.moveBody()
@@ -203,6 +205,16 @@ export class NPC {
       case 'follow': {
         const t = this.target
         if (!t) break
+        if (this.followOff) {
+          // a crew slot around the leader (x = to their right, z = ahead), or a breadcrumb
+          // on the leader's trail when a wall is in the way
+          const th = t.char ? t.char.heading : 0, [ox, oz] = this.followOff
+          const g = this.followGoal || { x: t.pos.x - Math.cos(th) * ox + Math.sin(th) * oz, z: t.pos.z + Math.sin(th) * ox + Math.cos(th) * oz }
+          const dx = g.x - c.pos.x, dz = g.z - c.pos.z, d = Math.hypot(dx, dz)
+          if (d > (this.followGoal ? 0.6 : 0.45)) { mx = dx / d; mz = dz / d; spd = Math.min(this.runSpeed, 0.9 + d * 1.7) }
+          else c.turnTo(th, h, 5)
+          break
+        }
         const dx = t.pos.x - c.pos.x, dz = t.pos.z - c.pos.z, d = Math.hypot(dx, dz)
         if (d > 2.2) { mx = dx / d; mz = dz / d; spd = d > 6 ? this.runSpeed : this.speed * 1.4 }
         else c.faceTowards(t.pos.x, t.pos.z, h, 6)
@@ -213,6 +225,10 @@ export class NPC {
           const d2 = (p.pos.x - c.pos.x) ** 2 + (p.pos.z - c.pos.z) ** 2
           if (d2 < 36) c.faceTowards(p.pos.x, p.pos.z, h, 4)
           else c.turnTo(this.home.ry, h, 2)
+        } else if (this.turnBack != null) {
+          // after a chat: slowly back to what they were looking at
+          c.turnTo(this.turnBack, h, 2.5)
+          if (Math.abs(angleDiff(c.heading, this.turnBack)) < 0.03) this.turnBack = null
         }
     }
     // separation from the player and other peds

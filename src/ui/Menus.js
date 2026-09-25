@@ -340,6 +340,8 @@ export class Menus {
       <div style="font-size:13.5px;color:#e5dccb;margin-bottom:10px">⚡ ${t.perk}</div>`
     const rows = [
       ['Lei', pr.lei], ['Viață', `${Math.round(pr.hp)} / ${pr.maxHp}`], ['Respect pe stradă', pr.cred + ' / 100'], ['Respect civic', pr.civic + ' / 100'],
+      ['👊 Gopnicii te știu', `${pr.tierName('gop')} · ${pr.respect.gop}`], ['🥧 Babele te știu', `${pr.tierName('bab')} · ${pr.respect.bab}`], ['👮 Poliția te știe', `${pr.tierName('pol')} · ${pr.respect.pol}`],
+      ['Vorbit cu lumea', pr.stats.talks || 0], ['Gașcă adunată', pr.stats.recruits || 0],
       ['Dosare găsite', pr.dosare.length], ['Gropi astupate', pr.potholes.length], ['Oameni puși la pământ', pr.stats.ko], ['Mașini „împrumutate"', pr.stats.cars],
       ['Curse de taxi', pr.stats.fares], ['Mită dată', pr.stats.bribes], ['Leșinat', pr.stats.fainted], ['Kilometri condus', (pr.stats.km / 1000).toFixed(1)],
     ]

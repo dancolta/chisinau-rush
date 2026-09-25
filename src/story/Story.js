@@ -763,6 +763,8 @@ export class Story {
     this.events.update(dt)
     const tags = []
     if (this.giverId && this.cast[this.giverId] && !this.active) tags.push({ npc: this.cast[this.giverId], icon: '!' })
+    if (g.crew) tags.push(...g.crew.tags())
+    if (g.street) tags.push(...g.street.tags())
     g.ui.setTags(tags)
   }
 

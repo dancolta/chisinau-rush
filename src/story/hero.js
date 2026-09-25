@@ -14,3 +14,11 @@ export function hero(g) { return HERO[g?.progress?.type] || DEFAULT }
 // gendered word: gen(g, 'băiatul', 'fata')
 export function gen(g, m, f) { return hero(g).female ? f : m }
 export function typeInfo(key) { return PLAYER_TYPES.find((t) => t.key === key) }
+
+// street lines: [[his|hers]] by the hero's gender, {country}/{name}/{anything in vars} filled in
+export function fill(g, s, vars = {}) {
+  const h = hero(g)
+  return String(s)
+    .replace(/\[\[([^|\]]*)\|([^\]]*)\]\]/g, (_, a, b) => (h.female ? b : a))
+    .replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : k === 'country' ? h.country : k === 'name' ? (g?.progress?.name || '') : m))
+}

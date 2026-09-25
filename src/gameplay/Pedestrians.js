@@ -78,6 +78,8 @@ export class Pedestrians {
     const personality = opts.personality || (s.top?.style === 'tracksuit' ? 'tough' : s.hat?.style === 'basma' ? 'babushka' : Math.random() < 0.15 ? 'tough' : 'normal')
     const voiceType = s.hat?.style === 'basma' ? 'old' : s.bottom?.style === 'skirt' || s.bottom?.style === 'dress' || s.hair?.style === 'long' || s.hair?.style === 'ponytail' || s.hair?.style === 'bun' ? 'female' : personality === 'tough' ? 'gruff' : 'male'
     const npc = new NPC(this.game, s, { x, y: this.game.physics.groundHeight(x, z), z, personality, voice: { pitch: 0.85 + Math.random() * 0.4, type: voiceType }, ...opts })
+    // who they are on the street: a tracksuit means a gopnik, a headscarf a granny
+    npc.archetype = opts.archetype || (personality === 'cop' ? 'cop' : personality === 'babushka' ? 'babushka' : s.top?.style === 'tracksuit' ? 'gopnik' : 'civilian')
     this.list.push(npc)
     return npc
   }
@@ -94,11 +96,15 @@ export class Pedestrians {
       const d = Math.hypot(n.x - px, n.z - pz)
       if (d < 35 || d > 95) continue
       if (this.game.traffic?.visible(n.x, n.z) && d < 70) continue
-      // district flavour
-      let spec = null
+      // district flavour: gopniks in the bloc districts, a cop on the beat in the centre
+      let spec = null, opts = {}
       const zone = n.block.zone
-      if ((zone === 'soviet' || zone === 'acasa' || zone === 'garaje') && Math.random() < 0.2) spec = CAST[['gopnik1', 'gopnik2', 'gopnik3'][Math.floor(Math.random() * 3)]]
-      const npc = this.spawn(n.x + (Math.random() - 0.5) * 2, n.z + (Math.random() - 0.5) * 2, spec, spec ? { personality: 'tough' } : {})
+      const bloc = zone === 'soviet' || zone === 'acasa' || zone === 'garaje'
+      if (bloc && Math.random() < 0.2) { spec = CAST[['gopnik1', 'gopnik2', 'gopnik3'][Math.floor(Math.random() * 3)]]; opts = { personality: 'tough', archetype: 'gopnik' } }
+      else if (!bloc && Math.random() < 0.05 && !this.game.police?.level && this.list.filter((q) => q.personality === 'cop').length < 2) {
+        spec = CAST.cop; opts = { personality: 'cop', archetype: 'cop', hp: 60, walkSpeed: 1.15, voice: { pitch: 0.85 + Math.random() * 0.2, type: 'gruff' } }
+      }
+      const npc = this.spawn(n.x + (Math.random() - 0.5) * 2, n.z + (Math.random() - 0.5) * 2, spec, opts)
       npc.node = n
       this.repath(npc)
       return npc
@@ -120,7 +126,7 @@ export class Pedestrians {
   // everyone near a violent event runs (or joins in, if they're the type)
   panic(pos, source, radius) {
     for (const n of this.list) {
-      if (n.state === 'knocked' || n.state === 'fight') continue
+      if (n.state === 'knocked' || n.state === 'fight' || n.personality === 'cop') continue
       const d2 = (n.pos.x - pos.x) ** 2 + (n.pos.z - pos.z) ** 2
       if (d2 < radius * radius && Math.random() < 0.85) n.flee(pos)
     }
@@ -174,7 +180,7 @@ export class Pedestrians {
         if (d2 < 0.8 && d2 > 1e-4) {
           const d = Math.sqrt(d2)
           a.pushX = (a.pushX || 0) + (dx / d) * 1.2; a.pushZ = (a.pushZ || 0) + (dz / d) * 1.2
-          if (p.char.speed > 4 && Math.random() < 0.05) a.say(pickLine(BUMPED))
+          if (p.char.speed > 4) { if (this.game.life) this.game.life.bump(a); else if (Math.random() < 0.05) a.say(pickLine(BUMPED)) }
         }
       }
       for (let j = i + 1; j < L.length; j++) {

@@ -78,7 +78,7 @@ export const STREET_RACE = {
       laps: 1, car: m.car, lapTime: 120, name: 'Cursă pe bani',
       rivals: [{ kind: 'jiguli', color: 0x9a1c1c, speed: 23.5, name: 'Vitea' }, { kind: 'logan', color: 0x16161a, speed: 22.5, name: 'Gena' }],
     })
-    if (res.won) { pr.addLei(bet * 2, 'Ai câștigat cursa!'); pr.addXp(80, 'Cursă câștigată'); pr.addCred(3); pr.stats.races++; g.audio?.sting('race_win'); g.ui.bigMessage('PRIMUL!', `+${bet * 2} lei`, { secs: 2.6 }) }
+    if (res.won) { pr.addLei(bet * 2, 'Ai câștigat cursa!'); pr.addXp(80, 'Cursă câștigată'); pr.addCred(3); pr.addRespect('gop', 5, 'cursă câștigată'); pr.stats.races++; g.audio?.sting('race_win'); g.ui.bigMessage('PRIMUL!', `+${bet * 2} lei`, { secs: 2.6 }) }
     else g.ui.bigMessage('AI PIERDUT', `Locul ${res.place}. Miza rămâne la Vitea.`, { color: 'red', secs: 2.6 })
     m.cancel()
   },
@@ -219,7 +219,7 @@ export class Activities {
       for (const k of WEAPON_ORDER) {
         const w = WEAPONS[k]
         if (!w.price || pr.weapons.includes(k)) continue
-        const wp = pr.price(w.price)
+        const wp = Math.round(pr.price(w.price) * (pr.tier('gop') >= 3 ? 0.9 : 1))
         offers.push({ text: `${w.icon} ${w.name}`, cost: `${wp} lei`, disabled: pr.lei < wp, buy: () => { pr.addLei(-wp); pr.giveWeapon(k); pr.weapon = k; g.player.setWeapon(k); g.ui.notify(`Ai ${w.icon} ${w.name}. {y}[Q]{/y} schimbi arma.`, 3, 'gold') } })
       }
       if (!pr.flags.acteFalse) offers.push({ text: '🪪 Acte false („de deputat")', cost: '150 lei', disabled: pr.lei < 150, buy: () => { pr.addLei(-150); pr.flags.acteFalse = true; g.ui.notify('Ai acte false. La prima oprire, poliția te salută.', 3.4, 'gold') } })

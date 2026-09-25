@@ -65,6 +65,8 @@ export class Director {
     const mk = g.ui.marker
     if (mk) out.push({ kind: 'target', x: mk.x, z: mk.z, edge: true })
     for (const t of g.story.blipList()) out.push(t)
+    if (g.street) out.push(...g.street.blips())
+    if (g.crew) out.push(...g.crew.blips())
     if (g.police) {
       for (const o of g.police.officers) if (!o.char.ko) out.push({ kind: 'police', x: o.pos.x, z: o.pos.z })
       for (const c of g.police.cars) out.push({ kind: 'police', x: c.v.pos.x, z: c.v.pos.z })
@@ -110,7 +112,7 @@ export class Director {
     p.char.anim.set('handsup')
     g.audio?.sting('busted')
     const sgt = { name: 'Sergentul', role: 'Poliția Chișinău', spec: CAST.cop, id: 'cop_generic', voice: { pitch: 0.85, type: 'gruff' } }
-    const bribe = 30 + lvl * 45
+    const bribe = Math.round((30 + lvl * 45) * (pr.tier('pol') >= 3 ? 0.5 : 1))
     const actsFalse = pr.flags.acteFalse
     const choices = [
       { text: `Mită: „Pentru cafea, șefu"`, cost: `${bribe} lei`, disabled: pr.lei < bribe },
@@ -125,7 +127,7 @@ export class Director {
       await g.ui.dialogue(sgt, ['Hm. Cafeaua e bună azi. Circulați, circulați.'])
       g.police.clear()
     } else if (i === 1) {
-      const chance = 0.25 + pr.civic / 250 + (pr.type === 'conductor' ? 0.25 : 0) - lvl * 0.06
+      const chance = 0.25 + pr.civic / 250 + (pr.respect?.pol || 0) / 250 + (pr.type === 'conductor' ? 0.25 : 0) - lvl * 0.06
       if (Math.random() < chance) { await g.ui.dialogue(sgt, ['…Bine, bine. Ai noroc că-s bine dispus azi. Să nu te mai văd!']); g.police.clear() }
       else {
         const fine = Math.min(pr.lei, 60 + lvl * 40)

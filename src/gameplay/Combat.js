@@ -107,7 +107,7 @@ export class Combat {
     if (d > 1.6) return
     const a = Math.abs(angleDiff(npc.char.heading, Math.atan2(dx, dz)))
     if (a > 1.1) return
-    const dmg = npc.personality === 'cop' ? 9 : npc.personality === 'babushka' ? 4 : 7
+    const dmg = npc.dmg ?? (npc.personality === 'cop' ? 9 : npc.personality === 'babushka' ? 4 : 7)
     if (target === g.player) {
       if (target.vehicle || target.char.ko) return
       g.progress.hurt(dmg)
