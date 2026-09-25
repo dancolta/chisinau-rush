@@ -4,7 +4,7 @@
 
 > De la *plecat peste hotare* la *primar*. Un oraș, o sută de gropi, un primar care vorbește prea des la telefon.
 
-Runs in the browser. No install, no account.
+Runs in the browser. No install; an account is optional (it keeps your save in the cloud, for playing on another device).
 
 ## Play
 
@@ -15,6 +15,10 @@ npm run build      # static build in dist/ (deployable anywhere, e.g. GitHub Pag
 ```
 
 Every push to `main` builds and publishes the game to GitHub Pages (`.github/workflows/deploy.yml`).
+
+**Accounts and cloud saves** (email + password, saves in Neon Postgres) run on Vercel: the static
+build plus the functions in `/api`. Launch steps, env vars and local dev: [docs/ACCOUNTS.md](docs/ACCOUNTS.md).
+Locally: `npm run api` next to `npm run dev`.
 
 ### Controls
 
@@ -75,6 +79,9 @@ node tools/systems.mjs                          # side systems checks (busted, s
 node tools/shot.mjs --out shot.png --eval "…"   # screenshots
 node tools/gallery.mjs --missions eban,mitingul    # capture every cutscene of the given missions
 node tools/views.mjs --out views --only night,play_day  # fixed review shots (day, dusk, night, gameplay camera)
+node tools/api-dev.mjs                          # the /api functions locally (PGlite), what `npm run api` runs
+node tools/api-test.mjs [--neon]                # API handler checks (auth, saves, limits, CORS)
+node tools/account.mjs [--shots dir]            # accounts end to end: sign-up, sync, conflicts, logout
 ```
 
 `?turbo=4` speeds up the simulation in dev builds; `?touch` forces touch controls on desktop.
