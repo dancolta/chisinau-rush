@@ -54,8 +54,8 @@ export class NightLights {
     for (const s of this.slots) {
       const target = s.lamp && this.want.has(s.lamp) ? 1 : 0
       s.k += (target - s.k) * fade
+      // never toggle .visible: three.js recompiles every material when the light count changes
       s.light.intensity = 95 * s.k * night
-      s.light.visible = s.light.intensity > 0.01
     }
     // soft fill on the hero so the player never turns into a silhouette
     const p = g.player
@@ -64,12 +64,10 @@ export class NightLights {
       const pp = p.vehicle ? p.vehicle.pos : p.pos
       this.fill.position.set(pp.x + (cam.position.x - pp.x) * 0.35, pp.y + 2.6, pp.z + (cam.position.z - pp.z) * 0.35)
       this.fill.intensity = 7 * night * (g.cutscene ? 0.6 : 1)
-      this.fill.visible = this.fill.intensity > 0.01
       // headlights of the car you're driving
       const v = p.vehicle && !p.passenger ? p.vehicle : null
       const on = v && night > 0.2 && !v.broken
       this.head.intensity += ((on ? 420 * night : 0) - this.head.intensity) * fade
-      this.head.visible = this.head.intensity > 0.5
       if (v) {
         const fx = Math.sin(v.heading), fz = Math.cos(v.heading)
         const L = v.def.dims[2]
