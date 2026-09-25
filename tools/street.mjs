@@ -4,7 +4,7 @@
 import { chromium } from 'playwright'
 import { createServer } from 'vite'
 
-const server = await createServer({ server: { port: 5197, strictPort: false, host: '127.0.0.1' }, logLevel: 'error' })
+const server = await createServer({ server: { port: 5197, strictPort: false, host: '127.0.0.1', fs: { strict: false } }, logLevel: 'error' })
 await server.listen()
 const base = `http://127.0.0.1:${server.config.server.port}/`
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'] })
