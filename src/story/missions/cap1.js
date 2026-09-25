@@ -10,7 +10,8 @@ export const sosire = {
   id: 'sosire', chapterName: 'Prolog', title: 'Acasă',
   desc: 'Te întorci la Chișinău după șapte ani „afară". Orașul te-a așteptat. Gropile, la fel.',
   giver: { place: 'peron', label: 'Peronul 1', auto: true, r: 8 },
-  intro: ['PROLOG', 'ACASĂ', 'Chișinău. Septembrie. Ora șase seara.'],
+  // the chapter card plays over the opening aerial shot (see the script)
+  silentStart: true,
   next: 'auto', silentPass: true,
   async script(m) {
     const g = m.game, p = m.player
@@ -26,19 +27,30 @@ export const sosire = {
     await m.cutscene(async () => {
       p.char.setVisible(false)
       p.teleport(321, 0.3, 311.6, Math.PI)
+      // golden hour over the whole city, hills in the haze, the station below: the title card
+      g.cameraRig.shot({ from: [452, 46, 366], to: [438, 41, 361], lookFrom: [330, 10, 282], lookTo: [328, 9, 286], dur: 5.6, ease: 'inout' })
+      g.ui.chapter('PROLOG', 'ACASĂ', 'Chișinău. Septembrie. Ora șase seara.', 3.8, { light: true })
+      await m.wait(2.2)
       train.arrive(298.3, 9)
-      g.cameraRig.shot({ from: [292, 2.3, 309.6], to: [288, 2.8, 308.2], lookFrom: [392, 2.2, 314], lookTo: [312, 2.0, 314.2], dur: 9, ease: 'inout' })
-      await m.wait(9.3)
+      await m.wait(3.4)
+      // crane down after the train as it pulls in alongside the platform
+      g.cameraRig.shot({ from: [438, 41, 361], to: [346, 8, 294], lookFrom: [328, 9, 286], lookTo: [322, 2.2, 311.5], dur: 6.4, ease: 'inout' })
+      await m.wait(6.2)
+      // the hero steps off, out of the train's shadow and into the evening sun
       p.char.setVisible(true)
       g.audio?.sfx('door', { vol: 0.7 })
-      g.cameraRig.shot({ from: [314.5, 2.3, 301.5], to: [316.5, 2.0, 302.6], look: [321.2, 1.35, 309.5], dur: 7, ease: 'inout' })
-      await m.playerWalk(321, 308, 1.6)
+      g.cameraRig.shot({ from: [304, 3.2, 300.5], to: [306.5, 2.5, 301.2], look: [319.5, 1.4, 306], dur: 6, ease: 'inout' })
+      await m.playerWalk(318.5, 302.8, 2.1)
+      m.hold({ from: [312.4, 1.95, 297.2], look: [318.6, 1.45, 303], dur: 60 })
       await m.talk('player', 'Șapte ani la Milano. Și gara tot aceeași.', 3.2)
       await m.talk('player', 'Mama zicea: „vino acasă, că aici e mai bine". Hai să vedem.', 3.6)
       train.depart()
+      // hand over facing the way out, toward Nea Grișa and the taxi
+      p.char.heading = p.char.prevHeading = Math.atan2(grisaPos.x - p.pos.x, grisaPos.z - p.pos.z)
+      m.endYaw = p.char.heading
     })
     // ---- to the taxi --------------------------------------------------------------------
-    m.tip('{y}[W][A][S][D]{/y} mergi · {y}[⇧]{/y} fugi · {y}Click dreapta{/y} sau {y}[Z][X]{/y} rotește camera', 9)
+    m.tip('{y}[W][A][S][D]{/y} sau {y}săgețile{/y}: mergi · ține {y}[⇧]{/y}: fugi repede · {y}Click dreapta{/y} / {y}[Z][X]{/y}: rotește camera', 10)
     await m.reach(grisaPos, 3.2, { text: 'Ieși din gară. {y}Nea Grișa{/y} te așteaptă cu taxiul peste drum.', label: 'Nea Grișa' })
     grisa.char.anim.play('wave')
     await m.say('grisa', [
@@ -68,10 +80,13 @@ export const sosire = {
       [1, G, 'Lucrează. Ca mine la sală. Din 2004.'],
     ])
     m.skippable = true
-    await m.until(() => drv.done || dist(taxi.pos, route[route.length - 1]) < 3.2 || m.skipFlag, { timeout: 150, onTimeout: 'Taxiul s-a rătăcit.' })
+    // a ride that drags on (traffic, a wrong turn) just cuts to the arrival instead of failing
+    let rideT = 0
+    m.track({ update: (dt) => { rideT += dt } })
+    await m.until(() => drv.done || dist(taxi.pos, route[route.length - 1]) < 3.2 || m.skipFlag || rideT > 120)
     m.skippable = false
     ride.stop()
-    if (m.skipFlag) {
+    if (m.skipFlag || (!drv.done && dist(taxi.pos, route[route.length - 1]) >= 3.2)) {
       m.skipFlag = false
       g.ui.subtitle(null)
       await m.fade(1, 400)

@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { SHARED } from '../render/Materials.js'
+import { FILTER } from '../physics/Physics.js'
 
 // Real grass tufts on the lawns around the player: short solid blades (no alpha test, so no
 // shimmer) that sway in the wind and lean away from whoever walks through them. They sit on a
@@ -131,7 +132,11 @@ export class GrassField {
       }
       if (inside && r.y >= ty) { ty = r.y; top = r }
     }
-    return top && top.s.startsWith('grass') ? top.y : -1
+    if (!top || !top.s.startsWith('grass')) return -1
+    // something solid sits on the lawn here (a platform, steps, a plinth, a tree trunk)
+    const hit = this.game.physics.raycast(x, top.y + 6, z, 0, -1, 0, 7, FILTER.Q_WORLD)
+    if (hit && hit.point.y > top.y + 0.06) return -1
+    return top.y
   }
 
   settings() {

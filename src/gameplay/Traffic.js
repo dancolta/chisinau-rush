@@ -107,6 +107,10 @@ class AIDriver {
       target = Math.min(target, Math.max(0, (obs.d - 5.5) * 0.8))
       if (obs.player && Math.abs(v.speed) < 1 && (this.honkT -= h) < 0) { this.honkT = 2 + Math.random() * 3; tr.game.audio?.horn(v, 0.5) }
     }
+    // story cars (Nea Grișa's taxi, the minister's convoy…) have right of way: brake when one is
+    // about to cross the road in front of us, whatever our light says
+    const yd = tr.yieldTo(v, 9 + Math.abs(v.speed) * 1.4)
+    if (yd !== null) target = Math.min(target, Math.max(0, (yd - 3) * 0.8))
     if (this.mode === 'flee') target = this.cruise * 1.6
     // ---- controls ------------------------------------------------------------------
     const sp = v.speed
@@ -196,6 +200,7 @@ export class Traffic {
       if (n) n.controlled = c
     }
     this.lastLightSig = ''
+    this.priority = new Set() // story RouteDrivers everyone else yields to
     this.spawnTrolleys()
   }
 
@@ -224,9 +229,9 @@ export class Traffic {
   }
 
   // nearest blocking thing in the vehicle's lane corridor
-  obstacleAhead(v, range) {
+  obstacleAhead(v, range, ignore = null, margin = 0.6) {
     const fx = Math.sin(v.heading), fz = Math.cos(v.heading)
-    const w = v.def.dims[0] + 0.6
+    const w = v.def.dims[0] + margin
     let best = null
     const test = (x, z, halfW, player = false) => {
       const dx = x - v.pos.x, dz = z - v.pos.z
@@ -235,15 +240,64 @@ export class Traffic {
       const side = Math.abs(dx * -fz + dz * fx)
       if (side > w + halfW) return
       const d = along - v.def.dims[2]
-      if (!best || d < best.d) best = { d, player }
+      if (!best || d < best.d) best = { d, player, v: cur }
     }
-    for (const o of this.game.vehicles.list) if (o !== v) test(o.pos.x, o.pos.z, o.def.dims[0], o.driver === 'player')
+    let cur = null
+    for (const o of this.game.vehicles.list) if (o !== v && o !== ignore) { cur = o; test(o.pos.x, o.pos.z, o.def.dims[0], o.driver === 'player') }
+    cur = null
     const p = this.game.player
     if (p && !p.vehicle) test(p.pos.x, p.pos.z, 0.5, true)
     const peds = this.game.peds?.list
     if (peds) for (const c of peds) if (!c.ko && c.onRoad) test(c.pos.x, c.pos.z, 0.5)
     return best
   }
+
+  // how far ahead a story car will cut across this car's path in the next ~2.5 s (null: it won't)
+  yieldTo(v, range) {
+    if (!this.priority.size) return null
+    const fx = Math.sin(v.heading), fz = Math.cos(v.heading)
+    let best = null
+    for (const d of this.priority) {
+      const pv = d.v
+      if (pv === v || pv.disposed || d.done) continue
+      const ox = pv.pos.x - v.pos.x, oz = pv.pos.z - v.pos.z
+      if (ox * ox + oz * oz > 70 * 70) continue
+      const pfx = Math.sin(pv.heading), pfz = Math.cos(pv.heading), sp = Math.max(2, pv.speed)
+      // it's in our own stream of traffic (behind us or ahead): it keeps its own distance
+      if (pfx * fx + pfz * fz > 0.5) continue
+      const reach = v.def.dims[0] + pv.def.dims[0] + 1.2
+      for (let t = 0; t <= 2.5; t += 0.25) {
+        const x = ox + pfx * sp * t, z = oz + pfz * sp * t
+        const along = x * fx + z * fz
+        if (along < 0.5 || along > range + v.def.dims[2] + pv.def.dims[2]) continue
+        if (Math.abs(x * -fz + z * fx) > reach) continue
+        const dd = along - v.def.dims[2] - pv.def.dims[2]
+        if (best === null || dd < best) best = dd
+        break
+      }
+    }
+    return best
+  }
+
+  // true near the stretch of road a story car is about to drive (no traffic spawns there)
+  onPriorityPath(x, z, pad = 12) {
+    for (const d of this.priority) {
+      const pts = d.points
+      if (!pts || d.done) continue
+      let a = d.v.pos
+      for (let i = d.i; i < Math.min(pts.length, d.i + 6); i++) {
+        const b = pts[i]
+        const abx = b.x - a.x, abz = b.z - a.z, L2 = abx * abx + abz * abz || 1
+        const t = Math.max(0, Math.min(1, ((x - a.x) * abx + (z - a.z) * abz) / L2))
+        if (Math.hypot(a.x + abx * t - x, a.z + abz * t - z) < pad) return true
+        a = b
+      }
+    }
+    return false
+  }
+
+  // traffic that may be taken off the road to unblock a story car
+  removable(o) { return !!o && !o.keep && !o.missionSpawned && !o.def.trolley && o.driver !== 'player' && (!o.driver || this.drivers.includes(o.driver)) }
 
   updateLights(dt) {
     this.time += dt
@@ -280,6 +334,7 @@ export class Traffic {
       // not right in front of the camera
       if (this.visible(p.x, p.z) && d < 140) continue
       if (this.game.vehicles.list.some((o) => (o.pos.x - p.x) ** 2 + (o.pos.z - p.z) ** 2 < 100)) continue
+      if (this.priority.size && this.onPriorityPath(p.x, p.z)) continue
       const kind = TRAFFIC_MIX[Math.floor(Math.random() * TRAFFIC_MIX.length)]
       const ry = Math.atan2(e.fx, e.fz)
       const v = this.game.vehicles.spawn(kind, p.x, p.z, ry, { y: 0 })
@@ -300,6 +355,7 @@ export class Traffic {
 
   fixedUpdate(h) {
     if (this.drivers.some((d) => d.v.disposed)) this.drivers = this.drivers.filter((d) => !d.v.disposed)
+    for (const d of this.priority) if (d.done || d.v.disposed || d.v.driver !== d) this.priority.delete(d)
     for (const d of this.drivers) d.fixedUpdate(h)
   }
 

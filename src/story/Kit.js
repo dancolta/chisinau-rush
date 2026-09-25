@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { angleDiff } from '../entities/Character.js'
 import { FILTER } from '../physics/Physics.js'
-import { H_ROADS, V_ROADS, RAIL_Z } from '../world/CityLayout.js'
+import { H_ROADS, V_ROADS, RAIL_Z, LANE_W } from '../world/CityLayout.js'
 import { roadProfile } from '../world/Ground.js'
 import { RoadGraph } from '../world/RoadGraph.js'
 import { GeoBuilder } from '../render/GeoBuilder.js'
@@ -196,19 +196,66 @@ export class VisionCone {
 // ---------------------------------------------------------------------------
 // drives a vehicle along a list of points (tailing targets, fleeing villains, racers)
 export class RouteDriver {
-  constructor(game, v, points, { speed = 16, loop = false, onEnd = null, avoid = true, laps = 0, loopFrom = 0 } = {}) {
+  constructor(game, v, points, { speed = 16, loop = false, onEnd = null, avoid = true, laps = 0, loopFrom = 0, priority = true } = {}) {
     this.game = game; this.v = v; this.points = points; this.i = 0; this.loopFrom = loopFrom
     this.speed = speed; this.loop = loop || laps > 0; this.laps = laps; this.lap = 0; this.onEnd = onEnd; this.avoid = avoid
     this.speedMul = 1
     this.done = false
     this.stuck = 0
+    this.blockedT = 0        // stopped behind another car
+    this.best = Infinity     // closest we've been to the current waypoint, and how long ago
+    this.noProgT = 0
+    this.clearT = 0
+    this.offset = 0          // lateral shift from the route (m, + = left): overtaking
+    this.offsetTarget = 0
+    this.passT = 0
     v.driver = this; v.ai = this
     v.parked = false
     v.body.wakeUp()
+    // traffic yields to story cars and keeps off their road; nobody parks on it meanwhile
+    this.slots = []
+    if (priority && game.traffic) {
+      game.traffic.priority.add(this)
+      for (const sl of game.vehicles?.parkedSlots || []) if (!sl.reserved && this.nearRoute(sl.x, sl.z, 3.4)) { sl.reserved = true; this.slots.push(sl) }
+      this.clearAhead(true)
+    }
   }
-  eject() { this.done = true }
+  release() { for (const sl of this.slots) sl.reserved = false; this.slots = [] }
+  // distance test against the whole route polyline
+  nearRoute(x, z, r) {
+    const pts = this.points
+    for (let i = 0; i < pts.length - 1 + (this.loop ? 1 : 0); i++) {
+      const a = pts[i], b = pts[(i + 1) % pts.length]
+      const abx = b.x - a.x, abz = b.z - a.z, L2 = abx * abx + abz * abz || 1
+      const t = Math.max(0, Math.min(1, ((x - a.x) * abx + (z - a.z) * abz) / L2))
+      if (Math.hypot(a.x + abx * t - x, a.z + abz * t - z) < r) return true
+    }
+    return false
+  }
+  // the hero is riding along: drive like a (Chișinău) human, never like a battering ram
+  get chauffeur() { const p = this.game.player; return !!p && p.vehicle === this.v && p.passenger }
+  // take the ordinary traffic the camera can't see off the next stretch of road
+  clearAhead(all = false) {
+    const tr = this.game.traffic
+    if (!tr) return
+    for (const d of [...tr.drivers]) {
+      const o = d.v
+      if (!tr.removable(o) || o === this.v) continue
+      if (!all && Math.hypot(o.pos.x - this.v.pos.x, o.pos.z - this.v.pos.z) > 160) continue
+      if (tr.visible(o.pos.x, o.pos.z)) continue
+      if (tr.onPriorityPath(o.pos.x, o.pos.z, 7)) tr.despawn(d)
+    }
+    // parked cars already standing in the reserved bays
+    const V = this.game.vehicles
+    for (const sl of this.slots) {
+      const o = V?.parkedActive?.get(sl.i)
+      if (o && tr.removable(o) && !tr.visible(o.pos.x, o.pos.z)) V.remove(o)
+    }
+  }
+  eject() { this.done = true; this.release() }
   finish() {
     this.done = true
+    this.release()
     this.v.throttle = 0; this.v.handbrake = true
     if (this.onEnd) { const cb = this.onEnd; this.onEnd = null; cb() }
   }
@@ -220,7 +267,7 @@ export class RouteDriver {
     if (!w) { this.finish(); return }
     const d = Math.hypot(w.x - v.pos.x, w.z - v.pos.z)
     if (d < (w.r || 7)) {
-      this.i++
+      this.i++; this.best = Infinity; this.noProgT = 0
       if (this.i >= this.points.length) {
         if (this.loop) {
           this.i = this.loopFrom; this.lap++
@@ -231,24 +278,102 @@ export class RouteDriver {
     }
     const nx = this.points[this.i + 1] || (this.loop ? this.points[this.loopFrom] : w)
     const d2 = Math.hypot(w.x - v.pos.x, w.z - v.pos.z)
-    const k = clamp((14 - d2) / 14, 0, 1)
-    const tx = w.x + (nx.x - w.x) * k * 0.6, tz = w.z + (nx.z - w.z) * k * 0.6
+    // pure pursuit: aim at a point a short way ahead along the route (keeps to the lane instead
+    // of drifting toward a waypoint far down the road), spilling onto the next leg at corners
+    const pv = this.i > 0 ? this.points[this.i - 1] : this.lap > 0 ? this.points[this.points.length - 1] : (this.startPt ||= { x: v.pos.x, z: v.pos.z })
+    const sl = Math.hypot(w.x - pv.x, w.z - pv.z) || 1
+    const sx = (w.x - pv.x) / sl, sz = (w.z - pv.z) / sl
+    const look = clamp(5 + Math.abs(v.speed) * 0.75, 6, 22)
+    const along = clamp((v.pos.x - pv.x) * sx + (v.pos.z - pv.z) * sz, 0, sl)
+    let tx, tz
+    if (along + look < sl) { tx = pv.x + sx * (along + look); tz = pv.z + sz * (along + look) }
+    else {
+      const nl = Math.hypot(nx.x - w.x, nx.z - w.z) || 1
+      const k2 = Math.min(1, (along + look - sl) / nl) * (nx === w ? 0 : 1)
+      tx = w.x + (nx.x - w.x) * k2; tz = w.z + (nx.z - w.z) * k2
+    }
+    // overtaking: follow the route shifted a lane to the left
+    this.offset += (this.offsetTarget - this.offset) * (1 - Math.exp(-1.8 * h))
+    if (Math.abs(this.offset) > 0.05) { tx += sz * this.offset; tz += -sx * this.offset }
     const err = angleDiff(v.heading, Math.atan2(tx - v.pos.x, tz - v.pos.z))
     v.steer = clamp(-err * 2.5, -1, 1)
     let target = (w.speed ?? this.speed) * this.speedMul
     if (Math.abs(err) > 0.5) target = Math.min(target, 9)
-    if (this.avoid) {
-      const obs = this.game.traffic?.obstacleAhead(v, 8 + Math.abs(v.speed))
-      if (obs && !obs.player) target = Math.min(target, Math.max(3, obs.d * 0.9))
+    const tr = this.game.traffic
+    const chauffeur = this.chauffeur
+    let blocker = null
+    const passing = this.offsetTarget !== 0 ? this.passing : null
+    if (this.avoid && tr) {
+      const obs = tr.obstacleAhead(v, 8 + Math.abs(v.speed) * (chauffeur ? 1.2 : 1), passing, 0.2)
+      if (obs && !obs.player) {
+        // with a passenger: queue politely; otherwise shove through at walking pace
+        target = Math.min(target, chauffeur ? Math.max(0, (obs.d - 3.2) * 0.9) : Math.max(3, obs.d * 0.9))
+        blocker = obs.v
+      }
     }
+    // pulling out round a stopped car: ease out, then go
+    if (passing) target = Math.min(target, 3.5 + 11 * clamp(this.offset / LANE_W, 0, 1))
     const e = target - v.speed
     v.throttle = e > 0 ? Math.min(1, e * 0.5 + 0.25) : Math.max(-1, e * 0.3)
-    v.handbrake = false
-    if (Math.abs(v.speed) < 0.8 && target > 3) {
+    v.handbrake = chauffeur && target < 0.3 && Math.abs(v.speed) < 0.6
+    // stuck behind slow or stopped traffic on a straight: pull out and pass when the next lane is
+    // clear (Nea Grișa has never waited for anyone), then tuck back in once past
+    const straight = d2 > 24 && Math.abs(err) < 0.35
+    if (this.offsetTarget === 0 && blocker && Math.abs(blocker.speed || 0) < 1 && this.blockedT > 0.8 && straight && this.laneFree(LANE_W, sx, sz, 70)) {
+      this.offsetTarget = LANE_W; this.passT = 0; this.passing = blocker
+    } else if (this.offsetTarget !== 0) {
+      this.passT += h
+      const back = this.passT > 1.5 && this.laneFree(0, sx, sz, 14, -3.5)
+      if (back || d2 < 16 || (this.passT > 14 && this.laneFree(0, sx, sz, 8, -3))) { this.offsetTarget = 0; this.passing = null }
+    }
+    // still stuck: once nobody is looking (or after a long wait) the blocker goes
+    if (blocker && Math.abs(v.speed) < 1.2) {
+      this.blockedT += h
+      if (tr.removable(blocker) && (this.blockedT > 18 || (this.blockedT > 1.5 && !tr.visible(blocker.pos.x, blocker.pos.z)))) {
+        const d = tr.drivers.find((dd) => dd.v === blocker)
+        if (d) tr.despawn(d); else this.game.vehicles.remove(blocker)
+        this.blockedT = 0
+      }
+    } else this.blockedT = 0
+    if (!blocker && Math.abs(v.speed) < 0.8 && target > 3) {
       this.stuck += h
       if (this.stuck > 1.2) { v.throttle = -1; v.steer = -v.steer }
       if (this.stuck > 2.6) this.stuck = 0
     } else this.stuck = 0
+    // keep the road ahead clear of traffic the camera can't see
+    if ((this.clearT -= h) <= 0) { this.clearT = 1; this.clearAhead() }
+    // no progress for a long time (wedged on a kerb, boxed in): hop to the next waypoint
+    if (d2 < this.best - 1.5 || (w.speed ?? this.speed) * this.speedMul <= 3) { this.best = Math.min(this.best, d2); this.noProgT = 0 }
+    else if ((this.noProgT += h) > 12) this.rescue(w)
+  }
+  // no vehicle (or walker in the road) in the lane `off` metres left of the route, from `back`
+  // metres behind us to `ahead` metres in front
+  laneFree(off, sx, sz, ahead, back = -8) {
+    const v = this.v, g = this.game
+    const lx = sz, lz = -sx
+    const test = (x, z, half) => {
+      const dx = x - v.pos.x, dz = z - v.pos.z
+      const along = dx * sx + dz * sz, side = dx * lx + dz * lz
+      return along > back && along < ahead && Math.abs(side - off) < 1.6 + half
+    }
+    for (const o of g.vehicles.list) if (o !== v && test(o.pos.x, o.pos.z, o.def.dims[0])) return false
+    const p = g.player
+    if (p && !p.vehicle && test(p.pos.x, p.pos.z, 0.4)) return false
+    for (const c of g.peds?.list || []) if (!c.ko && c.onRoad && test(c.pos.x, c.pos.z, 0.4)) return false
+    return true
+  }
+  rescue(w) {
+    const v = this.v, g = this.game
+    this.noProgT = 0; this.best = Infinity
+    if (!this.chauffeur && g.traffic?.visible(v.pos.x, v.pos.z)) return
+    const go = () => {
+      const nx = this.points[this.i + 1] || w
+      const ry = Math.atan2(nx.x - w.x, nx.z - w.z) || v.heading
+      g.vehicles.clearSpot?.(w.x, w.z, 7)
+      v.teleport(w.x, (g.physics.groundHeight(w.x, w.z, 3) ?? v.pos.y) + 0.3, w.z, ry)
+    }
+    if (this.chauffeur && g.ui?.fade) g.ui.fade(1, 250).then(() => { go(); g.cameraRig?.snap(); g.ui.fade(0, 400) })
+    else go()
   }
   // 0..1 progress along the route (for rubber-banding and race positions)
   progress() {

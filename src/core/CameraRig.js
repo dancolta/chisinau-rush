@@ -25,6 +25,7 @@ export class CameraRig {
     this.baseFov = game.settings.fov || 42
     this.cut = null           // active cutscene shot
     this.userYawT = 0
+    this.userTurnT = 0        // > 0 right after the player turned the camera themselves
     this.lookAhead = new THREE.Vector3()
     this.noiseT = 0
   }
@@ -79,11 +80,13 @@ export class CameraRig {
     const car = p.vehicle
     // ---- user orbit controls -----------------------------------------------------
     const sens = game.settings.camSensitivity ?? 1
-    if (input.key('Mouse2') || input.key('Mouse1') || input.touchCam) { this.yaw -= input.mouse.dx * 0.0055 * sens; if (input.mouse.dx) this.userYawT = 2.5 }
+    const turned = () => { this.userYawT = 2.5; this.userTurnT = 0.12 }
+    if (this.userTurnT > 0) this.userTurnT -= rawDt
+    if (input.key('Mouse2') || input.key('Mouse1') || input.touchCam) { this.yaw -= input.mouse.dx * 0.0055 * sens; if (input.mouse.dx) turned() }
     const look = input.lookAxes()
-    if (Math.abs(look.x) > 0) { this.yaw -= look.x * 2.4 * rawDt * sens; this.userYawT = 2.5 }
-    if (input.act('camLeft')) { this.yaw += 1.8 * rawDt; this.userYawT = 2.5 }
-    if (input.act('camRight')) { this.yaw -= 1.8 * rawDt; this.userYawT = 2.5 }
+    if (Math.abs(look.x) > 0) { this.yaw -= look.x * 2.4 * rawDt * sens; turned() }
+    if (input.act('camLeft')) { this.yaw += 1.8 * rawDt; turned() }
+    if (input.act('camRight')) { this.yaw -= 1.8 * rawDt; turned() }
     if (input.mouse.wheel) this.zoom = THREE.MathUtils.clamp(this.zoom * (input.mouse.wheel > 0 ? 1.12 : 0.89), 0.7, 2.2)
     if (this.userYawT > 0) this.userYawT -= rawDt
 
@@ -111,11 +114,13 @@ export class CameraRig {
       this.target.set(cp.x, cp.y + 1.65, cp.z).add(this.lookAhead)
       this.dist += (5.8 - this.dist) * (1 - Math.exp(-2 * rawDt))
       this.pitch += (this.wantPitch(0.24) - this.pitch) * (1 - Math.exp(-2 * rawDt))
-      // on foot the camera drifts in behind you while you run roughly forward (never while
-      // strafing: controls are camera-relative, so that would curve your run into a circle)
-      if (this.userYawT <= 0 && speed > 2.5 && game.settings.camFollow !== false) {
+      // on foot the camera swings in behind you as you run. With keys the run direction is held
+      // while the camera turns, so it can follow any heading except straight at the lens; a
+      // stick reads the camera continuously, so there it only drifts while you run roughly ahead
+      if (this.userYawT <= 0 && speed > 1.5 && game.settings.camFollow !== false) {
         const diff = wrap(Math.atan2(p.vel.x, p.vel.z) - this.yaw)
-        if (Math.abs(diff) < 0.9) this.yaw += diff * (1 - Math.exp(-0.8 * rawDt))
+        const keys = p.moveKey != null
+        if (Math.abs(diff) < (keys ? 2.2 : 0.9)) this.yaw += diff * (1 - Math.exp(-(keys ? 1.8 + speed * 0.08 : 0.8) * rawDt))
       }
     }
     const follow = car ? 7 : 9
@@ -131,7 +136,7 @@ export class CameraRig {
     this.cam.lookAt(this.smoothTarget)
 
     // speed FOV kick
-    const kick = car ? Math.min(12, Math.max(0, speed - 12) * 0.35) : p.sprinting ? 3 : 0
+    const kick = car ? Math.min(12, Math.max(0, speed - 12) * 0.35) : p.sprinting ? 6.5 : 0
     this.fovKick += (kick - this.fovKick) * (1 - Math.exp(-3 * rawDt))
     const fov = this.baseFov + this.fovKick
     if (Math.abs(this.cam.fov - fov) > 0.01) { this.cam.fov = fov; this.cam.updateProjectionMatrix() }

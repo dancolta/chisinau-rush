@@ -86,7 +86,7 @@ export class Vehicles {
       const d2 = (s.x - px) ** 2 + (s.z - pz) ** 2
       const v = this.parkedActive.get(s.i)
       if (!v && d2 < near * near) {
-        if (s.taken || s.bad) continue
+        if (s.taken || s.bad || s.reserved) continue
         if (s.ok === undefined) { s.ok = !this.blockedCar(s.x, s.z, s.ry); if (!s.ok) { s.bad = true; continue } }
         const nv = this.spawn(s.kindPick, s.x, s.z, s.ry, { parked: true })
         nv.slot = s

@@ -26,6 +26,15 @@ export const VIEWS = [
   { id: 'play_night', hour: 21.8, follow: { x: -52, z: 186, ry: Math.PI } },
   { id: 'play_car', hour: 17, follow: { x: -58.25, z: 120, ry: Math.PI, car: 'logan' } },
   { id: 'trees', hour: 15, from: [-36, 3.2, 170], look: [-24, 3.5, 186] },
+  // the opening of a new game (train at the station)
+  { id: 'open_a0', hour: 17.9, train: 372, from: [262, 42, 376], look: [352, 8, 292] },
+  { id: 'open_a1', hour: 17.9, train: 322, from: [276, 34, 362], look: [340, 6, 300] },
+  { id: 'open_se', hour: 17.9, train: 380, from: [446, 44, 382], look: [330, 10, 282] },
+  { id: 'open_se1', hour: 17.9, train: 330, from: [402, 22, 352], look: [322, 4, 304] },
+  { id: 'open_s', hour: 17.9, train: 360, from: [352, 52, 420], look: [322, 6, 270] },
+  { id: 'open_b1', hour: 17.9, train: 298.3, from: [304, 3.2, 300.5], look: [322, 1.8, 311.2] },
+  { id: 'open_c', hour: 17.9, train: 298.3, from: [312.5, 2.0, 297.5], look: [319, 1.3, 304] },
+  { id: 'open_play', hour: 17.9, train: 298.3, follow: { x: 318.5, z: 302.5, ry: Math.PI } },
 ]
 
 const server = await createServer({ server: { port, strictPort: false, host: '127.0.0.1', fs: { strict: false } }, logLevel: 'error' })
@@ -73,6 +82,11 @@ for (const v of VIEWS) {
       p.teleport(v.look[0], g.physics.groundHeight(v.look[0], v.look[2], 3), v.look[2])
       g.cameraRig.shot({ from: v.from, look: v.look, dur: 9999 })
     }
+    if (v.train !== undefined) {
+      if (!window.__train) { const { Train } = await import('/src/story/Kit.js'); window.__train = new Train(g, { cars: 3 }) }
+      const t = window.__train
+      t.x = v.train; t.mode = 'stopped'; t.group.position.x = v.train; t.group.visible = true
+    } else if (window.__train) window.__train.group.visible = false
     g.renderer.updateEnvironment?.(true)
   }, v)
   await page.waitForTimeout(settle)

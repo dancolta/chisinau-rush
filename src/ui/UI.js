@@ -171,8 +171,9 @@ export class UI {
     return new Promise((res) => setTimeout(() => { m.classList.add('out'); setTimeout(() => { m.remove(); res() }, 600) }, secs * 1000))
   }
 
-  chapter(kicker, name, desc, secs = 4) {
-    const c = el('div', 'chapter', `<div><div class="k">${kicker}</div><div class="n">${name}</div>${desc ? `<div class="d">${desc}</div>` : ''}</div>`)
+  // light: over an establishing shot, the title sits low on a soft gradient instead of a dimmed screen
+  chapter(kicker, name, desc, secs = 4, { light = false } = {}) {
+    const c = el('div', 'chapter' + (light ? ' light' : ''), `<div><div class="k">${kicker}</div><div class="n">${name}</div>${desc ? `<div class="d">${desc}</div>` : ''}</div>`)
     this.top.appendChild(c)
     this.game.audio?.sting('chapter')
     this.hud.style.opacity = '0'
@@ -495,21 +496,8 @@ export class UI {
       b.el.style.display = ''
       b.el.style.left = s.x + 'px'; b.el.style.top = s.y + 'px'
     }
-    // tags ("!" over quest givers)
-    this.tagEls ||= []
-    while (this.tagEls.length < this.tags.length) { const e = el('div', 'npc-tag'); this.world.appendChild(e); this.tagEls.push(e) }
-    this.tagEls.forEach((e, i) => {
-      const t = this.tags[i]
-      if (!t) { e.style.display = 'none'; return }
-      const pos = t.npc ? t.npc.char.mesh.position : t
-      const s = this.project(pos.x, pos.y + (t.npc ? 2.5 : 3), pos.z)
-      if (!s) { e.style.display = 'none'; return }
-      e.style.display = ''
-      const html = `<span class="ex">${t.icon || '!'}</span>${t.label || ''}`
-      if (e._h !== html) { e._h = html; e.innerHTML = html }
-      e.style.left = s.x + 'px'; e.style.top = s.y + 'px'
-    })
-    // waypoint marker (with edge arrow when off-screen)
+    // waypoint marker first (it has priority over tags), with an edge arrow when off-screen
+    const placed = []
     const mk = this.marker
     if (mk) {
       const cam = this.game.camera
@@ -527,7 +515,42 @@ export class UI {
       const pp = p.vehicle ? p.vehicle.pos : p.pos
       const d = Math.round(Math.hypot(mk.x - pp.x, mk.z - pp.z))
       const txt = (mk.label ? mk.label + ' · ' : '') + d + ' m'
-      if (txt !== this._mkTxt) { this._mkTxt = txt; this.markerEl.querySelector('.d').textContent = txt }
+      if (txt !== this._mkTxt) { this._mkTxt = txt; this.markerEl.querySelector('.d').textContent = txt; this._mkW = 0 }
+      if (!this._mkW) { this._mkW = this.markerEl.offsetWidth || 80; this._mkH = this.markerEl.offsetHeight || 46 }
+      placed.push({ x0: x - this._mkW / 2, x1: x + this._mkW / 2, y0: y - this._mkH, y1: y })
+    }
+    // tags ("!" over quest givers): nearest first; one that would sit on another steps up a
+    // row, and if there's still no room it keeps only its icon (or hides)
+    this.tagEls ||= []
+    while (this.tagEls.length < this.tags.length) { const e = el('div', 'npc-tag'); this.world.appendChild(e); this.tagEls.push(e) }
+    const cp = this.game.camera.position
+    const order = []
+    this.tagEls.forEach((e, i) => {
+      const t = this.tags[i]
+      if (!t) { e.style.display = 'none'; return }
+      const pos = t.npc ? t.npc.char.mesh.position : t
+      const s = this.project(pos.x, pos.y + (t.npc ? 2.5 : 3), pos.z)
+      if (!s) { e.style.display = 'none'; return }
+      e.style.display = ''
+      const html = `<span class="ex">${t.icon || '!'}</span>${t.label || ''}`
+      if (e._h !== html) { e._h = html; e.innerHTML = html; e._w = 0 }
+      order.push({ e, s, d: (pos.x - cp.x) ** 2 + (pos.z - cp.z) ** 2 })
+    })
+    order.sort((a, b) => a.d - b.d)
+    const hits = (r) => placed.find((q) => r.x0 < q.x1 && r.x1 > q.x0 && r.y0 < q.y1 && r.y1 > q.y0)
+    for (const { e, s } of order) {
+      e.classList.remove('compact')
+      if (!e._w) { e._w = e.offsetWidth || 60; e._hh = e.offsetHeight || 44; e.classList.add('compact'); e._cw = e.offsetWidth || 28; e._ch = e.offsetHeight || 30; e.classList.remove('compact') }
+      let x = s.x, y = s.y, w = e._w, h = e._hh, ok = false
+      for (let k = 0; k < 3 && !ok; k++) {
+        const r = { x0: x - w / 2, x1: x + w / 2, y0: y - h, y1: y }
+        const q = hits(r)
+        if (!q) { ok = true; placed.push(r); break }
+        if (k === 1) { e.classList.add('compact'); w = e._cw; h = e._ch; y = s.y }
+        else y = q.y0 - 2
+      }
+      if (!ok) { e.style.display = 'none'; continue }
+      e.style.left = x + 'px'; e.style.top = y + 'px'
     }
   }
 }

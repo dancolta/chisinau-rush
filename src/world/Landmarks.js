@@ -775,12 +775,16 @@ export class Landmarks {
     const pl = this.st(gx, pz)
     pl.box(200, 0.3, 6, { x: gx - 20, y: 0, z: pz, color: 0xa7a39a })
     pl.box(200, 0.05, 0.4, { x: gx - 20, y: 0.3, z: pz + 2.8, color: 0xe8c14a })
-    for (let x = gx - 110; x <= gx + 80; x += 12) {
+    // the canopy only runs along the station building: where you step off the train (its west
+    // end) there's open sky, so the opening and your first steps aren't under a roof
+    const c0 = gx - 28, c1 = gx + 72
+    for (let x = c0 + 2; x <= c1 - 2; x += 12) {
       pl.box(0.2, 4, 0.2, { x, y: 0.3, z: pz - 1.5, color: 0x3a4f63 })
       this.P.cylinder(x, 2.3, pz - 1.5, 2, 0.14)
     }
-    pl.box(190, 0.2, 5, { x: gx - 15, y: 4.3, z: pz - 0.5, color: 0x6a7f8e })
-    this.P.box(gx - 20, 0.15, pz, 100, 0.15, 3)
+    pl.box(c1 - c0, 0.2, 5, { x: (c0 + c1) / 2, y: 4.3, z: pz - 0.5, color: 0x6a7f8e })
+    // in 50 m pieces: one 200 m box is too coarse for the character controller's contact maths
+    for (let i = 0; i < 4; i++) this.P.box(gx - 120 + 25 + i * 50, 0.15, pz, 25, 0.15, 3)
     this.w.place('gara', 'Gara Feroviară Chișinău', gx, b.iz1 + 2, { kind: 'landmark' })
     this.w.place('peron', 'Peronul 1', gx - 40, pz, { kind: 'spot', y: 0.3 })
     this.w.rails = { z: RAIL_Z, x0: -520, x1: 520 }

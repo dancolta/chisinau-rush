@@ -9,6 +9,7 @@ import { makeFacadeMaterial } from './Facade.js'
 import { makeAsphalt, makePaving, makePlaza, makeGrass, makeDirt, makeConcrete, SignAtlas } from '../render/Textures.js'
 import { H_ROADS, V_ROADS, CURB_H, WORLD, RAIL_Z, onRoad } from './CityLayout.js'
 import { mulberry } from './rng.js'
+import { buildHorizon } from './Horizon.js'
 
 // Builds and owns the static city: ground, buildings, landmarks, props, colliders,
 // plus registries (named places, lamps, parking, benches…) used by every other system.
@@ -129,6 +130,7 @@ export class World {
     props.build()
     this.buildRails()
     this.buildOutskirts()
+    this.horizon = buildHorizon(this.scene)
     await tick()
     progress(0.8, 'finisaje')
     this.dyn = new DynamicProps(this)

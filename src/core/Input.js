@@ -136,19 +136,20 @@ export class Input {
   key(code) { return this.down.has(code) }
   keyPressed(code) { return this.pressedSet.has(code) }
 
-  // movement vector: x = right, y = forward
+  // movement vector: x = right, y = forward; digital = keys only (8 fixed directions)
   move() {
-    if (!this.enabled) return { x: 0, y: 0 }
+    if (!this.enabled) return { x: 0, y: 0, digital: false }
     let x = 0, y = 0
     if (this.act('left')) x -= 1
     if (this.act('right')) x += 1
     if (this.act('up')) y += 1
     if (this.act('down')) y -= 1
+    const analog = this.padAxes[0] !== 0 || this.padAxes[1] !== 0 || this.virtual.x !== 0 || this.virtual.y !== 0
     x += this.padAxes[0]; y -= this.padAxes[1]
     x += this.virtual.x; y += this.virtual.y
     const l = Math.hypot(x, y)
     if (l > 1) { x /= l; y /= l }
-    return { x, y }
+    return { x, y, digital: !analog }
   }
 
   // analog triggers for driving (gamepad) merged with keys

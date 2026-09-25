@@ -86,8 +86,13 @@ export class Physics {
     return this.world.createCollider(d, this.fixed)
   }
 
-  ground(size = 4000) {
-    return this.box(0, -0.5, 0, size, 0.5, size, { groups: FILTER.GROUND, friction: 0.9 })
+  // an exact infinite plane at y = 0 (a giant box made the character controller's contact
+  // maths lose ~0.15-0.35 m of precision, so people sank into the roads)
+  ground() {
+    const d = new RAPIER.ColliderDesc(new RAPIER.HalfSpace({ x: 0, y: 1, z: 0 }))
+      .setFriction(0.9).setRestitution(0.05)
+      .setCollisionGroups(FILTER.GROUND)
+    return this.world.createCollider(d, this.fixed)
   }
 
   dynamicBox({ x, y, z, rotY = 0, hx, hy, hz, mass = 20, groups: g = FILTER.PROP, friction = 0.6, restitution = 0.15, linDamp = 0.3, angDamp = 0.6, user, ccd = false, sleeping = true }) {
