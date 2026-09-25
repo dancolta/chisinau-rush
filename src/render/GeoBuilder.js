@@ -32,7 +32,8 @@ export class GeoBuilder {
   get count() { return this.pos.length / 3 }
 
   // add a geometry transformed by (x,y,z, rotation, scale) with a flat colour
-  add(geo, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1, color = 0xffffff, emit = 0, matrix = null, shade = null } = {}) {
+  // bendTo/bend: pull normals toward "away from this point" (soft, volumetric foliage lighting)
+  add(geo, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1, color = 0xffffff, emit = 0, matrix = null, shade = null, bendTo = null, bend = 0 } = {}) {
     if (matrix) _m.copy(matrix)
     else {
       _q.setFromEuler(_e.set(rx, ry, rz, 'YXZ'))
@@ -45,6 +46,10 @@ export class GeoBuilder {
     for (let i = 0; i < P.count; i++) {
       _p.fromBufferAttribute(P, i).applyMatrix4(_m)
       _n.fromBufferAttribute(N, i).applyMatrix3(_nm).normalize()
+      if (bendTo) {
+        const bx = _p.x - bendTo.x, by = _p.y - bendTo.y, bz = _p.z - bendTo.z, bl = Math.hypot(bx, by, bz) || 1
+        _n.set(_n.x + (bx / bl - _n.x) * bend, _n.y + (by / bl - _n.y) * bend, _n.z + (bz / bl - _n.z) * bend).normalize()
+      }
       this.pos.push(_p.x, _p.y, _p.z)
       this.nor.push(_n.x, _n.y, _n.z)
       let k = 1

@@ -62,6 +62,8 @@ Open city with ~40 landmarks (PMAN, Casa Guvernului, Arcul de Triumf, Catedrala,
 - **Three.js 0.186** rendering with a custom sky, time-of-day palette, shadow cascades that follow the player, a see-through cutout for buildings between camera and hero, **postprocessing** (bloom, AgX tonemapping, SMAA) and **N8AO** ambient occlusion, adaptive resolution.
 - **Rapier 3D** physics: arcade vehicles (bicycle model steering, grip/drift, contact damage), kinematic character controller, raycast line-of-sight.
 - Procedural city, characters (rigid-skinned, procedurally animated) and vehicles; CC0 models from **KayKit City Builder Bits** (Kay Lousberg).
+- Buildings are dressed from a painted texture array (Soviet panel blocks, loggias, shopfronts, classical and brick townhouses, offices, ruins) picked per module with a stable integer hash, so facades never shimmer; ground surfaces carry generated normal maps (slabs, granite, asphalt).
+- Night: the street lamps nearest the action become real point lights (a fixed number of them, so shaders never recompile), light pools on the pavement, a fill light on the player and headlights on your car. Lawns near the player grow swaying grass tufts.
 - **Web Audio** engine built for the game: procedural music (brass, accordion, țambal…), ambience, positional sfx, engines with Doppler, sirens, dialogue voices. Samples from **Kenney** (CC0).
 - Story runner where missions read top to bottom like a screenplay (`src/story/missions/*`).
 
@@ -72,6 +74,7 @@ node tools/play.mjs --from rapirea --turbo 6     # automated story playthrough (
 node tools/systems.mjs                          # side systems checks (busted, shop, taxi, save…)
 node tools/shot.mjs --out shot.png --eval "…"   # screenshots
 node tools/gallery.mjs --missions eban,mitingul    # capture every cutscene of the given missions
+node tools/views.mjs --out views --only night,play_day  # fixed review shots (day, dusk, night, gameplay camera)
 ```
 
 `?turbo=4` speeds up the simulation in dev builds; `?touch` forces touch controls on desktop.

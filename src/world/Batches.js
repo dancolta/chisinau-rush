@@ -15,6 +15,7 @@ export class FlatBuilder {
   // horizontal quad [x0..x1]x[z0..z1] at height y
   rect(x0, z0, x1, z1, y = 0) {
     const s = this.s
+    this.log?.push({ k: 0, s: this.surface, x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), y })
     const P = [[x0, z0], [x0, z1], [x1, z1], [x0, z0], [x1, z1], [x1, z0]]
     for (const [x, z] of P) { this.pos.push(x, y, z); this.nor.push(0, 1, 0); this.uv.push(x / s, -z / s) }
     return this
@@ -22,6 +23,7 @@ export class FlatBuilder {
   // rotated rectangle (centre, size, angle) on the ground
   orect(cx, cz, w, d, ang, y = 0) {
     const c = Math.cos(ang), sn = Math.sin(ang), s = this.s
+    this.log?.push({ k: 2, s: this.surface, cx, cz, w, d, ang, y })
     const pts = [[-w / 2, -d / 2], [-w / 2, d / 2], [w / 2, d / 2], [-w / 2, -d / 2], [w / 2, d / 2], [w / 2, -d / 2]]
     for (const [lx, lz] of pts) {
       const x = cx + lx * c + lz * sn, z = cz - lx * sn + lz * c
@@ -32,6 +34,7 @@ export class FlatBuilder {
   // disc (for roundabouts / fountain surrounds)
   disc(cx, cz, r, y = 0, seg = 32) {
     const s = this.s
+    this.log?.push({ k: 1, s: this.surface, cx, cz, r, y })
     for (let i = 0; i < seg; i++) {
       const a0 = (i / seg) * Math.PI * 2, a1 = ((i + 1) / seg) * Math.PI * 2
       const p = [[cx, cz], [cx + Math.cos(a1) * r, cz + Math.sin(a1) * r], [cx + Math.cos(a0) * r, cz + Math.sin(a0) * r]]
@@ -69,6 +72,7 @@ export class Batches {
     this.atlases = new Map() // key -> { items: [{geometry, matrix}], opts }
     this.flats = new Map()   // key -> { builder, surface }
     this.facades = new Map() // key -> FacadeBuilder
+    this.surfaces = []       // every ground rect/disc laid, with its surface kind (kept after finalize)
   }
 
   facade(x, z) {
@@ -95,7 +99,11 @@ export class Batches {
   flat(x, z, surface, uvScale) {
     const k = `${surface}|${chunkKey(x, z)}`
     let e = this.flats.get(k)
-    if (!e) { e = { builder: new FlatBuilder(uvScale), surface }; this.flats.set(k, e) }
+    if (!e) {
+      e = { builder: new FlatBuilder(uvScale), surface }
+      e.builder.surface = surface; e.builder.log = this.surfaces
+      this.flats.set(k, e)
+    }
     return e.builder
   }
 

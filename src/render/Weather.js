@@ -71,9 +71,12 @@ export class Weather {
     const s = g.world.surf
     if (s && Math.abs((this.lastK ?? -1) - k) > 0.01) {
       this.lastK = k
-      s.asphalt.roughness = 0.9 - 0.52 * k; s.asphalt.envMapIntensity = 0.35 + 0.9 * k
-      s.paving.roughness = 0.86 - 0.4 * k; s.paving.envMapIntensity = 0.35 + 0.6 * k
-      if (s.plaza) { s.plaza.roughness = 0.86 - 0.4 * k }
+      for (const suf of ['', '_o']) {
+        const a = s['asphalt' + suf], p = s['paving' + suf], z = s['plaza' + suf]
+        if (a) { a.roughness = 0.88 - 0.52 * k; a.envMapIntensity = 0.35 + 0.9 * k }
+        if (p) { p.roughness = 0.84 - 0.4 * k; p.envMapIntensity = 0.35 + 0.6 * k }
+        if (z) z.roughness = 0.74 - 0.35 * k
+      }
     }
     g.audio?.rain?.(k)
   }

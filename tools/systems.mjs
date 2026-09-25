@@ -42,7 +42,12 @@ r = await ev(async () => {
   const ped = g.peds.spawn(p.pos.x + Math.sin(p.char.heading) * 1.1, p.pos.z + Math.cos(p.char.heading) * 1.1)
   ped.state = 'idle'
   const hp0 = ped.hp
-  for (let i = 0; i < 6; i++) { p.attackCD = 0; p.attack(); await new Promise((r) => setTimeout(r, 350)) }
+  // give each swing time to land even when frames are slow (software rendering)
+  for (let i = 0; i < 6 && ped.hp >= hp0; i++) {
+    p.attackCD = 0; p.aimYaw = null; p.attack()
+    const f0 = g.frame
+    for (let k = 0; k < 40 && g.frame < f0 + 8; k++) await new Promise((r) => setTimeout(r, 100))
+  }
   return { hp0, hp: ped.hp, ko: ped.char.ko, heat: g.police.heat }
 })
 check('punches hurt a pedestrian', r.hp < r.hp0, JSON.stringify(r))
@@ -102,10 +107,10 @@ r = await ev(async () => {
   g.vehicles.enter(v)
   await new Promise((r) => setTimeout(r, 400))
   g.input.pressedSet.add('KeyT')
-  await new Promise((r) => setTimeout(r, 1200))
+  for (let k = 0; k < 80 && !g.story.active; k++) await new Promise((r) => setTimeout(r, 100))
   const started = g.story.active?.def.id
   g.vehicles.exit(true)
-  await new Promise((r) => setTimeout(r, 4500))
+  for (let k = 0; k < 150 && g.story.active; k++) await new Promise((r) => setTimeout(r, 100))
   return { started, after: g.story.active?.def.id || null }
 })
 check('taxi shift starts with T and ends on exit', r.started === 'act_taxi' && !r.after, JSON.stringify(r))

@@ -30,6 +30,8 @@ import { AudioEngine } from '../audio/Audio.js'
 import { Debug } from './Debug.js'
 import { Touch, isTouchDevice } from '../ui/Touch.js'
 import { Weather } from '../render/Weather.js'
+import { NightLights } from '../render/NightLights.js'
+import { GrassField } from '../world/GrassField.js'
 
 const STEP = 1 / 60
 if (import.meta.env.DEV) { window.THREE = THREE; window.__CR = { Character, CAST } }
@@ -77,6 +79,8 @@ export class Game {
     await this.world.build((p, l) => progress(0.6 + p * 0.3, l ? 'Construim: ' + l + '…' : undefined))
     progress(0.92, 'Oameni, mașini, polițiști…')
     this.fx = new FX(this)
+    this.nightLights = new NightLights(this, this.renderer.q.lamps ?? 8)
+    this.grass = new GrassField(this)
     this.weather = this.renderer.weather = new Weather(this)
     this.progress = new Progress(this)
     this.ui = new UI(this)
@@ -195,7 +199,7 @@ export class Game {
     if (!this.paused) this.renderer.tod.update(scaled)
     this.renderer.applyTimeOfDay()
     this.renderer.updateEnvironment()
-    if (this.world.poolMesh) this.world.poolMesh.material.opacity = SHARED.uNight.value * 0.3
+    if (this.world.poolMesh) this.world.poolMesh.material.opacity = SHARED.uNight.value * 0.22
     this.renderer.render(dt)
     this.input.endFrame()
   }
@@ -245,7 +249,7 @@ export class Game {
       this.safe('story', () => this.story.update(dt))
       if (playing) this.safe('interaction', () => this.interaction.update(dt))
       if (playing) this.safe('director', () => this.director.update(dt))
-      this.safe('fx', () => { this.fx.update(dt); this.vehicleFX(dt); this.weather.update(dt) })
+      this.safe('fx', () => { this.fx.update(dt); this.vehicleFX(dt); this.weather.update(dt); this.nightLights.update(rawDt); this.grass.update(rawDt) })
       this.debug?.update(rawDt)
     }
     this.safe('ui', () => { this.ui.update(rawDt); this.touch?.update() })

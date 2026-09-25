@@ -11,13 +11,16 @@ const DEFAULTS = {
   subtitles: true,
   invertCam: false,
   camSensitivity: 1,
-  fov: 42,
+  fov: 50,
+  v: 2,
 }
 
 export function loadSettings() {
   let s = {}
   try { s = JSON.parse(localStorage.getItem(KEY) || '{}') } catch (e) { s = {} }
   const merged = { ...DEFAULTS, ...s }
+  // v2: low third-person camera, which wants a wider view than the old top-down one
+  if ((s.v || 1) < 2) { merged.fov = DEFAULTS.fov; merged.v = 2 }
   // first run: guess a sensible quality tier from the device
   if (!s.quality) {
     const mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)

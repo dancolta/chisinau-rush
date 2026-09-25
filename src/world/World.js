@@ -9,6 +9,7 @@ import { makeFacadeMaterial } from './Facade.js'
 import { makeAsphalt, makePaving, makePlaza, makeGrass, makeDirt, makeConcrete, SignAtlas } from '../render/Textures.js'
 import { H_ROADS, V_ROADS, CURB_H, WORLD, RAIL_Z, onRoad } from './CityLayout.js'
 import { mulberry } from './rng.js'
+import { buildHorizon } from './Horizon.js'
 
 // Builds and owns the static city: ground, buildings, landmarks, props, colliders,
 // plus registries (named places, lamps, parking, benches…) used by every other system.
@@ -71,18 +72,38 @@ export class World {
     const tex = this.tex
     const mk = (map, opts = {}) => {
       const m = new THREE.MeshStandardMaterial({ map, roughness: 0.92, metalness: 0, ...opts })
+      if (map.userData?.normal) { m.normalMap = map.userData.normal; m.normalScale.set(0.9, 0.9) }
       m.envMapIntensity = 0.35
       return m
     }
-    return {
-      asphalt: mk(tex.asphalt, { roughness: 0.9 }),
-      paving: mk(tex.paving, { roughness: 0.86 }),
+    const base = {
+      asphalt: mk(tex.asphalt, { roughness: 0.88 }),
+      paving: mk(tex.paving, { roughness: 0.84 }),
       curb: mk(tex.concrete, { color: 0xd8d6d0, roughness: 0.9 }),
       grass: mk(tex.grass, { roughness: 1 }),
-      plaza: mk(tex.plaza, { roughness: 0.8 }),
+      plaza: mk(tex.plaza, { roughness: 0.74 }),
       dirt: mk(tex.dirt, { roughness: 1 }),
       concrete: mk(tex.concrete, { roughness: 0.9 }),
     }
+    // '<surface>_o': the same surface laid as a thin overlay on top of another one (patches,
+    // verges, kerb tops). A depth offset instead of a centimetre lift keeps them from z-fighting.
+    for (const k of Object.keys(base)) {
+      const o = base[k].clone()
+      o.polygonOffset = true; o.polygonOffsetFactor = -1; o.polygonOffsetUnits = -2
+      base[k + '_o'] = o
+    }
+    // grass tiles over 22 m, so close up it needs a finer second sample of itself
+    for (const m of [base.grass, base.grass_o]) {
+      m.onBeforeCompile = (sh) => {
+        sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+  {
+    vec3 det = texture2D(map, vMapUv * 8.7 + vec2(0.31, 0.17)).rgb;
+    diffuseColor.rgb *= clamp(0.45 + 1.8 * dot(det, vec3(0.3333)), 0.7, 1.35);
+  }`)
+      }
+      m.customProgramCacheKey = () => 'grass-detail'
+    }
+    return base
   }
 
   async build(progress = () => {}) {
@@ -109,6 +130,7 @@ export class World {
     props.build()
     this.buildRails()
     this.buildOutskirts()
+    this.horizon = buildHorizon(this.scene)
     await tick()
     progress(0.8, 'finisaje')
     this.dyn = new DynamicProps(this)
@@ -175,9 +197,9 @@ export class World {
     markings.polygonOffset = true; markings.polygonOffsetFactor = -2; markings.polygonOffsetUnits = -2
     const mats = {
       vcol: {
-        static: M.vcol({ roughness: 0.85 }),
-        bld: M.vcol({ roughness: 0.86, cutout: true }),
-        tree: M.vcol({ roughness: 0.95, cutout: true, flat: true, emissive: false, key: 'tree' }),
+        static: M.vcol({ roughness: 0.85, detail: 'plaster' }),
+        bld: M.vcol({ roughness: 0.86, cutout: true, detail: 'plaster' }),
+        tree: M.vcol({ roughness: 0.92, cutout: true, flat: false, emissive: false, key: 'tree', detail: 'leaf' }),
         markings,
       },
       atlas: {

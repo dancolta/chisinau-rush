@@ -196,9 +196,15 @@ export class Vehicle {
     this.lateral = vr
     // steering: bicycle model, less lock at speed
     const lock = d.steer / (1 + Math.abs(vf) / 22)
-    this.steerVis += (steer * lock - this.steerVis) * (1 - Math.exp(-10 * h))
+    const human = this.driver === 'player'
+    // keys are all-or-nothing, so for the player the wheel eases in and snaps back to centre
+    const rate = !human ? 10 : Math.abs(steer * lock) > Math.abs(this.steerVis) ? 6 : 12
+    this.steerVis += (steer * lock - this.steerVis) * (1 - Math.exp(-rate * h))
     const L = d.dims[2] * 1.25
     let yawRate = -vf * Math.tan(this.steerVis) / L
+    // the player's car can't out-turn its tyres at speed (~2.6 g): no more twitchy flicks on
+    // the motorway; the handbrake still swings the tail round
+    if (human) { const maxYaw = 26 / Math.max(4, Math.abs(vf)); yawRate = Math.max(-maxYaw, Math.min(maxYaw, yawRate)) }
     if (this.handbrake && Math.abs(vf) > 4) yawRate *= 1.55
     const av = b.angvel()
     const wy = av.y + (yawRate - av.y) * (1 - Math.exp(-(this.handbrake ? 5 : 11) * h))

@@ -333,7 +333,7 @@ class MissionContext {
   chaser(v, target, opts) { const d = new ChaseDriver(this.game, v, target, opts); this.addDriver(d); return d }
   addDriver(d) {
     this.story.drivers.push(d)
-    this.track({ dispose: () => { const i = this.story.drivers.indexOf(d); if (i >= 0) this.story.drivers.splice(i, 1); if (d.v.driver === d) { d.v.driver = null; d.v.ai = null; d.v.throttle = 0; d.v.handbrake = true } } })
+    this.track({ dispose: () => { const i = this.story.drivers.indexOf(d); if (i >= 0) this.story.drivers.splice(i, 1); d.release?.(); d.done = true; if (d.v.driver === d) { d.v.driver = null; d.v.ai = null; d.v.throttle = 0; d.v.handbrake = true } } })
   }
   lane(id, dir, along, opts) { return lanePos(id, dir, along, opts) }
   // the player rides along as a passenger (camera follows the car, no controls)
@@ -442,6 +442,10 @@ class MissionContext {
       p.control = true
       p.scripted = null
       g.cameraRig.endShot(false)
+      // back in control: the camera sits behind you (or looks where the scene asked it to)
+      g.cameraRig.yaw = this.endYaw ?? (p.vehicle ? p.vehicle.heading : p.char.heading)
+      this.endYaw = null
+      g.cameraRig.userYawT = 0
       g.cameraRig.target.copy(p.vehicle ? p.vehicle.pos : p.pos)
       g.cameraRig.snap()
       g.input.clear()
@@ -701,7 +705,7 @@ export class Story {
       const tx = Math.max(-480, Math.min(480, v.pos.x + ax / d * 300)), tz = Math.max(-330, Math.min(350, v.pos.z + az / d * 300))
       points = g.traffic.graph.route(v.pos.x, v.pos.z, tx, tz).slice(1)
     }
-    const d = new RouteDriver(g, v, points.length ? points : [{ x: v.pos.x + Math.sin(v.heading) * 80, z: v.pos.z + Math.cos(v.heading) * 80 }], { speed: 12 })
+    const d = new RouteDriver(g, v, points.length ? points : [{ x: v.pos.x + Math.sin(v.heading) * 80, z: v.pos.z + Math.cos(v.heading) * 80 }], { speed: 12, priority: false })
     v.keep = true
     v.leaving = true
     v.locked = true

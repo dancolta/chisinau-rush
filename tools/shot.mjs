@@ -45,11 +45,11 @@ if (stepsFile) {
     if (s.down) await page.keyboard.down(s.down)
     if (s.up) await page.keyboard.up(s.up)
     if (s.click) await page.mouse.click(s.click[0], s.click[1])
-    if (s.shot) { await page.screenshot({ path: s.shot }); console.log('saved', s.shot) }
+    if (s.shot) { await page.screenshot({ path: s.shot, timeout: 180000 }); console.log('saved', s.shot) }
   }
 }
 await page.waitForTimeout(wait)
-await page.screenshot({ path: out })
+await page.screenshot({ path: out, timeout: 180000 })
 const fps = await page.evaluate(() => window.__game ? { frame: window.__game.frame, calls: window.__game.renderer.renderer.info.render.calls, tris: window.__game.renderer.renderer.info.render.triangles, scale: window.__game.renderer.dynScale } : null).catch(() => null)
 console.log('stats', JSON.stringify(fps))
 console.log('saved', out)

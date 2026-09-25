@@ -10,6 +10,19 @@ import { WORLD } from '../world/CityLayout.js'
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e }
 
+// big map: short names, and which labels win when they'd collide (higher first)
+const MAP_NAME = {
+  pman: 'PMAN', catedrala: 'Catedrala', parc_catedrala: 'Parcul Catedralei', stefan: 'Ștefan cel Mare',
+  gradina: 'Grădina Publică', primaria: 'Primăria', opera: 'Opera', parlament: 'Parlamentul', usm: 'USM',
+  kotovski: 'Kotovski', hotel: 'Hotel Național', teatru: 'Teatrul Eminescu', muzeu: 'Muzeul de Istorie',
+  autogara: 'Autogara', circ: 'Circul', gara: 'Gara', biserica: 'Biserica', piata: 'Piața Centrală',
+}
+const MAP_RANK = {
+  pman: 10, gara: 9, piata: 9, guvern: 8, catedrala: 8, arc: 7, primaria: 7, parlament: 7, opera: 6, circ: 6,
+  gradina: 6, autogara: 6, presedintia: 5, usm: 5, stefan: 4, teatru: 4, muzeu: 4, hotel: 4, ambasada: 4,
+  kotovski: 3, parc_catedrala: 3, clopotnita: 2, sala_orga: 2, biserica: 2,
+}
+
 // cinematic loop for the title screen: [from, to, lookFrom, lookTo, secs]
 const FLYOVER = [
   [[-60, 14, 70], [40, 18, 60], [0, 8, 30], [0, 10, 40], 11],
@@ -194,6 +207,7 @@ export class Menus {
     side.style.width = '240px'; side.style.flex = 'none'
     body.appendChild(side)
     const cv = document.createElement('canvas'); wrap.appendChild(cv)
+    const tip = el('div', 'map-tip'); wrap.appendChild(tip)
     const st = renderStaticMap(g.world)
     const draw = () => {
       const r = wrap.getBoundingClientRect()
@@ -205,13 +219,34 @@ export class Menus {
       c.fillStyle = '#14171b'; c.fillRect(0, 0, cv.width, cv.height)
       c.drawImage(st.canvas, ox, oy, st.W * s, st.H * s)
       const P = (x, z) => [ox + st.X(x) * s, oy + st.Z(z) * s]
-      // labels for landmarks
-      c.font = `${11 * dpr}px Rubik`; c.textAlign = 'center'
-      for (const p of Object.values(g.world.places)) {
-        if (p.kind !== 'landmark' && p.kind !== 'park') continue
+      // landmark labels: a dot for each, names placed most-important first in the first free
+      // spot around the dot; a name that would overlap another is left out (hover shows it)
+      const fs = Math.round(Math.max(10, Math.min(13, s * 7)) * dpr)
+      c.font = `600 ${fs}px Rubik`; c.textBaseline = 'middle'; c.lineJoin = 'round'
+      const places = Object.values(g.world.places).filter((p) => p.kind === 'landmark' || p.kind === 'park')
+        .sort((a, b) => (MAP_RANK[b.id] ?? 1) - (MAP_RANK[a.id] ?? 1))
+      const boxes = []
+      const free = (r) => r.x0 >= 2 && r.y0 >= 2 && r.x1 <= cv.width - 2 && r.y1 <= cv.height - 2 && !boxes.some((q) => r.x0 < q.x1 && r.x1 > q.x0 && r.y0 < q.y1 && r.y1 > q.y0)
+      const dot = 3.2 * dpr
+      for (const p of places) { const [x, y] = P(p.x, p.z); boxes.push({ x0: x - dot, y0: y - dot, x1: x + dot, y1: y + dot }) }
+      this.mapLabels = []
+      for (const p of places) {
         const [x, y] = P(p.x, p.z)
-        c.fillStyle = 'rgba(0,0,0,0.6)'; c.fillText(p.name, x + 1, y + 1)
-        c.fillStyle = '#f3ecdc'; c.fillText(p.name, x, y)
+        c.fillStyle = p.kind === 'park' ? '#8fd47a' : '#f3ecdc'
+        c.beginPath(); c.arc(x, y, dot * 0.8, 0, Math.PI * 2); c.fill()
+        const name = MAP_NAME[p.id] ?? p.name
+        const w = c.measureText(name).width, h = fs * 1.1, gap = 5 * dpr
+        const spots = [[x + gap, y - h / 2, 'left'], [x - gap - w, y - h / 2, 'left'], [x - w / 2, y - gap - h, 'left'], [x - w / 2, y + gap, 'left'], [x + gap, y - h - gap * 0.4, 'left'], [x + gap, y + gap * 0.4, 'left'], [x - gap - w, y - h - gap * 0.4, 'left'], [x - gap - w, y + gap * 0.4, 'left']]
+        this.mapLabels.push({ x, y, name: p.name })
+        for (const [lx, ly] of spots) {
+          const r = { x0: lx - 2, y0: ly - 1, x1: lx + w + 2, y1: ly + h + 1 }
+          if (!free(r)) continue
+          boxes.push(r)
+          c.textAlign = 'left'
+          c.strokeStyle = 'rgba(12,14,18,0.85)'; c.lineWidth = 3.2 * dpr; c.strokeText(name, lx, ly + h / 2)
+          c.fillStyle = p.kind === 'park' ? '#bfe8b0' : '#f3ecdc'; c.fillText(name, lx, ly + h / 2)
+          break
+        }
       }
       for (const b of g.blips()) {
         const [x, y] = P(b.x, b.z)
@@ -222,6 +257,16 @@ export class Menus {
       const [px, py] = P(pp.x, pp.z)
       c.fillStyle = '#fff'; c.strokeStyle = '#000'; c.lineWidth = 2 * dpr
       c.beginPath(); c.arc(px, py, 7 * dpr, 0, Math.PI * 2); c.fill(); c.stroke()
+      // hover: the full name of the landmark under the cursor
+      cv.onmousemove = (e) => {
+        const rr = cv.getBoundingClientRect()
+        const mx = (e.clientX - rr.left) * dpr, my = (e.clientY - rr.top) * dpr
+        let best = null, bd = (14 * dpr) ** 2
+        for (const l of this.mapLabels || []) { const d = (l.x - mx) ** 2 + (l.y - my) ** 2; if (d < bd) { bd = d; best = l } }
+        tip.style.display = best ? 'block' : 'none'
+        if (best) { tip.textContent = best.name; tip.style.left = (best.x / dpr + 12) + 'px'; tip.style.top = (best.y / dpr - 12) + 'px' }
+      }
+      cv.onmouseleave = () => { tip.style.display = 'none' }
       cv.onmousedown = (e) => {
         const rr = cv.getBoundingClientRect()
         const mx = (e.clientX - rr.left) * dpr, my = (e.clientY - rr.top) * dpr
@@ -283,7 +328,7 @@ export class Menus {
   renderControls(body) {
     const rows = [
       ['Mers / condus', 'W A S D · săgeți', 'stick stânga · RT/LT', 'joystick stânga'],
-      ['Fugi / nitro', 'Shift', 'B', '» / 🔥'],
+      ['Fugi repede / nitro', 'ține Shift', 'ține B', '» / 🔥'],
       ['Lovește', 'Click · J · K', 'X', '👊'],
       ['Sari / frână de mână', 'Space', 'A', '⤒ / ⤓'],
       ['Acțiune, urcă/coboară, vorbește', 'E', 'Y', 'E'],
@@ -329,9 +374,13 @@ export class Menus {
 
   showSettingsOnly() {
     const g = this.game
-    const m = el('div', 'pause', '<div class="top"><h1>SETĂRI</h1></div><div class="body"></div><div class="foot"><button class="btn primary">‹ Înapoi</button></div>')
+    // on top of the title screen (the main menu layer sits above the in-game pause layer)
+    const m = el('div', 'pause over', '<div class="top"><h1>SETĂRI</h1></div><div class="body"></div><div class="foot"><button class="btn primary">‹ Înapoi</button></div>')
     this.layer.appendChild(m)
     this.renderSettings(m.querySelector('.body'))
-    m.querySelector('button').onclick = () => { m.remove(); g.audio?.sfx('back', { bus: 'ui' }) }
+    const close = () => { m.remove(); window.removeEventListener('keydown', onKey, true); g.audio?.sfx('back', { bus: 'ui' }) }
+    const onKey = (e) => { if (e.code === 'Escape' || (e.code === 'Backspace' && !/INPUT|SELECT/.test(e.target?.tagName))) { e.preventDefault(); e.stopPropagation(); close() } }
+    window.addEventListener('keydown', onKey, true)
+    m.querySelector('.foot button').onclick = close
   }
 }

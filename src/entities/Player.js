@@ -24,6 +24,9 @@ export class Player {
     this.airT = 0
     this.stamina = 1
     this.sprinting = false
+    this.winded = false      // ran the stamina dry: no sprint until it has recovered a bit
+    this.moveKey = null      // keyboard direction being held, and the camera yaw it was read against
+    this.moveYaw = 0
     this.control = true      // player input enabled
     this.vehicle = null
     this.scripted = null     // { x, z, speed, onArrive } for cutscene walking
@@ -79,23 +82,34 @@ export class Player {
       else { mx = dx / d; my = dz / d }
     } else if (canMove) {
       const m = input.move()
-      const yaw = game.cameraRig ? game.cameraRig.yaw : Math.PI
+      const rig = game.cameraRig
+      let yaw = rig ? rig.yaw : Math.PI
+      // Keys are read against the camera once, when the key combination changes, and that
+      // direction is held: the camera can then swing in behind you without bending the run
+      // into a circle. Turning the camera yourself (mouse, Z/X) still steers as you'd expect.
+      if (m.digital && (m.x || m.y)) {
+        const key = Math.sign(m.x) + 3 * Math.sign(m.y)
+        if (key !== this.moveKey || (rig && rig.userTurnT > 0)) { this.moveKey = key; this.moveYaw = yaw }
+        yaw = this.moveYaw
+      } else this.moveKey = null
       const fx = Math.sin(yaw), fz = Math.cos(yaw)
       const rx = -Math.cos(yaw), rz = Math.sin(yaw)
       mx = fx * m.y + rx * m.x
       my = fz * m.y + rz * m.x
-    }
+    } else this.moveKey = null
     const mag = Math.min(1, Math.hypot(mx, my))
-    // speed: jog by default, sprint on Shift with stamina
+    // speed: run by default, hold Shift to sprint while the stamina lasts (~10 s)
     const wantSprint = canMove && !this.scripted && input.act('sprint') && mag > 0.2
-    if (wantSprint && this.stamina > 0.05) { this.sprinting = true; this.stamina = Math.max(0, this.stamina - h * 0.22) }
-    else { this.sprinting = false; this.stamina = Math.min(1, this.stamina + h * (mag > 0.1 ? 0.18 : 0.32)) }
-    let speed = this.scripted ? (this.scripted.speed ?? 2.2) : this.sprinting ? 7.4 : 4.7
+    if (this.stamina <= 0.01 && !this.winded) { this.winded = true; game.ui?.notify?.('Ți s-a tăiat respirația…', 1.6) }
+    if (this.winded && this.stamina > 0.3) this.winded = false
+    if (wantSprint && !this.winded) { this.sprinting = true; this.stamina = Math.max(0, this.stamina - h * 0.1) }
+    else { this.sprinting = false; this.stamina = Math.min(1, this.stamina + h * (mag > 0.1 ? 0.16 : 0.3)) }
+    let speed = this.scripted ? (this.scripted.speed ?? 2.2) : this.sprinting ? 9.2 : 5.0
     speed *= this.speedMul
     const busy = c.anim.busy && ['jab', 'cross', 'hook', 'kick', 'swing', 'spray'].includes(c.anim.action?.name)
     if (busy) speed *= 0.25
     const tvx = mx * speed, tvz = my * speed
-    const accel = this.grounded ? 14 : 3
+    const accel = this.grounded ? (this.sprinting ? 9 : 14) : 3
     const k = 1 - Math.exp(-accel * h)
     this.vel.x += (tvx - this.vel.x) * k
     this.vel.z += (tvz - this.vel.z) * k
