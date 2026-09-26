@@ -447,6 +447,13 @@ export class UI {
     return result
   }
 
+  // where the talk camera should put the other face (screen coords, -1..1): above the dialogue
+  // box, or on the left when a short landscape screen puts the box on the right (same test as
+  // the CSS)
+  talkFrame() {
+    return innerHeight < 520 && innerWidth / innerHeight >= 1.3 ? { x: -0.5, y: 0.12 } : { x: 0, y: 0.42 }
+  }
+
   // a story character standing right here (Vova at his garage, Borea at the market…)
   castNear(sp) {
     const s = this.game.story, p = this.game.player, id = sp?.id

@@ -1,7 +1,8 @@
 // Dev tool: the conversation screen. Choices carry chips for what they do, what a pick paid shows
 // on the next line, the camera frames the other face above the box and the HUD steps back, then
 // everything comes back when the talk ends.
-// usage: node tools/dialogue.mjs
+// usage: node tools/dialogue.mjs            (a phone on its side: the box goes right)
+//        VIEW=1280x720 node tools/dialogue.mjs (desktop: the box at the bottom)
 import { chromium } from 'playwright'
 import { createServer } from 'vite'
 
@@ -9,7 +10,8 @@ const server = await createServer({ server: { port: 5243, strictPort: false, hos
 await server.listen()
 const base = `http://127.0.0.1:${server.config.server.port}/`
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'] })
-const page = await browser.newPage({ viewport: { width: 640, height: 360 } })
+const [VW, VH] = (process.env.VIEW || '640x360').split('x').map(Number)
+const page = await browser.newPage({ viewport: { width: VW, height: VH } })
 const errors = []
 page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 400)) })
 page.on('pageerror', (e) => errors.push('PAGEERROR ' + e.message))
@@ -97,19 +99,24 @@ r = await ev(async () => {
   await T.frames(40)
   const cam = g.cameraRig.cam
   const head = (ch) => { const v = ch.mesh.userData.bones.head.getWorldPosition(ch.mesh.position.clone()); v.y += 0.16; return v }
-  const pa = head(T.n.char).project(cam), pb = head(g.player.char).project(cam)
+  const ha = head(T.n.char), hb = head(g.player.char)
+  const da = ha.distanceTo(cam.position), db = hb.distanceTo(cam.position)
+  const pa = ha.project(cam), pb = hb.project(cam)
   const box = document.querySelector('.dialog .card')?.getBoundingClientRect()
   const H = innerHeight, W = innerWidth
-  return { ya: Math.round((1 - pa.y) / 2 * H), xa: Math.round((pa.x + 1) / 2 * W), xb: Math.round((pb.x + 1) / 2 * W), yb: Math.round((1 - pb.y) / 2 * H), boxTop: box ? Math.round(box.top) : null, W, H, inFront: pa.z < 1 }
+  return { ya: Math.round((1 - pa.y) / 2 * H), xa: Math.round((pa.x + 1) / 2 * W), xb: Math.round((pb.x + 1) / 2 * W), yb: Math.round((1 - pb.y) / 2 * H), boxTop: box ? Math.round(box.top) : null, boxLeft: box ? Math.round(box.left) : null, boxBottom: box ? Math.round(box.bottom) : null, W, H, inFront: pa.z < 1, heroNearer: db < da }
 })
-check('the other face is on screen, above the dialogue box', r.inFront && r.xa > 0 && r.xa < r.W && r.ya > 0 && r.boxTop != null && r.ya < r.boxTop - 10, JSON.stringify(r))
-check('the hero does not cover the other face', Math.abs(r.xa - r.xb) > r.W * 0.12 || r.yb < 0 || r.yb > r.H, JSON.stringify(r))
+check('the dialogue box fits on the screen', r.boxTop >= 0 && r.boxBottom <= r.H, JSON.stringify(r))
+check('the other face is on screen, clear of the dialogue box', r.inFront && r.xa > 0 && r.xa < r.W && r.ya > 0 && r.ya < r.H && (r.ya < r.boxTop - 10 || r.xa < r.boxLeft - 10), JSON.stringify(r))
+check('the hero does not cover the other face', !r.heroNearer || Math.hypot(r.xa - r.xb, r.ya - r.yb) > r.W * 0.12, JSON.stringify(r))
 
 // pick "Salut, pacani", then say goodbye (the last choice)
+await page.waitForTimeout(300)
 await page.keyboard.press('Digit1')
 await page.waitForFunction(() => document.querySelector('.dialog .paid .chip') || window.__talkDone, null, { timeout: 180000 }).catch(() => {})
 const paidNow = await ev(() => [...document.querySelectorAll('.dialog .paid .chip')].map((c) => c.textContent))
 await page.waitForFunction(() => document.querySelectorAll('.dialog .choice').length > 0 || window.__talkDone, null, { timeout: 180000 }).catch(() => {})
+await page.waitForTimeout(600) // choices take keys a moment after they appear (so the E that ended the line can't pick)
 const last = await ev(() => document.querySelectorAll('.dialog .choice').length)
 if (last > 0) await page.keyboard.press('Digit' + last)
 await page.waitForFunction(() => window.__talkDone, null, { timeout: 180000 }).catch(() => {})

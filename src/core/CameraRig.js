@@ -293,8 +293,13 @@ export class CameraRig {
     // above the dialogue box
     const w = facing ? 0.75 : 1
     const lx = B.x + (A.x - B.x) * w, lz = B.z + (A.z - B.z) * w
-    const pitch = Math.atan2(A.y - _v.y, Math.hypot(A.x - _v.x, A.z - _v.z)) - Math.atan(0.42 * Math.tan(THREE.MathUtils.degToRad(this.cam.fov / 2)))
-    _look.set(lx, _v.y + Math.hypot(lx - _v.x, lz - _v.z) * Math.tan(pitch), lz)
+    // where the layout leaves room for the face (screen coords, -1..1): above the box, or left of
+    // it when a short landscape screen puts the box on the right
+    const fr = this.game.ui?.talkFrame?.() || { x: 0, y: 0.42 }
+    const tv = Math.tan(THREE.MathUtils.degToRad(this.cam.fov / 2)), th = tv * this.cam.aspect
+    const D = Math.hypot(lx - _v.x, lz - _v.z) || 1, side = -fr.x * th * D
+    const pitch = Math.atan2(A.y - _v.y, Math.hypot(A.x - _v.x, A.z - _v.z)) - Math.atan(fr.y * tv)
+    _look.set(lx - (lz - _v.z) / D * side, _v.y + Math.hypot(D, side) * Math.tan(pitch), lz + (lx - _v.x) / D * side)
     const k = 1 - Math.exp(-6 * rawDt)
     if (!T.look) T.look = this.cam.getWorldDirection(_t).multiplyScalar(4).add(this.cam.position).clone()
     this.pos.lerp(_v, k)
