@@ -627,17 +627,20 @@ export class Police {
         pr.flags.acteFalse = false
         o.say(COP.papers, 3.4)
         this.clear()
+        g.events.emit('police:deal', { how: 'papers' })
       } else if (k === 'fine' && pr.spend(fine)) {
         pr.addRespect('pol', 1)
         o.say(fill(g, (lvl > 1 ? COP.fineMore : COP.fine).replace('{n}', fine)), 3.6)
         this.dropStar()
         this.graceT = 5
+        g.events.emit('police:deal', { how: 'fine' })
       } else if (k === 'bribe' && pr.lei >= bribe) {
         if (Math.random() < odds) {
           pr.spend(bribe); pr.stats.bribes++
           pr.addRespect('pol', 2, 'o „cafea"')
           o.say(pickLine(COP.bribeOk), 3.6)
           this.clear()
+          g.events.emit('police:deal', { how: 'bribe' })
         } else {
           o.say(COP.bribeNo, 3.4)
           this.addHeat(Math.max(1, THRESH[Math.min(5, lvl + 1)] - this.heat))
@@ -649,11 +652,13 @@ export class Police {
         pr.addLei(-fine2, 'Amendă la poliție')
         pr.stats.busted++
         pr.addRespect('pol', 2)
+        g.events.emit('police:deal', { how: 'jail' })
         g.story.failActive('Ai fost reținut de poliție.')
         jailed = true
       } else {
         o.say(COP.runAway, 2.4)
         this.addHeat(10)
+        g.events.emit('police:deal', { how: 'run' })
         for (const q of this.officers) if (!q.disposed && dist(q.pos, p.pos) < 4) q.stun = 1.2
       }
     } finally {
@@ -731,6 +736,7 @@ export class Police {
           g.ui?.notify(`{g}${COPS.escaped}{/g}`, 3, 'green')
           g.progress.addXp(20 * lvl, 'Scăpat de poliție')
           for (const o of this.officers) if (!o.char.ko && !o.disposed && Math.random() < 0.5) { o.say(pickLine(COPS.gaveUp), 2.4); break }
+          g.events.emit('police:escape', { level: lvl })
           this.clear()
         }
       }
