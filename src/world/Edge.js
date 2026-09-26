@@ -765,7 +765,7 @@ export class Edge {
       x.strokeStyle = '#111111'; x.lineWidth = 6; x.strokeRect(5, 5, w - 10, h - 10)
       x.font = '900 43px Rubik'; x.fillStyle = '#111111'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('CHIȘINĂU', w / 2, h / 2 + 2)
       x.strokeStyle = '#d0202a'; x.lineWidth = 15; x.beginPath(); x.moveTo(20, h - 17); x.lineTo(w - 20, 17); x.stroke()
-    }, { x: at(-26), y: 2.2, z: rz, ry, w: 1.9, h: 0.95, lit: 0.35 })
+    }, { x: at(-26.07), y: 2.2, z: rz, ry, w: 1.9, h: 0.95, lit: 0.35 })
     this.P.cylinder(at(-26), 1.1, rz, 1.1, 0.06)
     const dz = -rz, g2 = this.g(at(-40), dz)
     for (const o of [-1.2, 1.2]) { g2.box(0.12, 3.6, 0.12, { x: at(-40), y: 0, z: dz + o, color: 0x3a3f46 }); this.P.cylinder(at(-40), 1.8, dz + o, 1.8, 0.07) }
@@ -779,7 +779,7 @@ export class Edge {
         x.font = '900 29px Rubik'; x.textAlign = 'left'; x.fillText(t, 18, y)
         x.font = '700 29px Rubik'; x.textAlign = 'right'; x.fillText(km, w - 18, y)
       })
-    }, { x: at(-40), y: 3.0, z: dz, ry, w: 3.0, h: 1.75, lit: 0.45 })
+    }, { x: at(-40.08), y: 3.0, z: dz, ry, w: 3.0, h: 1.75, lit: 0.45 }) // (in front of its posts)
   }
 
   // a line of red and white jersey blocks with mobile fence panels behind it, closing a road at the
