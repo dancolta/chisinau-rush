@@ -89,8 +89,11 @@ function sweep(g, axis, s0, s1, at, out, prof, color, caps = true) {
   }
 }
 
-// the concrete safety barrier's profile (inner face at u = 0)
+// the concrete safety barrier's profile (inner face at u = 0). Its faces kink in at 0.33 m, so
+// for a collider it's two convex pieces: a hull over the whole profile would fill the kink and
+// stand 9 cm proud of the face you see
 const JERSEY = [[0, 0], [0.6, 0], [0.6, 0.08], [0.43, 0.33], [0.375, 0.81], [0.225, 0.81], [0.17, 0.33], [0, 0.08]]
+const JERSEY_HULLS = [[[0, 0], [0.6, 0], [0.6, 0.08], [0.43, 0.33], [0.17, 0.33], [0, 0.08]], [[0.17, 0.33], [0.43, 0.33], [0.375, 0.81], [0.225, 0.81]]]
 // the highway's parapet: vertical at the back (u = 0, the wall's face), shaped toward the traffic
 const PARAPET = [[0, 0], [0.6, 0], [0.6, 0.08], [0.43, 0.33], [0.375, 0.9], [0, 0.9]]
 
@@ -806,9 +809,12 @@ export class Edge {
     // colliders: the blocks' own shape (their face slopes back, a box would stand proud of it),
     // and the fence behind them
     for (let s = from; s < to - 0.01; s += 12.5) {
-      const s1 = Math.min(to, s + 12.5), pts = []
-      for (const t of [s, s1]) for (const [u, y] of JERSEY) { const [x, z] = P(t, u); pts.push(x, y, z) }
-      this.P.hull(pts)
+      const s1 = Math.min(to, s + 12.5)
+      for (const prof of JERSEY_HULLS) {
+        const pts = []
+        for (const t of [s, s1]) for (const [u, y] of prof) { const [x, z] = P(t, u); pts.push(x, y, z) }
+        this.P.hull(pts)
+      }
     }
     const [cx, cz] = P(from, 0.72), [dx, dz] = P(to, 0.78)
     this.solid(Math.min(cx, dx), 0, Math.min(cz, dz), Math.max(cx, dx), 2.2, Math.max(cz, dz))
@@ -1100,8 +1106,8 @@ export class Edge {
     const lines = LINES[k]
     const i = this.turn[k] ?? 0
     this.turn[k] = (i + 1) % lines.length
-    this.w.game.ui?.notify(lines[i], 4.2)
     this.lastLine = { stretch: k, text: lines[i] }
+    this.w.game.ui?.notify(lines[i], 4.2)
   }
 
   gatesUpdate(dt) {

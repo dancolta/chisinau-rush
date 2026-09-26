@@ -84,7 +84,7 @@ await ev(async () => {
     ray(x, y, z, dx, dz, max = 4) {
       const L2 = Math.hypot(dx, dz), ux = dx / L2, uz = dz / L2
       g.scene.updateMatrixWorld() // (the renderer does this, and it isn't drawing)
-      const skip = (o) => { for (let q = o; q; q = q.parent) if (q.userData?.vehicle || q.userData?.isPlayer || q.isSkinnedMesh || q.name === 'sky') return true; return false }
+      const skip = (o) => { for (let q = o; q; q = q.parent) if (q.userData?.vehicle || q.userData?.isPlayer || q.isSkinnedMesh || q.name === 'sky' || q.name === 'grass-tufts') return true; return false }
       let col = null, vis = null
       for (const o of [-0.24, -0.12, 0, 0.12, 0.24]) {
         const ox = x - uz * o, oz = z + ux * o
@@ -185,7 +185,8 @@ await ev(async () => {
   const upd = g.world.update.bind(g.world)
   g.world.update = (dt) => { upd(dt); E.tick() }
   const note = g.ui.notify.bind(g.ui)
-  g.ui.notify = (t, s, c) => { E.lines.push(t); return note(t, s, c) }
+  // (only the edge's own lines: favours, stamina and the rest have theirs)
+  g.ui.notify = (t, s, c) => { if (t === g.world.edge.lastLine?.text || /Orașul te-a tras înapoi/.test(t)) E.lines.push(t); return note(t, s, c) }
   g.draw = false
 })
 
