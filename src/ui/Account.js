@@ -52,7 +52,8 @@ export function summary(d) {
 // one line for menus: "Dan · 7/14 misiuni · 1 234 lei · Om cu relații"
 export function saveLine(d) {
   const s = summary(d)
-  return `${esc(s.name)} · ${s.done}/${STORY_TOTAL} misiuni · ${s.lei} lei · ${esc(s.rank)}`
+  const aura = d.side?.aura?.level > 1 ? ` · aură nivel ${d.side.aura.level}` : ''
+  return `${esc(s.name)} · ${s.done}/${STORY_TOTAL} misiuni · ${s.lei} lei · ${esc(s.rank)}${aura}`
 }
 
 function check(email, password, signup) {

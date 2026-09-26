@@ -238,7 +238,7 @@ export class Menus {
     g.audio?.duck(0.35, 0.3)
     const m = el('div', 'pause', `
       <div class="top"><h1>PAUZĂ</h1><div class="tabs">
-        <button data-t="map">Hartă</button><button data-t="missions">Misiuni</button><button data-t="char">Personaj</button><button data-t="controls">Controale</button><button data-t="settings">Setări</button>${g.cloud?.enabled ? '<button data-t="account">Cont</button>' : ''}</div></div>
+        <button data-t="map">Hartă</button><button data-t="missions">Misiuni</button><button data-t="char">Personaj</button><button data-t="aura">Aură</button><button data-t="controls">Controale</button><button data-t="settings">Setări</button>${g.cloud?.enabled ? '<button data-t="account">Cont</button>' : ''}</div></div>
       <div class="body"></div>
       <div class="foot"><button class="btn primary resume">▶ Continuă</button><button class="btn save">💾 Salvează</button><button class="btn danger quit">Meniu principal</button></div>`)
     this.layer.appendChild(m)
@@ -254,6 +254,7 @@ export class Menus {
       if (t === 'map') this.renderMap(body)
       else if (t === 'missions') this.renderMissions(body)
       else if (t === 'char') this.renderChar(body)
+      else if (t === 'aura') g.side?.renderPause(body)
       else if (t === 'controls') this.renderControls(body)
       else if (t === 'account') this.renderAccountTab(body)
       else this.renderSettings(body)

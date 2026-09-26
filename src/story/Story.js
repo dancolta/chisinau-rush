@@ -4,7 +4,7 @@ import { Ring, Pickup, VisionCone, RouteDriver, ChaseDriver, SetPiece, Potholes,
 import { SPEAKERS, HOMES } from './cast.js'
 import { MISSIONS } from './missions.js'
 import { ACTIVITIES, Activities } from './activities.js'
-import { StreetEvents } from './events.js'
+import { Happenings } from '../side/Happenings.js'
 import { CURB_H } from '../world/CityLayout.js'
 import { FILTER } from '../physics/Physics.js'
 import { fmt } from '../ui/UI.js'
@@ -494,7 +494,7 @@ export class Story {
     this.giverId = null
     this.potholes = new Potholes(game)
     this.acts = new Activities(game, this)
-    this.events = new StreetEvents(game, this)
+    this.events = new Happenings(game, this)   // random street events (src/side)
   }
 
   get done() { return this.game.progress.story.done }
@@ -609,8 +609,9 @@ export class Story {
     const g = this.game
     if (this.starting) return
     if (this.active) {
-      // story missions interrupt side jobs (taxi shift, pizza…)
-      if (!this.active.def.activity || def.activity) return
+      // story missions interrupt side jobs (taxi shift, pizza…); anything you start yourself
+      // interrupts a random street event
+      if (!this.active.def.activity || (def.activity && !this.active.def.event)) return
       this.starting = true
       this.active.fail(new MissionFail('', { cancel: true }))
       for (let i = 0; i < 60 && this.active; i++) await new Promise((r) => setTimeout(r, 50))

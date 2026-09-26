@@ -28,6 +28,7 @@ import { Gear } from '../gameplay/Gear.js'
 import { Wardrobe } from '../gameplay/Wardrobe.js'
 import { Safehouse } from '../gameplay/Safehouse.js'
 import { Director } from '../gameplay/Director.js'
+import { SideContent } from '../side/SideContent.js'
 import { UI } from '../ui/UI.js'
 import { Menus } from '../ui/Menus.js'
 import { Portraits } from '../ui/Portraits.js'
@@ -127,6 +128,8 @@ export class Game {
     this.story = new Story(this)
     this.director = new Director(this)
     this.menus = new Menus(this, this.ui)
+    // side content: AURA and its levels, car stunts, daily challenges (the street events run in story)
+    this.side = new SideContent(this)
     if (isTouchDevice() || location.search.includes('touch')) this.touch = new Touch(this)
     if (import.meta.env.DEV && location.search.includes('lineup')) this.debugLineup()
     if (import.meta.env.DEV) this.debug = new Debug(this)
@@ -285,6 +288,7 @@ export class Game {
       if (playing) this.safe('street', () => { this.life.update(dt); this.street.update(dt); this.home.update(dt) })
       if (playing) this.safe('interaction', () => this.interaction.update(dt))
       if (playing) this.safe('director', () => this.director.update(dt))
+      if (playing) this.safe('side', () => this.side.update(dt))
       this.safe('fx', () => { this.fx.update(dt); this.vehicleFX(dt); this.weather.update(dt); this.nightLights.update(rawDt); this.grass.update(rawDt) })
       this.debug?.update(rawDt)
     }

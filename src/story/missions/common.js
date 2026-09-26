@@ -128,6 +128,7 @@ export async function taxiFare(m, { taxi = null, spec = null, name = 'Clientul',
   g.progress.addLei(total, tip && !pen ? `Cursă ${base} lei + bacșiș ${tip}` : pen ? `Cursă: ${total} lei (minus bușituri)` : `Cursă: ${total} lei`)
   g.progress.stats.fares++
   g.progress.addXp(25, 'Cursă de taxi')
+  g.events.emit('taxi:fare', { total, tip, crashes, secs })
   npc.walkTo(to.x + rand(-6, 6), to.z + rand(-6, 6))
   const walker = npc
   setTimeout(() => { if (m.story.npcs.includes(walker)) m.story.removeNpc(walker) }, 9000)

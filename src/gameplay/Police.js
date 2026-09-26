@@ -203,6 +203,7 @@ export class Police {
         if (this.unseenT > 7 + this.level * 3) {
           g.ui?.notify('{g}Ai scăpat de poliție.{/g}', 3, 'green')
           g.progress.addXp(20 * this.level, 'Scăpat de poliție')
+          g.events.emit('police:escape', { level: this.level })
           this.clear()
         }
       }

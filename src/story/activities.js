@@ -86,6 +86,7 @@ export const STREET_RACE = {
       laps: 1, car: m.car, lapTime: 120, name: 'Cursă pe bani',
       rivals: [{ kind: 'jiguli', color: 0x9a1c1c, speed: 23.5, name: 'Vitea' }, { kind: 'logan', color: 0x16161a, speed: 22.5, name: 'Gena' }],
     })
+    g.events.emit('race:end', { won: res.won, place: res.place })
     if (res.won) { pr.addLei(bet * 2, 'Ai câștigat cursa!'); pr.addXp(80, 'Cursă câștigată'); pr.addCred(3); pr.addRespect('gop', 5, 'cursă câștigată'); pr.stats.races++; g.audio?.sting('race_win'); g.ui.bigMessage('PRIMUL!', `+${bet * 2} lei`, { secs: 2.6 }) }
     else g.ui.bigMessage('AI PIERDUT', `Locul ${res.place}. Miza rămâne la Vitea.`, { color: 'red', secs: 2.6 })
     m.cancel()
@@ -116,6 +117,7 @@ export const PIZZA = {
       paid += pay
       pr.addLei(pay, left > 10 ? `Pizza caldă! +${pay} lei` : `Pizza livrată: +${pay} lei`)
       pr.addXp(30, 'Livrare')
+      g.events.emit('pizza:delivered', { hot: left > 10 })
       g.audio?.sfx('cash', { bus: 'ui' })
       m.marker(null)
     }
@@ -149,7 +151,7 @@ export class Activities {
       })
     }
     const andy = g.world.shops.find((x) => x.label === "ANDY'S PIZZA")
-    if (andy) g.interaction.add({ id: 'pizza_job', x: andy.x + 2.2, z: andy.z, r: 2.2, priority: 2, label: "Livrări Andy's Pizza (job)", enabled: () => s.isDone('taxi') && !s.active, onInteract: () => s.run(PIZZA) })
+    if (andy) g.interaction.add({ id: 'pizza_job', x: andy.x + 2.2, z: andy.z, r: 2.2, priority: 2, label: "Livrări Andy's Pizza (job)", enabled: () => s.isDone('taxi') && (!s.active || s.active.def.event), onInteract: () => s.run(PIZZA) })
   }
 
   fixPothole(h) {
@@ -279,7 +281,7 @@ export class Activities {
     this.updateDosare()
     // taxi shift on [T]
     const v = p.vehicle
-    if (v && !p.passenger && v.kind === 'taxi' && !v.broken && s.isDone('taxi') && !s.active && !g.ui.modalOpen) {
+    if (v && !p.passenger && v.kind === 'taxi' && !v.broken && s.isDone('taxi') && (!s.active || s.active.def.event) && !g.ui.modalOpen) {
       if (this.taxiHint !== v) { this.taxiHint = v; g.ui.tip('Apasă {y}[T]{/y} ca să începi tura de taxi.', 6) }
       if (g.input.pressed('job')) s.run(TAXI_SHIFT)
     } else if (!v) this.taxiHint = 0
