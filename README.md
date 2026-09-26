@@ -61,7 +61,7 @@ Everything cool you do on the street earns **AURA** (*+54 AURA · bătaie de car
 
 ### Systems
 
-Open city with ~40 landmarks (PMAN, Casa Guvernului, Arcul de Triumf, Catedrala, Primăria, Opera, Circul, Gara, Piața Centrală…), day/night cycle, rain showers with wet asphalt, street life (weddings at the Arc, market vendors, bench grannies, card players in the park), traffic with lights and trolleybuses, pedestrians who flee or fight back, wanted levels with foot and car pursuits, busted (bribe / sweet-talk / run) and fainting flows, melee combat with combos and six improvised weapons, carjacking, car damage, skid marks and smoke, photo mode, save and continue. Plays on phones too (on-screen stick and buttons).
+Open city with ~40 landmarks (PMAN, Casa Guvernului, Arcul de Triumf, Catedrala, Primăria, Opera, Circul, Gara, Piața Centrală…), day/night cycle, rain showers with wet asphalt, street life (weddings at the Arc, market vendors, bench grannies, card players in the park), traffic with lights and trolleybuses, pedestrians who flee or fight back, wanted levels with foot and car pursuits, busted (bribe / sweet-talk / run, or you walk out of the Comisariatul Centru hours later without your car) and fainting flows, melee combat with combos and six improvised weapons, carjacking, car damage, skid marks and smoke, photo mode, save and continue. Plays on phones too (on-screen stick and buttons).
 
 ## Tech
 
