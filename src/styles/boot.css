@@ -1,14 +1,28 @@
+/* ============== tokens, fonts, the menu kit, the loading screen ==============
+   Art direction, "Chișinău de cartier": the city told in its own street graphics at golden hour.
+   The carpet on the wall (covor), hand-painted kiosk signs, cardboard price tags, paper notes with
+   tape, rubber stamps, tracksuit stripes, a marshrutka. Warm dusk colours on a dark aubergine wall.
+   Everything here is CSS or inline SVG: the loading screen shows before the engine, so it stays light. */
 :root {
-  --ink: #0d0b12;
-  --paper: #f6ecd8;
+  --ink: #1b0d10;            /* warm near-black: outlines, hard shadows */
+  --paper: #f6ecd8;          /* cream newsprint */
+  --paper-2: #ecdcb8;        /* older paper */
+  --kraft: #c89a5c;          /* cardboard */
   --gold: #ffcf4a;
+  --loto: #ff7a1c;           /* the Loto kiosk orange: primary actions */
   --amber: #f39a3c;
   --rust: #d2542f;
+  --carpet: #9a1f2a;         /* the wall carpet's red */
+  --stamp: #c7352a;          /* rubber-stamp ink */
+  --night: #1d1219;          /* the wall: menu backgrounds */
+  --night-2: #2a1a25;        /* a raised plate */
+  --plum: #4a2340;           /* dusk shadow */
   --teal: #2f8f9d;
   --sky: #9ed6e8;
   --green: #5fd06a;
   --red: #ff4d4d;
   --muted: #b7b0a6;
+  --cream-70: rgba(246, 236, 216, 0.7);
   --panel: rgba(14, 11, 20, 0.78);
   --panel-solid: #15111c;
   --stroke: rgba(255, 207, 74, 0.35);
@@ -16,7 +30,26 @@
   --title: 'Bangers', 'Bungee', system-ui, sans-serif;
   --body: 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --num: 'Paytone One', 'Rubik', system-ui, sans-serif;
+  --hand: 'Caveat', 'Segoe Print', 'Comic Sans MS', cursive;   /* marker on cardboard, pen on paper */
+  /* the logo's chunky 3D letters: rust going down into ink */
+  --extrude: 0 0.014em 0 #e0662f, 0 0.028em 0 #cf5529, 0 0.042em 0 #b84424, 0 0.056em 0 #9a351f, 0 0.07em 0 #7a2819, 0 0.084em 0 #561c16, 0 0.1em 0 var(--ink), 0 0.16em 0.24em rgba(0, 0, 0, 0.5);
+  /* @kit-tokens: the carpet band (horizontal / vertical), carpet field, grain, stamp speckle, the van, the bus stop, the stripes */
+  --covor-h: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='16' shape-rendering='crispEdges'%3E%3Crect x='0' y='0' width='28' height='16' fill='%239a1f2a'/%3E%3Crect x='0' y='0' width='28' height='2' fill='%231b0d10'/%3E%3Crect x='0' y='14' width='28' height='2' fill='%231b0d10'/%3E%3Crect x='0' y='2' width='28' height='1' fill='%23f2b33d'/%3E%3Crect x='0' y='13' width='28' height='1' fill='%23f2b33d'/%3E%3Cpath fill='%236e1119' d='M6 7h2v2h-2zM22 7h2v2h-2zM6 3h2v2h-2zM22 3h2v2h-2zM6 11h2v2h-2zM22 11h2v2h-2z'/%3E%3Cpath fill='%23f2b33d' d='M14 3h2v2h-2zM12 5h2v2h-2zM16 5h2v2h-2zM10 7h2v2h-2zM18 7h2v2h-2zM12 9h2v2h-2zM16 9h2v2h-2zM14 11h2v2h-2z'/%3E%3Cpath fill='%231b0d10' d='M14 5h2v2h-2zM12 7h2v2h-2zM16 7h2v2h-2zM14 9h2v2h-2zM0 7h2v2h-2z'/%3E%3Cpath fill='%23f3e3c3' d='M14 7h2v2h-2zM0 5h2v2h-2zM26 7h2v2h-2zM2 7h2v2h-2zM0 9h2v2h-2z'/%3E%3C/svg%3E");
+  --covor-v: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='28' shape-rendering='crispEdges'%3E%3Crect x='0' y='0' width='16' height='28' fill='%239a1f2a'/%3E%3Crect x='0' y='0' width='2' height='28' fill='%231b0d10'/%3E%3Crect x='14' y='0' width='2' height='28' fill='%231b0d10'/%3E%3Crect x='2' y='0' width='1' height='28' fill='%23f2b33d'/%3E%3Crect x='13' y='0' width='1' height='28' fill='%23f2b33d'/%3E%3Cpath fill='%236e1119' d='M7 6h2v2h-2zM7 22h2v2h-2zM3 6h2v2h-2zM3 22h2v2h-2zM11 6h2v2h-2zM11 22h2v2h-2z'/%3E%3Cpath fill='%23f2b33d' d='M3 14h2v2h-2zM5 12h2v2h-2zM5 16h2v2h-2zM7 10h2v2h-2zM7 18h2v2h-2zM9 12h2v2h-2zM9 16h2v2h-2zM11 14h2v2h-2z'/%3E%3Cpath fill='%231b0d10' d='M5 14h2v2h-2zM7 12h2v2h-2zM7 16h2v2h-2zM9 14h2v2h-2zM7 0h2v2h-2z'/%3E%3Cpath fill='%23f3e3c3' d='M7 14h2v2h-2zM5 0h2v2h-2zM7 26h2v2h-2zM7 2h2v2h-2zM9 0h2v2h-2z'/%3E%3C/svg%3E");
+  --covor-field: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' shape-rendering='crispEdges'%3E%3Crect width='40' height='40' fill='%23861a24'/%3E%3Cpath fill='%236a121b' d='M0 18h2v2h-2zM20 0h2v2h-2zM38 20h2v2h-2zM18 38h2v2h-2zM2 16h2v2h-2zM22 2h2v2h-2zM36 22h2v2h-2zM16 36h2v2h-2zM4 14h2v2h-2zM24 4h2v2h-2zM34 24h2v2h-2zM14 34h2v2h-2zM6 12h2v2h-2zM26 6h2v2h-2zM32 26h2v2h-2zM12 32h2v2h-2zM8 10h2v2h-2zM28 8h2v2h-2zM30 28h2v2h-2zM10 30h2v2h-2zM10 8h2v2h-2zM30 10h2v2h-2zM28 30h2v2h-2zM8 28h2v2h-2zM12 6h2v2h-2zM32 12h2v2h-2zM26 32h2v2h-2zM6 26h2v2h-2zM14 4h2v2h-2zM34 14h2v2h-2zM24 34h2v2h-2zM4 24h2v2h-2zM16 2h2v2h-2zM36 16h2v2h-2zM22 36h2v2h-2zM2 22h2v2h-2zM18 0h2v2h-2zM38 18h2v2h-2zM20 38h2v2h-2zM0 20h2v2h-2z'/%3E%3Cpath fill='%23a8323a' d='M19 17h2v2h-2zM17 19h2v2h-2zM19 19h2v2h-2zM21 19h2v2h-2zM19 21h2v2h-2zM-1 -3h2v2h-2zM-3 -1h2v2h-2zM-1 -1h2v2h-2zM1 -1h2v2h-2zM-1 1h2v2h-2zM39 -3h2v2h-2zM37 -1h2v2h-2zM39 -1h2v2h-2zM41 -1h2v2h-2zM39 1h2v2h-2zM-1 37h2v2h-2zM-3 39h2v2h-2zM-1 39h2v2h-2zM1 39h2v2h-2zM-1 41h2v2h-2zM39 37h2v2h-2zM37 39h2v2h-2zM39 39h2v2h-2zM41 39h2v2h-2zM39 41h2v2h-2z'/%3E%3Cpath fill='%23c98a2e' d='M19 -1h2v2h-2zM-1 19h2v2h-2zM39 19h2v2h-2zM19 39h2v2h-2z'/%3E%3C/svg%3E");
+  --grain-l: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .2 -.05'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  --grain-d: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .26 -.05'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  --speckle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.7 1.5'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23s)'/%3E%3C/svg%3E");
+  --van: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 27'%3E %3Cpath d='M3 6.5Q3 3.5 6 3.5H35Q37.5 3.5 39.2 5.6L46 13.6Q47 14.8 47 16.4V20Q47 22 45 22H5Q3 22 3 20Z' fill='%23ffc83d' stroke='%231b0d10' stroke-width='1.8' stroke-linejoin='round'/%3E %3Cpath d='M4 3.8H34' stroke='%23fff6d6' stroke-width='1.4'/%3E %3Crect x='6.5' y='6.5' width='7.5' height='6' rx='1.2' fill='%232c3a52'/%3E%3Crect x='16' y='6.5' width='7.5' height='6' rx='1.2' fill='%232c3a52'/%3E%3Crect x='25.5' y='6.5' width='7' height='6' rx='1.2' fill='%232c3a52'/%3E %3Cpath d='M34.6 6.5H37.8L43.6 13.4H34.6Z' fill='%232c3a52'/%3E%3Crect x='35.4' y='7.4' width='4.2' height='2.4' fill='%23f3e3c3'/%3E %3Cpath d='M3.6 15.2H46.4' stroke='%23d9412a' stroke-width='2.2'/%3E %3Crect x='44.2' y='16.8' width='2.2' height='2' rx='.6' fill='%23fff3b0'/%3E %3Ccircle cx='12.5' cy='21.8' r='4.3' fill='%231b0d10'/%3E%3Ccircle cx='12.5' cy='21.8' r='1.7' fill='%23b7b0a6'/%3E %3Ccircle cx='37' cy='21.8' r='4.3' fill='%231b0d10'/%3E%3Ccircle cx='37' cy='21.8' r='1.7' fill='%23b7b0a6'/%3E %3C/svg%3E");
+  --stop: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 34'%3E %3Crect x='7' y='10' width='2.2' height='24' fill='%23b7b0a6' stroke='%231b0d10' stroke-width='.8'/%3E %3Ccircle cx='8' cy='8' r='7' fill='%232f6ad8' stroke='%231b0d10' stroke-width='1.4'/%3E%3Ccircle cx='8' cy='8' r='5.2' fill='none' stroke='%23f3e3c3' stroke-width='1'/%3E %3Cpath d='M5 5.6H11V10.2H5Z' fill='%23f3e3c3'/%3E%3Crect x='5.8' y='6.3' width='4.4' height='1.8' fill='%232f6ad8'/%3E %3C/svg%3E");
+  --stripes: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 44'%3E%3Cpath d='M3 39H13L27 9H17Z' fill='%237a2819' stroke='%231b0d10' stroke-width='2.6' stroke-linejoin='round'/%3E%3Cpath d='M21 39H31L45 9H35Z' fill='%237a2819' stroke='%231b0d10' stroke-width='2.6' stroke-linejoin='round'/%3E%3Cpath d='M39 39H49L63 9H53Z' fill='%237a2819' stroke='%231b0d10' stroke-width='2.6' stroke-linejoin='round'/%3E%3Cpath d='M3 36.5H13L27 6.5H17Z' fill='%23b84424' stroke='%231b0d10' stroke-width='0' stroke-linejoin='round'/%3E%3Cpath d='M21 36.5H31L45 6.5H35Z' fill='%23b84424' stroke='%231b0d10' stroke-width='0' stroke-linejoin='round'/%3E%3Cpath d='M39 36.5H49L63 6.5H53Z' fill='%23b84424' stroke='%231b0d10' stroke-width='0' stroke-linejoin='round'/%3E%3Cpath d='M3 34H13L27 4H17Z' fill='%23fff7e8' stroke='%231b0d10' stroke-width='2.6' stroke-linejoin='round'/%3E%3Cpath d='M21 34H31L45 4H35Z' fill='%23fff7e8' stroke='%231b0d10' stroke-width='2.6' stroke-linejoin='round'/%3E%3Cpath d='M39 34H49L63 4H53Z' fill='%23fff7e8' stroke='%231b0d10' stroke-width='2.6' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
+
+/* Caveat Bold (SIL OFL, src/fonts/OFL-Caveat.txt), cut down to what Romanian needs */
+@font-face { font-family: 'Caveat'; font-style: normal; font-weight: 700; font-display: swap; src: url(../fonts/caveat-700-ro.woff2) format('woff2');
+  unicode-range: U+0020-007E, U+00A0, U+00AB, U+00B0, U+00B7, U+00BB, U+00C2, U+00CE, U+00D7, U+00E2, U+00EE, U+2013-2014, U+2018-2019, U+201C-201E, U+2022, U+2026, U+20AC; }
+@font-face { font-family: 'Caveat'; font-style: normal; font-weight: 700; font-display: swap; src: url(../fonts/caveat-700-ro-ext.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+015E-015F, U+0162-0163, U+0218-021B; }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: #0e0f13; overflow: hidden; }
@@ -25,45 +58,119 @@ body { font-family: var(--body); color: var(--paper); -webkit-font-smoothing: an
 #viewport canvas { display: block; width: 100%; height: 100%; outline: none; }
 #ui { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
 
-.boot { position: fixed; inset: 0; z-index: 100; background: #efe6d2; transition: opacity 0.8s ease; overflow: hidden; }
-.boot.hide { opacity: 0; pointer-events: none; }
-/* the loading screen is a cover-art grid (think GTA V's box art) made of stills the game rendered
-   of itself: framed panels that slam in, pan slowly and keep swapping while the city loads */
-.boot-grid { position: absolute; inset: 0; display: grid; gap: 7px; padding: 7px;
-  grid-template-columns: 1fr 1.3fr 1.3fr 1fr; grid-template-rows: 1fr 1fr 0.9fr;
+/* ---- the kit: shared by the loading screen and the menus ---- */
+/* a rubber stamp: bordered caps in stamp ink, a little crooked, the ink not quite everywhere */
+.stampila { display: inline-block; font: 400 13px/1 var(--display); letter-spacing: 0.12em; color: var(--stamp); border: 2.5px solid currentColor; border-radius: 5px;
+  padding: 5px 7px 4px; transform: rotate(-8deg); opacity: 0.9; -webkit-mask: var(--speckle); mask: var(--speckle); white-space: nowrap; }
+/* the logo: gold letters with a rust extrusion, RUSH in cream with the three stripes after it */
+.logo { font-family: var(--title); font-weight: 400; line-height: 0.95; letter-spacing: 0.02em; color: var(--gold); white-space: nowrap;
+  -webkit-text-stroke: 0.045em var(--ink); paint-order: stroke fill; text-shadow: var(--extrude); }
+.logo span { color: #fff7e8; }
+.logo span::after { content: ''; display: inline-block; width: 0.86em; height: 0.56em; margin-left: 0.1em; vertical-align: 0.02em; background: var(--stripes) center / contain no-repeat;
+  filter: drop-shadow(0 0.1em 0.12em rgba(0, 0, 0, 0.45)); }
+
+/* ============================ the loading screen ============================
+   Stills the game rendered of itself, printed and hung on a dark wall around a piece of the
+   carpet: the logo, a marshrutka driving the loading bar to its stop, and a tip on a taped note */
+.boot { position: fixed; inset: 0; z-index: 100; overflow: hidden; transition: opacity 0.8s ease, transform 0.9s ease;
+  background: radial-gradient(120% 80% at 50% 115%, rgba(255, 122, 28, 0.2), transparent 60%), var(--grain-l), #150c11; }
+.boot.hide { opacity: 0; transform: scale(1.025); pointer-events: none; }
+.boot-grid { position: absolute; inset: 0; display: grid; gap: 9px; padding: 11px;
+  grid-template-columns: 1fr 1.3fr 1.3fr 1fr; grid-template-rows: 1fr 1fr 0.98fr;
   grid-template-areas: "a b b c" "a d d c" "e l l f"; }
-.bp { position: relative; overflow: hidden; background: #15111c; box-shadow: 0 0 0 2px #17120d;
-  opacity: 0; transform: scale(1.1) rotate(-0.6deg); transition: opacity 0.3s ease-out, transform 0.55s cubic-bezier(0.18, 0.9, 0.22, 1); }
-.bp.in { opacity: 1; transform: none; }
-.bp-a { grid-area: a; } .bp-b { grid-area: b; } .bp-c { grid-area: c; } .bp-d { grid-area: d; } .bp-e { grid-area: e; } .bp-f { grid-area: f; }
-.bp > i { position: absolute; inset: -5%; background: #15111c center / cover no-repeat; filter: saturate(1.2) contrast(1.08);
+.bp { position: relative; overflow: hidden; background: #241820; border-radius: 3px; box-shadow: 0 0 0 2px var(--ink), 0 12px 26px rgba(0, 0, 0, 0.5);
+  opacity: 0; transform: translateY(16px) scale(1.05) rotate(calc(var(--r, 0deg) * -4)); transition: opacity 0.35s ease-out, transform 0.65s cubic-bezier(0.18, 0.9, 0.22, 1); }
+.bp.in { opacity: 1; transform: rotate(var(--r, 0deg)); }
+.bp-a { grid-area: a; --r: -0.45deg; } .bp-b { grid-area: b; --r: 0.2deg; } .bp-c { grid-area: c; --r: 0.5deg; }
+.bp-d { grid-area: d; --r: -0.25deg; } .bp-e { grid-area: e; --r: 0.55deg; } .bp-f { grid-area: f; --r: -0.5deg; }
+.bp > i { position: absolute; inset: -5%; background: #241820 center / cover no-repeat; filter: saturate(1.15) contrast(1.06) sepia(0.08);
   animation: kb 16s ease-in-out infinite alternate; transition: opacity 0.8s ease; }
-.bp > i.gone { opacity: 0; }
+.bp > i.gone, .bp > .cap.gone { opacity: 0; }
 .bp:nth-child(2n) > i { animation-name: kb2; animation-duration: 19s; }
 .bp:nth-child(3n) > i { animation-duration: 13s; }
-/* print texture: a fine halftone over every panel */
-.bp::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.22; mix-blend-mode: multiply;
+/* the print: a cream border, a dusk grade at the foot, a fine halftone */
+.bp::before { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: 3px;
+  box-shadow: inset 0 0 0 3px rgba(243, 227, 195, 0.93), inset 0 0 0 4px rgba(27, 13, 16, 0.55), inset 0 0 50px rgba(28, 8, 20, 0.45);
+  background: linear-gradient(to top, rgba(42, 12, 30, 0.55), transparent 42%); }
+.bp::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0.2; mix-blend-mode: multiply;
   background: radial-gradient(circle, rgba(0, 0, 0, 0.55) 0.9px, transparent 1.3px) 0 0 / 4px 4px; }
-.bp-l { grid-area: l; background: #0e0b14; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2vh 3vw; }
-.bp-l::after { opacity: 0.08; mix-blend-mode: normal; }
-.boot-logo { font-family: var(--title); font-size: clamp(40px, min(6.2vw, 10.5vh), 120px); line-height: 1; white-space: nowrap; letter-spacing: 2px; text-align: center; color: var(--gold);
-  -webkit-text-stroke: 0.035em #1a0b02; paint-order: stroke fill; text-shadow: 0 0.06em 0 #6a2412, 0 0.12em 0.4em rgba(0, 0, 0, 0.6); transform: rotate(-2deg); }
-/* one line here (the panel is wide and short), so nothing can sit on the comma under the Ș */
-.boot-logo span { color: #fff; margin-left: 0.22em; }
-.boot-bar { width: min(420px, 80%); height: 8px; margin: 1.6vh auto 8px; border-radius: 5px; background: rgba(255, 255, 255, 0.1); overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.16); }
-.boot-bar i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--rust), var(--gold)); transition: width 0.25s ease; }
-.boot-status { font-size: 12px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); text-align: center; }
-.boot-tip { margin-top: 1.4vh; max-width: min(560px, 94%); display: flex; gap: 10px; align-items: flex-start; text-align: left;
-  border-left: 3px solid var(--gold); padding: 2px 0 2px 12px; font-size: 14px; line-height: 1.4; color: #efe6d2; }
-.boot-tip b { font-family: var(--display); font-weight: 400; font-size: 11px; letter-spacing: 1.5px; color: var(--gold); padding-top: 2px; }
-.boot-tip span { min-height: 20px; }
+/* each still's caption, on a strip of paper */
+.bp > .cap { position: absolute; left: 13px; bottom: 13px; z-index: 3; max-width: calc(100% - 26px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: 400 clamp(9px, 1.05vw, 13px) / 1 var(--display); letter-spacing: 0.04em; color: var(--ink); background: var(--grain-d), var(--paper);
+  padding: 0.45em 0.7em 0.38em; border-radius: 2px; transform: rotate(-1.4deg); transform-origin: left bottom; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4); transition: opacity 0.8s ease; font-style: normal; }
+
+/* ---- the carpet: logo, road, status, tip ---- */
+.bp-l { grid-area: l; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr); align-items: center; align-content: center;
+  column-gap: clamp(14px, 1.8vw, 36px); padding: clamp(24px, 3.6vh, 46px) clamp(22px, 2.4vw, 46px);
+  background: var(--covor-h) 0 0 / auto 16px repeat-x, var(--covor-h) 0 100% / auto 16px repeat-x,
+    radial-gradient(ellipse 58% 75% at 30% 50%, rgba(24, 6, 10, 0.66), transparent 74%),
+    radial-gradient(ellipse at center, transparent 45%, rgba(20, 4, 8, 0.55)), var(--covor-field) center / 40px 40px;
+  background-color: var(--carpet); }
+/* the fringe on either end, and the weave */
+.bp-l::before { inset: 16px 0; border-radius: 0; box-shadow: none;
+  background: repeating-linear-gradient(0deg, rgba(243, 227, 195, 0.9) 0 2px, transparent 2px 5px) left / 6px 100% no-repeat,
+    repeating-linear-gradient(0deg, rgba(243, 227, 195, 0.9) 0 2px, transparent 2px 5px) right / 6px 100% no-repeat; }
+.bp-l::after { opacity: 0.35; mix-blend-mode: normal; background: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.1) 0 1px, transparent 1px 3px); }
+.boot-head { position: relative; z-index: 3; min-width: 0; display: flex; flex-direction: column; align-items: stretch; }
+.boot-logo { font-size: clamp(28px, min(4.25vw, 8vh), 100px); text-align: center; transform: rotate(-2deg); }
+.boot-logo span { margin-left: 0.2em; }
+/* the road: a marshrutka drives the loading bar to its stop */
+.boot-bar { position: relative; height: 12px; margin: clamp(22px, 3.4vh, 38px) 18px 0 4px; border-radius: 3px; background: linear-gradient(#3b3035, #2a2226);
+  box-shadow: 0 0 0 2px var(--ink), inset 0 2px 0 rgba(255, 255, 255, 0.07); }
+.boot-bar::before { content: ''; position: absolute; left: 8px; right: 8px; top: 5px; height: 2px; z-index: 2;
+  background: repeating-linear-gradient(90deg, rgba(243, 227, 195, 0.75) 0 10px, transparent 10px 21px); }
+.boot-bar::after { content: ''; position: absolute; right: -16px; bottom: 5px; width: clamp(12px, 0.85vw, 18px); aspect-ratio: 16 / 34; background: var(--stop) center / contain no-repeat; }
+.boot-bar i { position: relative; display: block; height: 100%; width: 0%; min-width: 40px; border-radius: 3px 0 0 3px; transition: width 0.25s ease;
+  background: linear-gradient(90deg, #8e2a1c, var(--rust) 35%, var(--loto) 75%, var(--gold)); }
+.boot-bar i::after { content: ''; position: absolute; right: -12px; bottom: 3px; width: clamp(42px, 3.4vw, 62px); aspect-ratio: 50 / 27;
+  background: var(--van) center / contain no-repeat; transform-origin: 30% 100%; animation: van 2.6s linear infinite; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35)); }
+.boot-status { margin: 12px 0 0; font: 400 clamp(9.5px, 1.3vh, 12.5px) / 1.3 var(--display); letter-spacing: 0.16em; text-transform: uppercase; text-align: center;
+  color: rgba(243, 227, 195, 0.85); text-shadow: 0 1px 0 var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the tip: a note taped to the carpet, stamped SFAT */
+.boot-tip { position: relative; z-index: 3; justify-self: center; width: 100%; max-width: 470px; min-height: 4.4em;
+  padding: 15px 16px 12px 14px; font-size: clamp(16px, 2.45vh, 25px); background: var(--grain-d), linear-gradient(172deg, #faf1dd, #eddcb6); color: #2a1812;
+  border-radius: 2px 3px 2px 4px; transform: rotate(1.6deg); box-shadow: 0 12px 20px rgba(0, 0, 0, 0.45), 0 2px 0 rgba(0, 0, 0, 0.3); }
+.boot-tip::before { content: ''; position: absolute; top: -10px; left: 50%; width: 90px; height: 22px; margin-left: -45px; transform: rotate(-3deg);
+  background: linear-gradient(180deg, rgba(255, 248, 222, 0.72), rgba(236, 222, 180, 0.62)); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  clip-path: polygon(0 8%, 5% 0, 10% 10%, 90% 0, 95% 10%, 100% 0, 100% 92%, 95% 100%, 90% 90%, 10% 100%, 5% 90%, 0 100%); }
+.boot-tip b { float: left; margin: 1px 12px 4px 0; font-size: clamp(11px, 1.4vh, 16px); border-width: 3px; opacity: 0.95; }
+.boot-tip span { font: 700 1em / 1.12 var(--hand); }
+.boot-tip.swap b { animation: thud 0.45s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.boot-tip.swap span { animation: inkin 0.5s ease; }
+
 @keyframes kb { from { transform: scale(1.02) translate(0, 0); } to { transform: scale(1.12) translate(-2%, -1.5%); } }
 @keyframes kb2 { from { transform: scale(1.12) translate(-1.5%, 1%); } to { transform: scale(1.03) translate(1.5%, -1%); } }
-/* phones held upright: two columns, the three strongest panels and the logo */
-@media (max-aspect-ratio: 1/1) {
-  .boot-grid { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1.15fr 0.9fr 0.95fr; grid-template-areas: "b b" "a c" "d d" "l l"; gap: 6px; padding: 6px; }
-  .bp-e, .bp-f { display: none; }
-  .boot-tip { font-size: 13px; }
-  .boot-logo { font-size: clamp(34px, 11vw, 80px); }
+/* along the road: a rattle, then a pothole */
+@keyframes van { 0%, 20%, 40%, 60%, 78%, 95%, 100% { transform: none; } 10%, 30%, 50%, 70% { transform: translateY(-1px); }
+  83% { transform: translateY(-5px) rotate(-5deg); } 88% { transform: translateY(0) rotate(2deg); } 92% { transform: translateY(-2px) rotate(-1deg); } }
+@keyframes thud { from { transform: rotate(-8deg) scale(1.9); opacity: 0; } }
+@keyframes inkin { from { opacity: 0; } }
+
+/* short screens (phones on their side) */
+@media (max-height: 520px) {
+  .boot-grid { gap: 6px; padding: 7px; }
+  .bp-l { padding: 16px 20px; column-gap: 14px; background-size: auto 10px, auto 10px, auto, auto, 30px 30px; }
+  .bp-l::before { inset: 10px 0; }
+  .boot-bar { height: 9px; margin-top: 18px; }
+  .boot-bar::before { top: 3.5px; }
+  .boot-bar i::after { width: 34px; bottom: 2px; }
+  .boot-bar::after { width: 11px; right: -13px; bottom: 3px; }
+  .boot-status { margin-top: 7px; }
+  .boot-tip { padding: 10px 10px 8px; min-height: 4.2em; font-size: 16px; }
+  .boot-tip b { font-size: 10.5px; padding: 4px 5px 3px; margin-right: 8px; border-width: 2.5px; }
+  .bp > .cap { left: 9px; bottom: 9px; font-size: 9px; }
 }
-@media (prefers-reduced-motion: reduce) { .bp > i { animation: none; } .bp { transition: opacity 0.3s ease; transform: none; } }
+/* phones held upright: two columns, the three strongest stills, the carpet across the bottom */
+@media (max-aspect-ratio: 1/1) {
+  .boot-grid { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1.15fr 0.9fr auto; grid-template-areas: "b b" "a c" "d d" "l l"; gap: 7px; padding: 8px; }
+  .bp-e, .bp-f { display: none; }
+  .bp-l { grid-template-columns: 1fr; row-gap: 20px; padding: 30px 22px 28px; }
+  .boot-logo { font-size: clamp(30px, 10.5vw, 72px); }
+  .boot-tip { max-width: 520px; font-size: clamp(17px, 4.6vw, 24px); }
+  .bp > .cap { font-size: clamp(9px, 2.6vw, 12px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bp > i, .boot-bar i::after, .boot-tip.swap b, .boot-tip.swap span { animation: none; }
+  .bp { transition: opacity 0.3s ease; transform: none; }
+  .bp.in { transform: none; }
+}
