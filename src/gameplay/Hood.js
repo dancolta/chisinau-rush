@@ -252,7 +252,7 @@ export class Hood {
   // ---- the talk --------------------------------------------------------------------------------------
   ask(n, line, choices, vars) {
     const g = this.game
-    return g.ui.dialogue(g.street.speaker(n), [this.fill(line, vars)], { choices: choices.map((c) => ({ ...c, text: this.fill(c.text, vars) })) })
+    return g.ui.dialogue(g.street.speaker(n), [this.fill(line, vars)], { choices: choices.map((c) => ({ ...c, text: this.fill(c.text, vars) })), focus: n })
   }
 
   async talk(e) {
@@ -516,7 +516,7 @@ export class Hood {
     for (const k of kinds) { f = this.planFavor(k, s); if (f) break }
     if (!f) return { line: 'Acu\' n-avem nimic pentru tine. Treci mâine, poate.' }
     const F = HOOD.favor[f.kind]
-    const reward = { bere: '+respect · 5 lei', pachet: '+respect · 25 lei', datornic: '+respect · 10 lei' }[f.kind]
+    const reward = { bere: '+respect · +5 lei', pachet: '+respect · +25 lei', datornic: '+respect · +10 lei' }[f.kind]
     const i = await this.ask(n, F.offer, [{ text: F.accept, cost: reward }, { text: F.decline }], { place: f.place })
     if (!this.alive(e)) return { end: true }
     if (i !== 0) return { line: 'Normalno. Altă dată.' }

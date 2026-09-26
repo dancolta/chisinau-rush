@@ -1,5 +1,6 @@
 import { pathThrough } from '../Kit.js'
 import { dist, banner } from './common.js'
+import { GOALS } from '../Rating.js'
 
 const CH3 = 'Capitolul 3'
 
@@ -9,16 +10,23 @@ export const beciul = {
   id: 'beciul', chapterName: CH3, title: 'Beciul Primăriei',
   desc: 'Nelu Gunoierul te bagă noaptea în curtea din spate a Primăriei. Fă poze. Nu te lăsa văzut.',
   giver: { npc: 'nelu', label: 'Nelu Gunoierul' },
+  startText: 'Nelu Gunoierul te așteaptă la {y}containerele din spatele Primăriei{/y}. Noaptea, beciul are musafiri.',
   intro: ['CAPITOLUL 3', 'BECIUL', 'Orice primărie are un beci. Unele au și ceva în el.'],
   reward: { xp: 500 },
+  // caught in the yard: the photos you'd taken are still on the phone
+  checkpoints: ['curte'],
+  cpAt: { curte: () => ({ x: -70, z: -62 }) },
+  stars: [GOALS.ghost('Paznicii nu te-au văzut'), GOALS.time(150, 'Trei poze sub 2:30')],
   async script(m) {
     const g = m.game, p = m.player
-    await m.say('nelu', [
-      'Tu ești ăla care umblă cu matrioșca? Lilia mi-a zis de tine.',
-      'Io-s Nelu. Mătur curtea Primăriei de douăzeci de ani. Noaptea, în beci, e mișcare mare: cutii, dube, oameni în negru.',
-      'Intri pe la containere, prin spate. Fă poze la tot: la arhivă, la dubă și la telefonul roșu din geam.',
-      'Și nu te lăsa văzut, că io am trei copii și o soacră.',
-    ])
+    if (m.before('curte')) {
+      await m.say('nelu', [
+        'Tu ești [[ăla|aia]] care umblă cu matrioșca? Lilia mi-a zis de tine.',
+        'Io-s Nelu. Mătur curtea Primăriei de douăzeci de ani. Noaptea, în beci, e mișcare mare: cutii, dube, oameni în negru.',
+        'Intri pe la containere, prin spate. Fă poze la tot: la arhivă, la dubă și la telefonul roșu din geam.',
+        'Și nu te lăsa văzut, că io am trei copii și o soacră. Și soacra e mai rea ca paznicii.',
+      ])
+    }
     const h = g.renderer.tod.hour
     if (h > 5 && h < 21) {
       await m.fade(1, 700)
@@ -74,11 +82,12 @@ export const beciul = {
       { id: 'duba', x: -87, z: -51.4, label: 'Fotografiază {y}duba „Beznă Invest"{/y}' },
       { id: 'telefon', x: -80, z: -41.4, label: 'Fotografiază {y}telefonul roșu{/y}' },
     ]
-    let taken = 0
-    const rings = []
+    // photos from an earlier try (a checkpoint retry) are still on the phone
+    const kept = m.cpData.photos || []
+    let taken = kept.length
     for (const s of shots) {
+      if (kept.includes(s.id)) { s.done = true; continue }
       const r = m.ring(s.x, s.z, { r: 1.2, color: 0x7fd4ff })
-      rings.push(r)
       m.interact({
         id: 'foto_' + s.id, x: s.x, z: s.z, r: 1.8, hold: 1.1, label: s.label, enabled: () => !s.done,
         onInteract: () => {
@@ -88,14 +97,17 @@ export const beciul = {
           g.audio?.sfx('camera', { bus: 'ui', vol: 0.9 })
           g.ui.flash('#fff', 180)
           m.notify(`Poză făcută (${taken}/3)`, 2, 'gold')
+          m.cpData.photos = shots.filter((q) => q.done).map((q) => q.id)
+          m.checkpoint('curte')
         },
       })
     }
-    m.objective('Intră în curtea din spate a Primăriei. {r}Nu te lăsa văzut.{/r}', { sub: 'Poze: 0/3 · ține {y}[E]{/y} pe cercurile albastre' })
+    m.objective('Intră în curtea din spate a Primăriei. {r}Nu te lăsa văzut.{/r}', { sub: `Poze: ${taken}/3 · ține {y}[E]{/y} pe cercurile albastre` })
     m.marker({ x: -72, z: -56 }, 'Intrarea din spate')
     m.tip('Stai în afara conurilor de lumină. Fuga ({y}⇧{/y}) face zgomot: te observă mai repede.', 9)
     await m.until(() => dist(p.pos, { x: -72, z: -56 }) < 9 || taken > 0)
     m.marker(null)
+    m.checkpoint('curte', 'curtea din spate')
     m.every(() => { m.sub(`Poze: ${taken}/3 · ține {y}[E]{/y} pe cercurile albastre`) })
     await m.until(() => taken >= 3)
     // ---- get out -------------------------------------------------------------------------------------
@@ -103,7 +115,7 @@ export const beciul = {
     const exit = nelu ? nelu.pos : { x: -68, z: -64 }
     await m.reach(exit, 3.4, { text: 'Ieși din curte. Înapoi la {y}Nelu{/y}.', label: 'Nelu' })
     for (const q of guards) q.cone.enabled = false
-    await m.say('nelu', ['Ai ieșit? Viu? Bravo. Io am stat cu mătura pregătită. Pentru tine sau pentru ei, nu știu nici io.', 'Du pozele la Lilia. Ea știe ce să facă cu ele.'])
+    await m.say('nelu', ['Ai ieșit? [[Viu|Vie]]? Bravo. Io am stat cu mătura pregătită. Pentru tine sau pentru ei, nu știu nici io.', 'Du pozele la Lilia. Ea știe ce să facă cu ele. Și sun-o pe Zina, că te-a căutat de trei ori. Io i-am zis că ești la „colindat".'])
     await m.evidence('poze_beci', 'Pozele din beci', 'Arhiva orașului împachetată în cutii, o dubă {y}„Beznă Invest"{/y} gata de plecare și un {y}telefon roșu{/y} cu linie directă. Într-un colț, un calendar: {y}„Vineri. Trenul de Moscova."{/y}')
   },
 }
@@ -114,12 +126,20 @@ export const rapirea = {
   id: 'rapirea', chapterName: CH3, title: 'Răpirea',
   desc: 'Cineva a vorbit prea mult. Tanti Zina a dispărut într-un G-Wagon negru. Gopnicii din curte sunt cu tine.',
   giver: { place: 'acasa', label: 'Acasă (Blocul 7)', auto: true, r: 16 },
-  startText: 'Lilia așteaptă pozele, dar întâi treci pe {y}acasă{/y}. Ceva nu-i în regulă în curte.',
+  startText: 'Tanti Zina nu mai răspunde la telefon. {r}Fugi acasă, la Blocul 7!{/r}',
   reward: { xp: 600, cred: 20 },
   chapterEnd: 'CAPITOLUL 3 · ÎNCHEIAT', chapterEndText: 'Ai dovezi, martori și o curte întreagă în spate. E timpul să vorbească piața.',
+  // a lost brawl starts again at the circus, not with the chase across town
+  checkpoints: ['bataie'],
+  cpAt: { bataie: () => ({ x: -226, z: -146 }) },
+  stars: [
+    GOALS.check('Nu i-ai lăsat să se depărteze (sub 110 m)', (m) => (m.data.maxD ?? 999) <= 110, (m) => `cel mai departe: ${Math.round(m.data.maxD ?? 0)} m`),
+    GOALS.hp(35, 'Ieși din bătaie în picioare'),
+  ],
   async script(m) {
     const g = m.game, p = m.player
     m.hideCast('zina')
+    if (!m.before('bataie')) return circusFight(m, null)
     const vitea = m.story.cast.vitea
     const V = vitea || m.spawn('vitea', 'gopnik1', 12, 205)
     await m.walk(V, p.pos.x + 2, p.pos.z + 1.5, { run: true, timeout: 6 })
@@ -150,9 +170,18 @@ export const rapirea = {
     crew.locked = true
     m.chaser(crew, () => ({ x: gw.pos.x, z: gw.pos.z, speed: Math.abs(gw.speed) }), { speed: 19, keep: 14 })
     if (vitea) { m.hideCast('vitea') } else m.story.removeNpc(V)
+    m.task(async (live) => {
+      await m.wait(8)
+      if (live()) m.call('vitea', [
+        'Bratan, îi vezi? Noi suntem în spate, cu Jiguliul! Jiguliul nu vrea mai repede de optzeci!',
+        'Nu-i pierde! Tanti Zina are pastilele de tensiune în geantă! Și plăcintele noastre!',
+      ])
+    })
     let lostT = 0
+    m.data.maxD = 0
     const chase = m.every((dt) => {
       const d = dist(m.P, gw.pos)
+      if (m.car) m.data.maxD = Math.max(m.data.maxD, d)
       lostT = d > 150 || !m.car ? lostT + dt : Math.max(0, lostT - dt)
       if (lostT > 12) m.fail('I-ai pierdut. Tanti Zina… Doamne ferește.')
       drv.speedMul = d > 90 ? 0.82 : d < 30 ? 1.1 : 1
@@ -163,61 +192,81 @@ export const rapirea = {
     m.untrack(chase)
     gw.throttle = 0; gw.handbrake = true
     m.sub('')
-    const at = { x: gw.pos.x, z: gw.pos.z }
-    const circus = dist(at, { x: -240, z: -157 }) < 30
-    // ---- the brawl -----------------------------------------------------------------------------------
-    const fx = Math.sin(gw.heading), fz = Math.cos(gw.heading)
-    const zina = m.spawn('zina', 'zina', at.x + fx * 5, at.z + fz * 5, { voice: { pitch: 1.3, type: 'old' }, anim: 'idle' })
-    zina.state = 'cower'
-    const foes = [
-      m.enemy('mascat', at.x - fz * 2.4, at.z + fx * 2.4, { hp: 58 }),
-      m.enemy('mascat', at.x + fz * 2.4, at.z - fx * 2.4, { hp: 58 }),
-    ]
-    if (circus) {
-      foes.push(m.enemy('mascat', -231, -167, { hp: 58 }), m.enemy('mascat', -249, -167, { hp: 58 }))
-    }
-    const allies = [
-      m.ally('gopnik1', crew.pos.x + 2, crew.pos.z + 1, { id: 'vitea' }),
-      m.ally('gopnik2', crew.pos.x - 2, crew.pos.z + 1),
-      m.ally('gopnik3', crew.pos.x, crew.pos.z + 3),
-    ]
-    m.brawl(foes, allies)
-    m.notify(circus ? 'Au băgat-o spre Circ! Mascații ies din clădire!' : 'G-Wagonul s-a oprit! Mascații sar din mașină!', 3, 'red')
-    allies[0].say('Pentru Tanti Zina! Davai, băieți!')
-    m.objective('Bate-i pe {r}mascați{/r} și salveaz-o pe {y}Tanti Zina{/y}!', { sub: `Mascați rămași: ${foes.length}` })
-    m.every(() => m.sub(`Mascați rămași: ${foes.filter((f) => !m.down(f)).length}`))
-    await m.until(() => m.allDown(foes))
-    g.audio?.sting('fight_win')
-    await m.wait(1)
-    await m.cutscene(async () => {
-      // stage the reunion on open ground, away from wrecks and their smoke
-      await m.fade(1, 350)
-      if (p.vehicle) g.vehicles.exit(true)
-      const s = m.stageSpot(p.pos.x, p.pos.z, { r: 6 })
-      const za = Math.atan2(zina.pos.x - s.x, zina.pos.z - s.z)
-      m.teleport(s.x, s.z, za)
-      zina.state = 'idle'
-      zina.char.anim.set('idle')
-      zina.teleport(s.x + Math.sin(za) * 4.5, g.physics.groundHeight(s.x + Math.sin(za) * 4.5, s.z + Math.cos(za) * 4.5, 3), s.z + Math.cos(za) * 4.5, za + Math.PI)
-      const zx = s.x + Math.sin(za) * 1.3, zz = s.z + Math.cos(za) * 1.3
-      const vi = allies[0]
-      if (vi && !vi.char.ko) {
-        const vx = s.x - Math.cos(za) * 1.9 + Math.sin(za) * 0.4, vz = s.z + Math.sin(za) * 1.9 + Math.cos(za) * 0.4
-        vi.state = 'idle'
-        vi.teleport(vx, g.physics.groundHeight(vx, vz, 3), vz, za)
-      }
-      m.hold({ ...m.clearView((s.x + zx) / 2, (s.z + zz) / 2, { dist: 4.6, lookY: 1.2, prefer: za + Math.PI / 2 }), dur: 60 })
-      await m.fade(0, 450)
-      await m.walk(zina, zx, zz, { timeout: 5 })
-      m.face(zina, p.pos.x, p.pos.z)
-      await m.say('zina', [
-        'Maică, știam că vii! Ăștia m-au întrebat ce-am văzut. Le-am zis că văd prost. Ha! Văd tot.',
-        { who: 'vitea', text: 'Nimeni nu se atinge de babele din curtea noastră, bratan. Nimeni.' },
-        'Și să știi: în mașină vorbeau. Sâmbătă, primarul face „miting de sprijin" în PMAN.',
-        'Acolo e momentul, maică. În fața la toată lumea. Cu tot ce-ai strâns.',
-      ])
-    })
-    await m.evidence('martora', 'Martora: Tanti Zina', 'Răpită de oamenii primarului, în {y}G-Wagonul{/y} lui. A auzit tot: dosarele pleacă vineri, iar sâmbătă Eban face {y}miting în PMAN{/y}. Acum vrea să vorbească. Tare.')
+    m.cpData.maxD = m.data.maxD
+    await circusFight(m, { gw, crew })
   },
+}
+
+// the brawl where the G-Wagon stopped (at the circus, on a checkpoint retry), and Zina safe
+async function circusFight(m, chase) {
+  const g = m.game, p = m.player
+  let gw, crew
+  if (chase) ({ gw, crew } = chase)
+  else {
+    // a checkpoint retry: the G-Wagon is parked at the circus, the boys' Jiguli right behind
+    m.data.maxD = m.cpData.maxD
+    g.vehicles.clearSpot(-240, -152, 14)
+    gw = m.vehicle('gwagon', -240, -155, 0, { color: 0x0c0c0e })
+    gw.locked = true
+    crew = m.vehicle('jiguli', -236, -137, 0, { color: 0x9a1c1c })
+    crew.locked = true
+    m.notify('Mascații au scos-o pe Tanti Zina din G-Wagon. Vitea și băieții sunt cu tine.', 3)
+  }
+  m.checkpoint('bataie', 'bătaia de la Circ')
+  const at = { x: gw.pos.x, z: gw.pos.z }
+  const circus = dist(at, { x: -240, z: -157 }) < 30
+  // ---- the brawl -----------------------------------------------------------------------------------
+  const fx = Math.sin(gw.heading), fz = Math.cos(gw.heading)
+  const zina = m.spawn('zina', 'zina', at.x + fx * 5, at.z + fz * 5, { voice: { pitch: 1.3, type: 'old' }, anim: 'idle' })
+  zina.state = 'cower'
+  const foes = [
+    m.enemy('mascat', at.x - fz * 2.4, at.z + fx * 2.4, { hp: 58 }),
+    m.enemy('mascat', at.x + fz * 2.4, at.z - fx * 2.4, { hp: 58 }),
+  ]
+  if (circus) {
+    foes.push(m.enemy('mascat', -231, -167, { hp: 58 }), m.enemy('mascat', -249, -167, { hp: 58 }))
+  }
+  const allies = [
+    m.ally('gopnik1', crew.pos.x + 2, crew.pos.z + 1, { id: 'vitea' }),
+    m.ally('gopnik2', crew.pos.x - 2, crew.pos.z + 1),
+    m.ally('gopnik3', crew.pos.x, crew.pos.z + 3),
+  ]
+  m.brawl(foes, allies)
+  m.notify(circus ? 'Au băgat-o spre Circ! Mascații ies din clădire!' : 'G-Wagonul s-a oprit! Mascații sar din mașină!', 3, 'red')
+  allies[0].say('Pentru Tanti Zina! Davai, băieți!')
+  m.objective('Bate-i pe {r}mascați{/r} și salveaz-o pe {y}Tanti Zina{/y}!', { sub: `Mascați rămași: ${foes.length}` })
+  m.every(() => m.sub(`Mascați rămași: ${foes.filter((f) => !m.down(f)).length}`))
+  await m.until(() => m.allDown(foes))
+  g.audio?.sting('fight_win')
+  await m.wait(1)
+  await m.cutscene(async () => {
+    // stage the reunion on open ground, away from wrecks and their smoke
+    await m.fade(1, 350)
+    if (p.vehicle) g.vehicles.exit(true)
+    const s = m.stageSpot(p.pos.x, p.pos.z, { r: 6 })
+    const za = Math.atan2(zina.pos.x - s.x, zina.pos.z - s.z)
+    m.teleport(s.x, s.z, za)
+    zina.state = 'idle'
+    zina.char.anim.set('idle')
+    zina.teleport(s.x + Math.sin(za) * 4.5, g.physics.groundHeight(s.x + Math.sin(za) * 4.5, s.z + Math.cos(za) * 4.5, 3), s.z + Math.cos(za) * 4.5, za + Math.PI)
+    const zx = s.x + Math.sin(za) * 1.3, zz = s.z + Math.cos(za) * 1.3
+    const vi = allies[0]
+    if (vi && !vi.char.ko) {
+      const vx = s.x - Math.cos(za) * 1.9 + Math.sin(za) * 0.4, vz = s.z + Math.sin(za) * 1.9 + Math.cos(za) * 0.4
+      vi.state = 'idle'
+      vi.teleport(vx, g.physics.groundHeight(vx, vz, 3), vz, za)
+    }
+    m.hold({ ...m.clearView((s.x + zx) / 2, (s.z + zz) / 2, { dist: 4.6, lookY: 1.2, prefer: za + Math.PI / 2 }), dur: 60 })
+    await m.fade(0, 450)
+    await m.walk(zina, zx, zz, { timeout: 5 })
+    m.face(zina, p.pos.x, p.pos.z)
+    await m.say('zina', [
+      'Maică, știam că vii! Ăștia m-au întrebat ce-am văzut. Le-am zis că văd prost. Ha! Văd tot.',
+      { who: 'vitea', text: 'Nimeni nu se atinge de babele din curtea noastră, bratan. Nimeni.' },
+      'Și să știi: în mașină vorbeau. Sâmbătă, primarul face „miting de sprijin" în PMAN.',
+      'Acolo e momentul, maică. În fața la toată lumea. Cu tot ce-ai strâns.',
+    ])
+  })
+  await m.evidence('martora', 'Martora: Tanti Zina', 'Răpită de oamenii primarului, în {y}G-Wagonul{/y} lui. A auzit tot: dosarele pleacă vineri, iar sâmbătă Eban face {y}miting în PMAN{/y}. Acum vrea să vorbească. Tare.')
 }
 

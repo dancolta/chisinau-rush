@@ -33,8 +33,9 @@ export class Aura {
     return Math.max(AURA.repeatFloor, 1 - AURA.repeatDecay * (r.c - 1))
   }
 
-  // a cool moment: +n (times the streak unless raw); returns what was actually added
-  gain(n, why = '', { raw = false, key = null, big = false } = {}) {
+  // a cool moment: +n (times the streak unless raw); returns what was actually added.
+  // quiet: a bonus handed out (the daily streak): a chip in the reward stack, not the big pop
+  gain(n, why = '', { raw = false, key = null, big = false, quiet = false } = {}) {
     if (!(n > 0)) return 0
     const s = this.s
     let k = key ? this.repeat(key) : 1
@@ -45,9 +46,12 @@ export class Aura {
     s.total += v
     s.lifetime += v
     this.side.state.today.aura += v
-    this.streak++
-    this.streakT = AURA.streakWindow
-    this.side.ui.pop(v, why, { mult: m, big: big || v >= 100 })
+    if (quiet) { this.game.ui?.chip?.('aura', v, { why }); this.side.ui.bump(this.side.ui.chip) }
+    else {
+      this.streak++
+      this.streakT = AURA.streakWindow
+      this.side.ui.pop(v, why, { mult: m, big: big || v >= 100 })
+    }
     this.side.hint('aura')
     this.side.challenges.track('aura', v)
     if (this.mult > 1) this.side.challenges.track('streak', this.mult)

@@ -7,6 +7,8 @@ import { dist, taxiFare, runRace, rand, pickOne } from './missions/common.js'
 
 // Shown in the pause menu once unlocked
 export const ACTIVITIES = [
+  { id: 'favoruri', title: '📱 Favoruri', desc: 'Oamenii te sună când au nevoie de tine. Favorul apare pe hartă ({y}★{/y} deasupra omului); îl reiei din lista de misiuni, pentru stele.', unlock: 'paine' },
+  { id: 'grisa', title: '🚕 Taxiul lui Nea Grișa', desc: 'În lista de misiuni, „Du-mă acolo" te lasă lângă următoarea misiune sau lângă un favor. 15 lei, fără bacșiș. Obligatoriu.', unlock: 'paine' },
   { id: 'gropi', title: '🕳️ Astupă gropile', desc: 'Ține {y}[E]{/y} lângă o groapă ca s-o astupi. Asociația de proprietari plătește 15 lei. Respect civic.', unlock: 'paine' },
   { id: 'dosare', title: '📁 Dosare pierdute', desc: 'Primăria „pierde" dosare prin tot orașul: 30 în total. Borea le cumpără.', unlock: 'paine' },
   { id: 'taxi', title: '🚕 Tura de taxi', desc: 'Urcă într-un taxi și apasă {y}[T]{/y}. Clienții apar pe hartă. Coboară ca să închei tura.', unlock: 'taxi' },
@@ -53,7 +55,7 @@ export const TAXI_SHIFT = {
           taxi: cab, spec, name: who, wreckEnds: true, voice: { pitch: old ? rand(1.1, 1.3) : rand(0.85, 1.2), type: old ? 'old' : woman ? 'female' : 'male' },
           from: { x: fx, z: fz }, to: { x: tx, z: tz }, toLabel: toName, patience: 4,
           lines: [pickOne([`La ${toName}, șefu'. Și dacă se poate, fără gropi.`, `${toName}, vă rog. Am întârziat deja.`, `Mă duceți la ${toName}? Cât costă? …Bine, bine.`]), pickOne(['Ați auzit ce-a mai zis primarul? Nici eu. Nu mai ascult.', 'Pe vremea mea, drumul ăsta era mai bun. Pe vremea mea era și eu mai tânăr.', 'Aveți încărcător de telefon? Nu? Nici eu.', 'Muzica asta… e Zdob și Zdub? Dați mai tare!'])],
-          crashLines: ['Ușor, domnule!', 'Doamne ferește!', 'Io am plătit pentru o cursă, nu pentru montagne russe!'],
+          crashLines: ['Ușor, [[domnule|doamnă]]!', 'Doamne ferește!', 'Io am plătit pentru o cursă, nu pentru montagne russe!'],
           arrive: [pickOne(['Mersi, șefu\'. Drum bun!', 'Mulțumesc. Păstrați restul. Care rest? Glumesc.', 'Merci! Vă dau cinci stele. Dacă găsesc aplicația.'])],
         }).catch(() => null),
         m.until(() => outT > 3 || cab.broken).then(() => null),

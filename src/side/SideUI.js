@@ -22,9 +22,12 @@ export class SideUI {
     this.root = el('div', 'side-hud')
     ui.hud.appendChild(this.root)
     const bl = ui.hud.querySelector('.hud-bl') || ui.hud
+    // under the bar, the next thing you get and how far it is (goals.hints(): the next AURA level,
+    // the next rank, the day's closest challenge, taking turns)
     this.chip = el('div', 'aura-chip', `<div class="lv"><b>1</b><small>NV</small></div>
       <div class="info"><div class="ttl"></div><div class="bar"><i></i></div></div>
       <div class="amt"><b>0</b><small>AURA</small></div>
+      <div class="next"><span class="ni"></span><span class="nt"></span><span class="nl"></span><i class="nb"><b></b></i></div>
       <div class="streak hidden"><span>🔥</span><b>×1</b><i></i></div>`)
     this.feedEl = el('div', 'side-feed')
     bl.insertBefore(this.chip, bl.firstChild)
@@ -42,6 +45,7 @@ export class SideUI {
     const q = (e, sel) => e.querySelector(sel)
     this.$ = {
       lv: q(this.chip, '.lv b'), ttl: q(this.chip, '.ttl'), amt: q(this.chip, '.amt b'), bar: q(this.chip, '.bar i'),
+      next: q(this.chip, '.next'), ni: q(this.chip, '.next .ni'), nt: q(this.chip, '.next .nt'), nl: q(this.chip, '.next .nl'), nb: q(this.chip, '.next .nb b'),
       streak: q(this.chip, '.streak'), streakX: q(this.chip, '.streak b'), streakBar: q(this.chip, '.streak i'),
       stLive: q(this.stunt, '.st-live'), stPts: q(this.stunt, '.pts'), stX: q(this.stunt, '.x'), stList: q(this.stunt, '.st-list'), stBar: q(this.stunt, '.st-bar i'),
       markD: q(this.mark, '.d'), markIc: q(this.mark, '.ic'),
@@ -49,15 +53,23 @@ export class SideUI {
   }
 
   // ---- the chip: level, title, progress, streak ---------------------------------------------------------------
-  update() {
+  update(dt = 0) {
     const a = this.side.aura, s = a.s, c = this.cache, $ = this.$
     const lv = s.level
     if (c.lv !== lv) { c.lv = lv; $.lv.textContent = lv; $.ttl.textContent = a.title.name }
     if (c.total !== s.total) {
+      // a gain turns the next line to AURA
+      if (c.total != null && s.total > c.total) this.hintFocus('aura')
       c.total = s.total
-      $.amt.textContent = nf(s.total)
       $.bar.style.transform = `scaleX(${a.progress.toFixed(3)})`
     }
+    // the number rolls up to the new total (a big gain counts up, it doesn't just jump)
+    this.dispAura = this.dispAura ?? s.total
+    if (this.dispAura > s.total || s.total - this.dispAura < 1) this.dispAura = s.total
+    else this.dispAura += (s.total - this.dispAura) * Math.min(1, (this.game.rawDt || dt || 0.016) * 7)
+    const shown = nf(this.dispAura)
+    if (c.amt !== shown) { c.amt = shown; $.amt.textContent = shown }
+    this.updateNext(this.game.rawDt || dt || 0.016)
     const m = a.mult
     const on = a.streak > 0 && a.streakT > 0
     if (c.streakOn !== on) { c.streakOn = on; $.streak.classList.toggle('hidden', !on) }
@@ -71,6 +83,39 @@ export class SideUI {
   }
 
   bump(e) { e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump') }
+
+  // ---- the next-reward line: takes turns every few seconds; a gain turns it to that currency ----------------
+  hintFocus(key) { this.nextKey = key; this.nextT = 7; this.nextRefresh = 0; this.cache.nx = null; this.nextBump = true }
+
+  updateNext(dt) {
+    const goals = this.side.goals
+    if (!goals) return
+    this.nextT = (this.nextT ?? 0) - dt
+    this.nextRefresh = (this.nextRefresh ?? 0) - dt
+    if (this.nextT > 0 && this.nextRefresh > 0) return
+    this.nextRefresh = 0.4
+    const list = goals.hints()
+    if (!list.length) return
+    let i = list.findIndex((h) => h.key === this.nextKey)
+    if (this.nextT <= 0) { i = (i + 1) % list.length; this.nextT = 6 }
+    const h = list[Math.max(0, i)]
+    this.nextKey = h.key
+    const $ = this.$
+    const sig = `${h.key}|${h.label}|${h.prize}|${h.left}`
+    if (this.cache.nx !== sig) {
+      const turned = this.cache.nxKey !== h.key
+      this.cache.nx = sig
+      this.cache.nxKey = h.key
+      $.next.className = `next ${h.key}`
+      $.ni.textContent = h.icon
+      $.nt.innerHTML = fmt(h.prize ? `${h.label} · ${h.prize}` : h.label)
+      $.nl.textContent = h.key === 'daily' ? h.left : `încă ${h.left}`
+      if (turned) { $.next.classList.add('flip'); setTimeout(() => $.next.classList.remove('flip'), 400) }
+      if (this.nextBump) { this.nextBump = false; this.bump($.nl) }
+    }
+    const k = h.k.toFixed(3)
+    if (this.cache.nk !== k) { this.cache.nk = k; $.nb.style.transform = `scaleX(${k})` }
+  }
 
   // dev/screenshots: keep pops, cards and the combo on screen (a slow capture would miss them)
   freeze(on) { this.frozen = !!on; this.root.classList.toggle('freeze', this.frozen) }

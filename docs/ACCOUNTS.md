@@ -14,9 +14,9 @@ that Vercel deploys next to it, talking to Neon through `DATABASE_URL`.
    `npm run build` and `dist`) → **Deploy**. The game works right away; accounts answer
    "not configured yet" until step 2.
 2. **Create the database.** In the Vercel project: **Storage** → **Create Database** → **Neon**
-   (Serverless Postgres) → region **Frankfurt (fra1)**, the region the API runs in
+   (Serverless Postgres) → region **US East (iad1 / AWS us-east-1)**, the region the API runs in
    (`vercel.json`) → connect it to the project for all environments. This sets `DATABASE_URL`.
-   *Or* create a project on [neon.tech](https://neon.tech) (region AWS Europe Central / Frankfurt),
+   *Or* create a project on [neon.tech](https://neon.tech) (region AWS US East 1, where the live database is),
    copy its connection string (the pooled one is fine) and add it in Vercel → Project →
    **Settings** → **Environment Variables** as `DATABASE_URL` (Production and Preview).
 3. **Redeploy** (Deployments → ⋯ → **Redeploy**) so the functions pick up `DATABASE_URL`.
@@ -29,7 +29,7 @@ Optional: `npm run db:migrate` creates the tables from your machine (it reads `D
 Neon SQL editor. Both are the same idempotent statements the API runs.
 
 Good to know:
-- The API runs in Frankfurt (`"regions": ["fra1"]` in `vercel.json`), close to the players. If the
+- The API runs in US East (`"regions": ["iad1"]` in `vercel.json`), next to the Neon database (AWS us-east-1): one request makes several queries, so the API sits by the database rather than by the players. If the
   database ends up in another region it still works, just slower: move one of them.
 - Preview deployments (every branch / PR) get the same `DATABASE_URL`, so they share the real
   accounts unless you turn on the Neon integration's option to create a database branch per preview.

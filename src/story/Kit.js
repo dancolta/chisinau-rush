@@ -580,7 +580,8 @@ export class Potholes {
           if ((h.cool || 0) > now) continue
           h.cool = now + 700
           car.bump = 0.12; car.speed *= 0.82
-          if (car === v) { car.damage(3); g.cameraRig.shake(0.35); g.audio?.sfx('bump', { vol: 0.9 }); g.ui.notify('Bum! Groapă. Suspensia plânge.', 1.8) }
+          // (missions with fragile cargo listen for this)
+          if (car === v) { car.damage(3); g.cameraRig.shake(0.35); g.audio?.sfx('bump', { vol: 0.9 }); g.ui.notify('Bum! Groapă. Suspensia plânge.', 1.8); g.events.emit('pothole:hit', { car, hole: h }) }
         }
       }
     }

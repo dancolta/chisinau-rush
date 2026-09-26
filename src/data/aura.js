@@ -52,7 +52,7 @@ export const DOWN = {
   fightLost: [25, 'Te-au bătut pacanii'],
   fightFled: [10, 'Ai fugit de bătaie'],
   bribe: [10, 'Mită pentru „cafea"'],
-  jail: [30, 'Trei ore de „discuții" la secție'],
+  jail: [30, '„Discuții" la Comisariatul Centru'],
   raceLost: [10, 'Vitea te-a lăsat în urmă'],
   trolley: [20, 'Ai bușit troleibuzul. Tot orașul a văzut'],
   copCar: [10, 'Ai bușit poliția. Curaj sau prostie?'],

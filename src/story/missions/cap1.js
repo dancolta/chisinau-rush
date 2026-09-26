@@ -2,6 +2,7 @@ import { CAST } from '../../data/outfits.js'
 import { Train, pathThrough } from '../Kit.js'
 import { dist, rand, banner, crowd, cheerAll, taxiFare, freeSpot } from './common.js'
 import { hero, gen } from '../hero.js'
+import { GOALS } from '../Rating.js'
 
 const CH1 = 'Capitolul 1'
 
@@ -86,6 +87,8 @@ export const sosire = {
       [1.2, { name: 'Radio Chișinău' }, '„…primarul Ceon Eban a declarat că gropile vor fi astupate până în 2040. «Lucrăm la asta», a precizat edilul."', 5.2],
       [1, G, 'Lucrează. Ca mine la sală. Din 2004.'],
     ])
+    // the phone's first ring: Mama, from the tomato patch
+    m.task(async (live) => { await m.wait(7); if (live() && !m.skipFlag) m.sms('mama', 'Ai ajuns cu bine? Zina are cheile. Nu mânca șaurma de la gară, că nu-i de la gară. Te pup. Mama.') })
     m.skippable = true
     // a ride that drags on (traffic, a wrong turn) just cuts to the arrival instead of failing
     let rideT = 0
@@ -134,8 +137,10 @@ export const paine = {
   id: 'paine', chapterName: CH1, title: 'Pâine de la Linella',
   desc: 'Tanti Zina vrea o franzelă. Gopnicii din alt cartier vor și ei.',
   giver: { npc: 'zina', label: 'Tanti Zina' },
+  startText: 'Tanti Zina te strigă de pe bancă. Du-te la {y}Tanti Zina{/y}.',
   intro: ['CAPITOLUL 1', 'BANI DE PÂINE', 'Primul lucru pe care-l faci acasă: te trimite cineva după pâine.'],
   reward: { lei: 30, xp: 150 },
+  stars: [GOALS.hp(20, 'Bătaia fără zgârieturi'), GOALS.time(150, 'Pâinea ajunge caldă: sub 2:30')],
   async script(m) {
     const g = m.game
     await m.say('zina', [
@@ -212,6 +217,10 @@ export const jiguli = {
   startText: 'Du-te la {y}garajul unchiului Vasile{/y}, în spatele blocului.',
   reward: { xp: 200 },
   next: 'auto',
+  stars: [
+    GOALS.check('Fără mită la poliție', (m) => m.game.progress.flags.caldare !== 'mita' || !m.data.stopped),
+    GOALS.check('Jiguliul ajunge întreg (75%+)', (m) => (m.data.jig?.health ?? 0) >= 75, (m) => `${Math.round(m.data.jig?.health ?? 0)}%`),
+  ],
   async script(m) {
     const g = m.game, p = m.player
     // a retry starts with one Jiguli in the garage, not a second one next to the last attempt's
@@ -249,6 +258,16 @@ export const jiguli = {
     g.fx?.smoke(jig.pos.x - Math.sin(jig.heading) * 2.2, 0.5, jig.pos.z - Math.cos(jig.heading) * 2.2, 0.05, 4)
     m.notify('{g}A pornit!{/g} Vecinii de la etajul cinci aplaudă. Sau înjură.', 3)
     m.tip('{y}[W]/[S]{/y} accelerezi / frânezi · {y}[A]/[D]{/y} virezi · {y}[Space]{/y} frână de mână · {y}[E]{/y} cobori · {y}[H]{/y} claxon', 10)
+    // the owner rings from the tomato patch (the village has one bar of signal, on the fence)
+    m.task(async (live) => {
+      await m.wait(6)
+      if (live()) m.call('vasile', [
+        'Alo?! Tu mi-ai pornit Jiguliul? L-am auzit de la Hâncești. Tot satul l-a auzit.',
+        'Ai grijă la a treia, că sare. Și la a doua. Și la frână, că frâna-i mai mult decorativă.',
+        { who: 'player', text: 'Și dacă mă oprește poliția?' },
+        'Zi că-i mașina lui Vasile de la Blocul 7. Toți gaborii mă știu. Unii mă și iubesc.',
+      ])
+    })
     // ---- drive to Vova; a cop pulls you over on the way --------------------------------------
     const vova = m.places.mecanic
     m.objective('Du Jiguliul la {y}Vova{/y}, la Auto Service (cooperativa de garaje).')
@@ -276,6 +295,7 @@ export const jiguli = {
       ])
       if (r < 2) {
         // ---- the classic Chișinău traffic stop ----------------------------------------------------
+        m.data.stopped = true
         chase.done = true
         cop.throttle = 0; cop.handbrake = true
         const lx = Math.cos(cop.heading), lz = -Math.sin(cop.heading)
@@ -366,6 +386,13 @@ export const taxi = {
   desc: 'Trei clienți, un Logan și o mulțime de gropi. Ultimul client uită ceva pe bancheta din spate.',
   giver: { npc: 'vova', label: 'Vova (service)' },
   reward: { xp: 250 },
+  // a fail on the second or third fare doesn't cost the whole shift: the cab waits by that client
+  checkpoints: ['fare2', 'fare3'],
+  cpAt: { fare2: () => ({ x: 222, z: 16 }), fare3: () => ({ x: -72, z: -16 }) },
+  stars: [
+    GOALS.check('Bacșiș la toate trei cursele', (m) => (m.cpData.tips || 0) >= 3, (m) => `${m.cpData.tips || 0}/3`),
+    GOALS.crashes(0, 'Clienții n-au țipat: fără bușituri'),
+  ],
   async script(m) {
     const g = m.game, p = m.player
     // a retry takes the cab from the last attempt instead of lining up another one (a wreck gets towed)
@@ -378,6 +405,15 @@ export const taxi = {
     }
     cab.keep = true
     g.progress.flags.taxiCar = true
+    // a checkpoint retry: the cab is parked on the kerb a few metres from the next client
+    const at = m.resume === 'fare2' ? m.lane('BD', 'E', 214, { curb: true }) : m.resume === 'fare3' ? m.lane('BD', 'W', -72, { curb: true }) : null
+    if (at) {
+      g.vehicles.clearSpot(at.x, at.z, 6)
+      cab.teleport(at.x, g.physics.groundHeight(at.x, at.z, 3) + 0.3, at.z, at.ry)
+      cab.health = Math.max(cab.health, 80)
+      m.seat(cab)
+      g.cameraRig.yaw = at.ry; g.cameraRig.snap()
+    }
     if (p.vehicle !== cab) {
       m.objective('Urcă în {y}taxi{/y}.')
       m.marker(cab.pos, 'Taxi')
@@ -388,26 +424,33 @@ export const taxi = {
     // the later clients are already out on the pavement, so nobody pops up beside the cab
     const F2 = { name: 'Ionel, student', spec: CAST.ionel, voice: { pitch: 1.1, type: 'male' } }
     const F = { name: 'Funcționarul', spec: CAST.deputat, voice: { pitch: 1.0, type: 'male' } }
-    const ionel = m.spawn(null, F2.spec, 243, 13.2, { name: F2.name, voice: F2.voice, ry: Math.PI })
+    const ionel = m.before('fare3') ? m.spawn(null, F2.spec, 243, 13.2, { name: F2.name, voice: F2.voice, ry: Math.PI }) : null
     const clerk = m.spawn(null, F.spec, -97, -13.6, { name: F.name, voice: F.voice, ry: 0 })
     clerk.state = 'phone'
+    const tipped = (r) => { if (r?.tip > 0) m.cpData.tips = (m.cpData.tips || 0) + 1 }
     // fare 1: Linella -> Piața Centrală
-    await taxiFare(m, {
-      taxi: cab, spec: { ...CAST.vanzatoare, top: { style: 'coat', color: 0x5a6a8a, lapel: 0x4a5a7a }, hair: { style: 'bun', color: 0xb0a8a0 } },
-      name: 'Doamna Tamara', voice: { pitch: 1.25, type: 'old' },
-      from: { x: 125, z: 149.2, ry: Math.PI }, to: { x: 236, z: 13.5 }, toLabel: 'Piața Centrală',
-      lines: ['Bună ziua, dragă! La Piața Centrală. Și nu prin gropi, că am ouă în sacoșă.', 'Pe vremea mea, taxiul costa doi lei. Și taximetristul îți căra sacoșele până la etaj.', 'Ai auzit? Primarul iar a tăiat panglica la o groapă. Zice că-i reparată. Au vopsit-o în negru.'],
-      crashLines: ['Ouăle! Vai de ouăle mele!', 'Ușurel, dragă, că nu-s cartofi!', 'Doamne, iartă-l că nu știe ce face!'],
-      arrive: ['Mulțumesc, dragă. Poftim. Și mănâncă, că ești slab.'],
-    })
+    if (m.before('fare2')) {
+      tipped(await taxiFare(m, {
+        taxi: cab, spec: { ...CAST.vanzatoare, top: { style: 'coat', color: 0x5a6a8a, lapel: 0x4a5a7a }, hair: { style: 'bun', color: 0xb0a8a0 } },
+        name: 'Doamna Tamara', voice: { pitch: 1.25, type: 'old' },
+        from: { x: 125, z: 149.2, ry: Math.PI }, to: { x: 236, z: 13.5 }, toLabel: 'Piața Centrală',
+        lines: ['Bună ziua, dragă! La Piața Centrală. Și nu prin gropi, că am ouă în sacoșă.', 'Pe vremea mea, taxiul costa doi lei. Și taximetristul îți căra sacoșele până la etaj.', 'Ai auzit? Primarul iar a tăiat panglica la o groapă. Zice că-i reparată. Au vopsit-o în negru.'],
+        crashLines: ['Ouăle! Vai de ouăle mele!', 'Ușurel, dragă, că nu-s cartofi!', 'Doamne, iartă-l că nu știe ce face!'],
+        arrive: ['Mulțumesc, dragă. Poftim. Și mănâncă, că ești [[slab|slabă]].'],
+      }))
+      m.checkpoint('fare2', 'cursa a doua')
+    }
     // fare 2: Piața -> Primăria
-    await taxiFare(m, {
-      taxi: cab, spec: F2.spec, name: F2.name, voice: F2.voice, npc: ionel,
-      from: { x: 243, z: 13.2, ry: Math.PI }, to: { x: -90, z: -13.5 }, toLabel: 'Primăria',
-      lines: ['La Primărie, șefu\'. Am audiență. Vreau să întreb de ce căminul n-are apă caldă din 2019.', 'Mi-au zis să vin „săptămâna viitoare". De trei ani îmi zic asta.', 'Da\' io-s optimist. Am adus și o plăcintă pentru secretară.'],
-      crashLines: ['Plăcinta! Mi-ai turtit plăcinta!', 'Bratan, eu vreau să ajung viu la audiență!'],
-      arrive: ['Mersi! Dacă nu ies în două ore, sună la ambasada Italiei.'],
-    })
+    if (m.before('fare3')) {
+      tipped(await taxiFare(m, {
+        taxi: cab, spec: F2.spec, name: F2.name, voice: F2.voice, npc: ionel,
+        from: { x: 243, z: 13.2, ry: Math.PI }, to: { x: -90, z: -13.5 }, toLabel: 'Primăria',
+        lines: ['La Primărie, șefu\'. Am audiență. Vreau să întreb de ce căminul n-are apă caldă din 2019.', 'Mi-au zis să vin „săptămâna viitoare". De trei ani îmi zic asta.', 'Da\' io-s optimist. Am adus și o plăcintă pentru secretară.'],
+        crashLines: ['Plăcinta! Mi-ai turtit plăcinta!', 'Bratan, eu vreau să ajung viu la audiență!'],
+        arrive: ['Mersi! Dacă nu ies în două ore, sună la ambasada Italiei.'],
+      }))
+      m.checkpoint('fare3', 'cursa a treia')
+    }
     // fare 3: a clerk from the Primăria, on the phone in Russian, to the railway station
     const r3 = await taxiFare(m, {
       taxi: cab, spec: F.spec, name: F.name, voice: F.voice, npc: clerk,
@@ -416,6 +459,7 @@ export const taxi = {
       crashLines: ['Atent, că ai în mașină un om important!', 'Te dau afară din… de unde lucrezi tu. Oriunde!'],
       arrive: ['Ține restul. Și… n-ai văzut nimic.'],
     })
+    tipped(r3)
     r3.npc.runSpeed = 5.5
     r3.npc.walkTo(361, 285, { run: true })
     await m.wait(1.2)
@@ -439,9 +483,18 @@ export const eban = {
   startText: 'Primarul taie o panglică în {y}Piața Marii Adunări Naționale{/y}. Du-te să vezi spectacolul.',
   reward: { xp: 300, cred: 10 },
   chapterEnd: 'CAPITOLUL 1 · ÎNCHEIAT', chapterEndText: 'Ai un dosar și o bănuială. Următorul pas: martori.',
+  // losing the cortege starts you again at the car, not at the ceremony
+  checkpoints: ['coada'],
+  cpAt: { coada: () => ({ x: -10, z: -60 }) },
+  stars: [
+    GOALS.check('Coadă de profesionist: 85% din drum la distanța bună', (m) => (m.data.good ?? 0) >= 0.85, (m) => `${Math.round((m.data.good ?? 0) * 100)}%`),
+    GOALS.crashes(0, 'Fără nicio bușitură'),
+  ],
   async script(m) {
     const g = m.game, p = m.player
     const RX = 0, RZ = -70
+    // (a replay: the Lilia who lives in PMAN would be standing next to this one)
+    m.hideCast('lilia')
     // ---- the stage -------------------------------------------------------------------------
     m.prop((b) => {
       b.box(3.6, 0.02, 7, { x: 0, y: 0, z: 1.6, color: 0xa3141c })
@@ -452,59 +505,19 @@ export const eban = {
     const ribbon = m.prop((b) => { b.box(3.4, 0.14, 0.02, { x: 0, y: 0.95, z: 0, color: 0xd11a1a }); b.box(0.5, 0.35, 0.05, { x: 0, y: 0.8, z: 0, color: 0xd11a1a }) }, { x: RX, z: RZ })
     banner(m, 'LUCRĂM LA ASTA', { x: RX, y: 3.1, z: RZ - 4.2, w: 7, h: 1.3, bg: '#1f3f8a', fg: '#ffd84a' })
     m.prop((b) => { for (const s of [-1, 1]) b.cyl(0.06, 0.06, 3.8, 8, { x: s * 3.4, y: 0, z: 0, color: 0x888888 }) }, { x: RX, z: RZ - 4.2 })
-    const ebanN = m.spawn('eban', 'eban', RX, RZ - 2.4, { ry: 0, voice: { pitch: 1.05, type: 'male' } })
-    const gA = m.spawn('bodyA', 'mascat', RX - 2.8, RZ - 3.2, { ry: 0 })
-    const gB = m.spawn('bodyB', 'mascat', RX + 2.8, RZ - 3.2, { ry: 0 })
-    const people = crowd(m, RX, RZ + 1.5, 10, { r0: 5.5, r1: 8.5, face: { x: RX, z: RZ - 1 } })
     const gw = m.vehicle('gwagon', 11, RZ - 1, 0, { color: 0x0c0c0e })
     const esc = m.vehicle('police', 11, RZ + 8, 0)
     gw.locked = true; esc.locked = true
-    await m.reach({ x: RX, z: RZ + 9 }, 8, { text: 'Apropie-te de mulțime.', label: 'Ceremonia', inVehicle: false })
-    // ---- the ceremony ----------------------------------------------------------------------------
-    await m.cutscene(async () => {
-      m.playerWalk(RX + 1.5, RZ + 9.5, 1.6).catch(() => {})
-      g.cameraRig.shot({ from: [RX + 7, 2.6, RZ + 9], to: [RX + 5, 2.3, RZ + 7], look: [RX, 1.6, RZ - 2], dur: 12, ease: 'inout' })
-      ebanN.char.anim.set('talk')
-      await m.talk('eban', 'Dragi chișinăuieni! Astăzi e o zi istorică pentru capitala noastră!', 3.4)
-      await m.talk('eban', 'Inaugurăm reparația gropii numărul o mie! Adică… am vopsit-o. Dar e un început!', 4)
-      cheerAll(people)
-      g.audio?.sfx('applause', { vol: 0.8 })
-      await m.talk('eban', 'Lucrăm la asta! Mereu lucrăm la asta!', 2.8)
-      g.cameraRig.shot({ from: [RX - 2.5, 1.9, RZ + 3], look: [RX, 1.1, RZ], dur: 5, ease: 'out' })
-      ebanN.char.anim.play('swing')
-      await m.wait(0.5)
+    if (m.before('coada')) await ceremony(m, { RX, RZ, gw, esc, ribbon })
+    else {
+      // a retry at the car: the cortege is about to pull out, Lilia is already in the passenger seat
       m.untrack(ribbon)
-      g.fx?.confetti(RX, 2.2, RZ, 70)
-      g.audio?.sfx('snip', { vol: 1 })
-      cheerAll(people)
-      await m.wait(1.6)
-      g.audio?.sfx('phone_ring', { at: ebanN.pos, vol: 1 })
-      ebanN.state = 'phone'
-      g.cameraRig.shot({ from: [RX + 2.6, 1.8, RZ + 0.6], look: [RX, 1.55, RZ - 2.4], dur: 8, ease: 'inout' })
-      await m.talk('eban', '(la telefon, în rusă) Da? Da, Vasili Petrovici. Da. Vsio po planu.', 3.6)
-      await m.talk('eban', '(la telefon) Dokumenty v piatnițu. Ne volnuites. Tut vse svoi.', 3.6)
-      await m.talk({ name: 'Cineva din mulțime' }, 'Iar vorbește în rusă…', 2.2)
-      ebanN.state = 'idle'
-      await m.talk('eban', 'Scuzați, dragi cetățeni! O ședință urgentă. Cu… investitorii!', 3)
-    })
-    // ---- the cortege leaves; Lilia appears ---------------------------------------------------------
-    m.walk(ebanN, gw.pos.x - 1.8, gw.pos.z, { run: true, timeout: 5 }).then(() => { if (m.story.npcs.includes(ebanN)) m.story.removeNpc(ebanN) }).catch(() => {})
-    m.walk(gA, esc.pos.x - 1.8, esc.pos.z, { run: true, timeout: 5 }).then(() => { if (m.story.npcs.includes(gA)) m.story.removeNpc(gA) }).catch(() => {})
-    m.walk(gB, gw.pos.x + 1.8, gw.pos.z, { run: true, timeout: 5 }).then(() => { if (m.story.npcs.includes(gB)) m.story.removeNpc(gB) }).catch(() => {})
-    for (const c of people) c.walkTo(c.pos.x + rand(-14, 14), c.pos.z + rand(6, 16))
-    const lilia = m.spawn('lilia', 'jurnalista', p.pos.x - 2.2, p.pos.z + 1.5, { voice: { pitch: 1.2, type: 'female' } })
-    m.face(lilia, p.pos.x, p.pos.z)
-    await m.wait(1.2)
-    await m.say('lilia', [
-      'Ai auzit și tu? Iar vorbea în rusă. Eu-s Lilia, de la „Ochiul Chișinăului". Îl urmăresc de un an.',
-      '„Documentele vineri, cu trenul"… Hai după cortegiu! Eu n-am mașină. Da\' tu ai, nu?',
-    ])
+      const car = m.needCar(-14, RZ + 6, 0, 'hatch')
+      m.seat(car)
+      g.cameraRig.yaw = car.heading; g.cameraRig.snap()
+      m.notify('Lilia e deja lângă tine, cu carnețelul. „De data asta, nu-l pierde."', 3)
+    }
     // ---- tail the cortege ------------------------------------------------------------------------
-    const car = m.needCar(-14, RZ + 6, 0, 'hatch')
-    m.objective('Urcă într-o mașină. Lilia vine cu tine.')
-    if (m.car !== car) { m.marker(car.pos, 'Mașina'); await m.until(() => m.car && !m.car.broken); m.marker(null) }
-    m.story.removeNpc(lilia)
-    m.notify('Lilia s-a urcat lângă tine. Și-a scos carnețelul.', 2.6)
     const L = { name: 'Lilia', spec: CAST.jurnalista, voice: { pitch: 1.2, type: 'female' } }
     const graph = g.traffic.graph
     const mid = pathThrough(graph, [[4, 2], [6, 2], [6, 1], [7, 1]], { lane: 0, speed: 13 })
@@ -522,13 +535,16 @@ export const eban = {
     await m.wait(0.8)
     const dGw = m.driver(gw, route, { speed: 13 })
     m.objective('Urmărește {y}cortegiul{/y}. Nu te apropia prea mult, nu-l pierde.', { sub: '' })
-    let farT = 0, closeT = 0, said = 0
+    let farT = 0, closeT = 0, said = 0, goodT = 0, allT = 0
     const tail = m.every((dt) => {
       const d = dist(m.P, gw.pos)
       farT = d > 115 || !m.car ? farT + dt : Math.max(0, farT - dt)
       closeT = d < 14 && m.car ? closeT + dt : Math.max(0, closeT - dt * 0.5)
       if (farT > 12) m.fail('L-ai pierdut. Cortegiul a dispărut printre blocuri.')
       if (closeT > 4) m.fail('Te-au observat! Cortegiul a schimbat traseul.')
+      allT += dt
+      if (d >= 14 && d <= 90 && m.car) goodT += dt
+      m.data.good = goodT / allT
       const tag = d < 14 ? '{r}PREA APROAPE{/r}' : d > 90 ? '{r}ÎL PIERZI{/r}' : '{g}bine{/g}'
       m.sub(`Distanța: ${Math.round(d)} m · ${tag}`)
       if (d < 16 && said !== 1) { said = 1; m.task(() => m.talk(L, 'Mai încet, că ne vede!', 2)) }
@@ -538,6 +554,7 @@ export const eban = {
     const tailTalk = m.chatter([
       [8, L, 'Știi câte mașini are primăria? Nici eu. Nu-s în niciun registru.', 4],
       [10, L, 'Am scris despre el de trei ori. De trei ori mi-au închis site-ul. „Probleme tehnice."', 4.4],
+      [9, L, 'Te-a sunat și pe tine un număr ascuns? Pe mine mă sună din 2019. Înseamnă că suntem pe drumul bun.', 4.6],
       [10, L, 'Spre Ismail… spre ambasadă. Știam eu.', 3],
     ])
     await m.until(() => dGw.done || dist(gw.pos, route[route.length - 1]) < 4)
@@ -563,7 +580,62 @@ export const eban = {
     await m.say(L, [
       'Tu ai găsit deja un dosar în taxi? Bun. Păstrează-l. Ne trebuie mai multe: martori, poze, acte.',
       'Începe cu gopnicii din curtea ta. Ei văd fiecare mașină care intră și iese din cartier.',
-      'Eu stau în PMAN, la „Ochiul Chișinăului". Ai grijă de tine.',
+      'Eu stau în PMAN, la „Ochiul Chișinăului". Ai grijă de tine. Și nu mai răspunde la numere ascunse.',
     ])
   },
+}
+
+// the ribbon cutting in PMAN, up to Lilia jumping in beside you (a checkpoint retry skips it)
+async function ceremony(m, { RX, RZ, gw, esc, ribbon }) {
+  const g = m.game, p = m.player
+  const ebanN = m.spawn('eban', 'eban', RX, RZ - 2.4, { ry: 0, voice: { pitch: 1.05, type: 'male' } })
+  const gA = m.spawn('bodyA', 'mascat', RX - 2.8, RZ - 3.2, { ry: 0 })
+  const gB = m.spawn('bodyB', 'mascat', RX + 2.8, RZ - 3.2, { ry: 0 })
+  const people = crowd(m, RX, RZ + 1.5, 10, { r0: 5.5, r1: 8.5, face: { x: RX, z: RZ - 1 } })
+  await m.reach({ x: RX, z: RZ + 9 }, 8, { text: 'Apropie-te de mulțime.', label: 'Ceremonia', inVehicle: false })
+  // ---- the ceremony ----------------------------------------------------------------------------
+  await m.cutscene(async () => {
+    m.playerWalk(RX + 1.5, RZ + 9.5, 1.6).catch(() => {})
+    g.cameraRig.shot({ from: [RX + 7, 2.6, RZ + 9], to: [RX + 5, 2.3, RZ + 7], look: [RX, 1.6, RZ - 2], dur: 12, ease: 'inout' })
+    ebanN.char.anim.set('talk')
+    await m.talk('eban', 'Dragi chișinăuieni! Astăzi e o zi istorică pentru capitala noastră!', 3.4)
+    await m.talk('eban', 'Inaugurăm reparația gropii numărul o mie! Adică… am vopsit-o. Dar e un început!', 4)
+    cheerAll(people)
+    g.audio?.sfx('applause', { vol: 0.8 })
+    await m.talk('eban', 'Lucrăm la asta! Mereu lucrăm la asta!', 2.8)
+    g.cameraRig.shot({ from: [RX - 2.5, 1.9, RZ + 3], look: [RX, 1.1, RZ], dur: 5, ease: 'out' })
+    ebanN.char.anim.play('swing')
+    await m.wait(0.5)
+    m.untrack(ribbon)
+    g.fx?.confetti(RX, 2.2, RZ, 70)
+    g.audio?.sfx('snip', { vol: 1 })
+    cheerAll(people)
+    await m.wait(1.6)
+    g.audio?.sfx('phone_ring', { at: ebanN.pos, vol: 1 })
+    ebanN.state = 'phone'
+    g.cameraRig.shot({ from: [RX + 2.6, 1.8, RZ + 0.6], look: [RX, 1.55, RZ - 2.4], dur: 8, ease: 'inout' })
+    await m.talk('eban', '(la telefon, în rusă) Da? Da, Vasili Petrovici. Da. Vsio po planu.', 3.6)
+    await m.talk('eban', '(la telefon) Dokumenty v piatnițu. Ne volnuites. Tut vse svoi.', 3.6)
+    await m.talk({ name: 'Cineva din mulțime' }, 'Iar vorbește în rusă…', 2.2)
+    ebanN.state = 'idle'
+    await m.talk('eban', 'Scuzați, dragi cetățeni! O ședință urgentă. Cu… investitorii!', 3)
+  })
+  // ---- the cortege leaves; Lilia appears ---------------------------------------------------------
+  m.walk(ebanN, gw.pos.x - 1.8, gw.pos.z, { run: true, timeout: 5 }).then(() => { if (m.story.npcs.includes(ebanN)) m.story.removeNpc(ebanN) }).catch(() => {})
+  m.walk(gA, esc.pos.x - 1.8, esc.pos.z, { run: true, timeout: 5 }).then(() => { if (m.story.npcs.includes(gA)) m.story.removeNpc(gA) }).catch(() => {})
+  m.walk(gB, gw.pos.x + 1.8, gw.pos.z, { run: true, timeout: 5 }).then(() => { if (m.story.npcs.includes(gB)) m.story.removeNpc(gB) }).catch(() => {})
+  for (const c of people) c.walkTo(c.pos.x + rand(-14, 14), c.pos.z + rand(6, 16))
+  const lilia = m.spawn('lilia', 'jurnalista', p.pos.x - 2.2, p.pos.z + 1.5, { voice: { pitch: 1.2, type: 'female' } })
+  m.face(lilia, p.pos.x, p.pos.z)
+  await m.wait(1.2)
+  await m.say('lilia', [
+    'Ai auzit și tu? Iar vorbea în rusă. Eu-s Lilia, de la „Ochiul Chișinăului". Îl urmăresc de un an.',
+    '„Documentele vineri, cu trenul"… Hai după cortegiu! Eu n-am mașină. Da\' tu ai, nu?',
+  ])
+  const car = m.needCar(-14, RZ + 6, 0, 'hatch')
+  m.objective('Urcă într-o mașină. Lilia vine cu tine.')
+  if (m.car !== car) { m.marker(car.pos, 'Mașina'); await m.until(() => m.car && !m.car.broken); m.marker(null) }
+  m.story.removeNpc(lilia)
+  m.notify('Lilia s-a urcat lângă tine. Și-a scos carnețelul.', 2.6)
+  m.checkpoint('coada', 'urmărirea cortegiului')
 }
