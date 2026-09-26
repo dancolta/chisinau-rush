@@ -3,6 +3,21 @@ import { CURB_H, block, H_ROADS, RAIL_Z } from './CityLayout.js'
 import { mulberry } from './rng.js'
 import { shade } from './Buildings.js'
 
+// a flat ring facing up, and an open cylinder facing inward (the inside of a basin), as
+// non-indexed geometry for GeoBuilder.add
+function ringTop(r0, r1, seg) {
+  return new THREE.RingGeometry(r0, r1, seg, 1).rotateX(-Math.PI / 2).toNonIndexed()
+}
+function innerWall(r, seg) {
+  const g = new THREE.CylinderGeometry(r, r, 1, seg, 1, true).toNonIndexed()
+  const P = g.attributes.position.array, N = g.attributes.normal.array, U = g.attributes.uv.array
+  const swap = (A, i, j) => { const t = A[i]; A[i] = A[j]; A[j] = t }
+  for (let t = 0; t < P.length; t += 9) for (let k = 0; k < 3; k++) { swap(P, t + k, t + 6 + k); swap(N, t + k, t + 6 + k) }
+  for (let t = 0; t < U.length; t += 6) for (let k = 0; k < 2; k++) swap(U, t + k, t + 4 + k)
+  for (let i = 0; i < N.length; i++) N[i] = -N[i]
+  return g
+}
+
 // Palette
 const STONE = 0xebe3cf, STONE_D = 0xd2c6aa, STONE_L = 0xf6f2e8, BRICK = 0xb24a33, ROOF = 0x5e5a55
 const DOME = 0x3d7a68, GOLD = 0xdcae42, BRONZE = 0x506b5a, GLASS = 0x2b3e50, DARK = 0x2a2b30
@@ -761,11 +776,22 @@ export class Landmarks {
     // Parcul Valea Trandafirilor: a lake, paths round it, roses, benches, plenty of trees
     const lx = b.cx - 14, lz = b.cz + 6, lr = 17
     this.B.flat(lx, lz, 'dirt_o', 6).disc(lx, lz, lr + 4, Y + 0.012, 48)
-    // a knee-high stone parapet round the water: what stops you is what you see
-    const w = this.st(lx, lz)
-    w.cyl(lr + 0.55, lr + 0.7, 0.55, 48, { x: lx, y: Y, z: lz, color: 0x9d978b })
-    w.cyl(lr, lr, 0.52, 48, { x: lx, y: Y + 0.01, z: lz, color: 0x3a6f8f })
-    this.P.cylinder(lx, Y + 0.3, lz, 0.3, lr + 0.62)
+    // a knee-high stone rim round the water: what stops you is what you see. It's a ring (outer
+    // face, top, inner face), so the water shows inside it
+    const w = this.st(lx, lz), RIM = 0.55, WY = Y + 0.3
+    w.cyl(lr + 0.6, lr + 0.7, RIM, 48, { x: lx, y: Y, z: lz, color: 0x9d978b, open: true })
+    w.add(ringTop(lr, lr + 0.6, 48), { x: lx, y: Y + RIM, z: lz, color: 0xb1ab9d })
+    w.add(innerWall(lr, 48), { x: lx, y: (WY + Y + RIM) / 2 - 0.01, z: lz, sy: Y + RIM - WY + 0.02, color: 0x857f73 })
+    const water = new THREE.Mesh(new THREE.CircleGeometry(lr, 64).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x24566f, roughness: 0.08, metalness: 0.1, envMapIntensity: 1.1 }))
+    water.position.set(lx, WY, lz)
+    water.receiveShadow = true
+    this.w.scene.add(water)
+    // the rim's collider is a ring of short boxes: jump over it and you wade in, knee-deep
+    const n = 40, rm = lr + 0.33
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2
+      this.P.box(lx + Math.sin(a) * rm, Y + RIM / 2, lz + Math.cos(a) * rm, (Math.PI * rm) / n + 0.06, RIM / 2, 0.33, { rotY: a })
+    }
     this.w.fountains.push({ x: lx, z: lz, y: Y + 1.5, r: 3 })
     this.clear(lx - lr - 5, lz - lr - 5, lx + lr + 5, lz + lr + 5)
     this.patch('dirt', b.ix0, lz - 2, lx - lr - 2, lz + 2, 0.011)
