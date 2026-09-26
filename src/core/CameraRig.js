@@ -110,18 +110,26 @@ export class CameraRig {
     if (!p) return
     if (this.room) { this.updateRoom(rawDt); return }
     const car = p.vehicle
-    if (car !== this.lastCar) { if (car) this.enterT = 0.9; this.lastCar = car }
+    // getting in: the camera goes straight behind the car, whatever you'd done with it on foot
+    if (car !== this.lastCar) {
+      if (car) { this.enterT = 0.7; this.userYawT = 0; this.userTurnT = 0; this.pitchOff = 0; this.pitchT = 0; this.zoom = 1 }
+      this.lastCar = car
+    }
+    // driving, the camera is fixed behind the car: the mouse only looks round while you hold a
+    // button (a locked pointer twitches all the time), the stick and Z/X always can
+    const driving = !!car && !p.passenger
     // ---- user look controls: mouse (locked pointer, or right/middle drag), right stick, Z/X ---------
     const sens = game.settings.camSensitivity ?? 1
     const inv = game.settings.invertCam ? -1 : 1
     // riding in the back you're sightseeing: the view you picked stays put for longer
-    const turned = () => { this.userYawT = p.passenger ? 6 : 2.5; this.userTurnT = 0.12 }
+    const turned = () => { this.userYawT = p.passenger ? 6 : car ? 1.5 : 2.5; this.userTurnT = 0.12 }
     if (this.userTurnT > 0) this.userTurnT -= rawDt
     const locked = input.locked
     if (locked || input.key('Mouse2') || input.key('Mouse1') || input.touchCam) {
       const k = locked ? 0.0026 : 0.0055
-      if (input.mouse.dx) { this.yaw -= input.mouse.dx * k * sens; turned() }
-      if (input.mouse.dy) { this.pitchOff = THREE.MathUtils.clamp(this.pitchOff + input.mouse.dy * k * 0.8 * sens * inv, -0.3, 0.95); this.pitchT = 2.5 }
+      const free = !driving || input.key('Mouse2') || input.key('Mouse1') || input.touchCam
+      if (free && input.mouse.dx) { this.yaw -= input.mouse.dx * k * sens; turned() }
+      if (free && input.mouse.dy) { this.pitchOff = THREE.MathUtils.clamp(this.pitchOff + input.mouse.dy * k * 0.8 * sens * inv, -0.3, 0.95); this.pitchT = 2.5 }
     }
     const look = input.lookAxes()
     if (Math.abs(look.x) > 0) { this.yaw -= look.x * 2.4 * rawDt * sens; turned() }
@@ -150,11 +158,12 @@ export class CameraRig {
       // up), and a spring settles it in behind: briskly right after you get in, gently while you
       // drive. A passenger gets a lazy three-quarter view from the kerb side, so the city goes by
       const rh = car.mesh.rotation.y
-      if (this.userYawT <= 0) {
+      if (this.userYawT <= 0 || this.enterT > 0) {
         const dh = this.carHeading == null ? 0 : wrap(rh - this.carHeading)
         if (Math.abs(dh) < 0.5) this.yaw += dh * (ride ? 0.8 : 0.92)
         const want = rh + (ride ? 0.32 : 0)
-        const rate = this.enterT > 0 ? 6 : ride ? (speed > 0.5 ? 0.9 : 0) : speed > 1 ? 3.2 : 0
+        // the driver's camera settles back behind the car even when you're stopped
+        const rate = this.enterT > 0 ? 9 : ride ? (speed > 0.5 ? 0.9 : 0) : speed > 1 ? 3.2 : 2
         if (rate) this.yaw += wrap(want - this.yaw) * (1 - Math.exp(-rate * rawDt))
       }
       this.carHeading = rh

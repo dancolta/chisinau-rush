@@ -190,7 +190,7 @@ export const profetul = {
     g.police.clear()
     await m.wait(0.4)
     await m.fade(0, 900)
-    await g.ui.overlay('01:45', 1.2)
+    await g.ui.overlay('01:45', 1.2, { tone: 'white' })
     const hide = { x: 12.5, z: 29 }
     const zone = m.ring(hide.x, hide.z, { r: 2.2, color: 0x7fe07f })
     await m.reach(hide, 2.2, { text: 'Ascunde-te lângă Arc, în {g}cercul verde{/g}, și așteaptă.', label: 'Ascunzătoare' })
