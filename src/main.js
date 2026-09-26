@@ -7,6 +7,7 @@ import '@fontsource/bangers/400.css'
 import '@fontsource/paytone-one/400.css'
 import './styles/boot.css'
 import './styles/ui.css'
+import './styles/menus.css'
 import { Game } from './core/Game.js'
 import { TIPS } from './data/tips.js'
 

@@ -167,14 +167,15 @@ html.touch .ui-layer.stunting .prompt { visibility: hidden; }
 .au-badge b { font-family: var(--num); font-size: 38px; display: block; margin-top: 8px; }
 .au-badge small { font-family: var(--display); font-size: 10px; letter-spacing: 2px; }
 .au-who { flex: 1; min-width: 0; }
-.au-t { font-family: var(--title); font-size: 34px; letter-spacing: 1px; color: var(--gold); line-height: 1; }
+.au-t { font-family: var(--title); font-size: 34px; letter-spacing: 1px; color: var(--gold); line-height: 1; -webkit-text-stroke: 0.04em var(--ink); paint-order: stroke fill; text-shadow: 0 0.06em 0 var(--ink); }
 .au-j { font-size: 13px; color: #cfc8bb; font-style: italic; margin: 4px 0 8px; }
 .au-bar { height: 10px; border-radius: 6px; background: rgba(255,255,255,0.1); overflow: hidden; }
 .au-bar i { display: block; height: 100%; transform-origin: left; background: linear-gradient(90deg, #7c4dff, var(--aura) 55%, #ffcf4a); }
 .au-n { font-size: 12.5px; color: #cfc8bb; margin-top: 5px; } .au-n b { color: #fff; }
 .au-next { font-size: 13px; color: #e5dccb; background: rgba(181, 140, 255, 0.1); border: 1px solid rgba(181, 140, 255, 0.25); border-radius: 10px; padding: 7px 10px; }
 .au-next b { color: var(--gold); }
-.au-h { font-family: var(--display); color: var(--gold); margin: 16px 0 8px; font-size: 13px; letter-spacing: 1px; }
+.au-h { display: flex; align-items: center; gap: 9px; font-family: var(--display); color: var(--gold); margin: 16px 0 8px; font-size: 12.5px; letter-spacing: 1px; }
+.au-h::before { content: ''; flex: none; width: 24px; height: 10px; background: var(--covor-h) 0 50% / auto 10px; box-shadow: 0 0 0 1.5px var(--ink); border-radius: 1px; }
 .au-tier { font-family: var(--display); font-size: 11px; letter-spacing: 1px; color: #7a7388; margin: 9px 0 3px; }
 .au-tier.on { color: var(--aura); }
 .au-row { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center; padding: 5px 6px; border-radius: 8px; font-size: 12.5px; color: #8a8494; }
@@ -183,7 +184,7 @@ html.touch .ui-layer.stunting .prompt { visibility: hidden; }
 .au-row.got { color: #e5dccb; } .au-row.got .n { color: #7ee07a; }
 .au-row.cur { color: #fff; background: rgba(255, 207, 74, 0.1); border: 1px solid rgba(255, 207, 74, 0.45); } .au-row.cur .n { color: var(--gold); }
 .au-daily { display: grid; gap: 8px; }
-.au-ch { position: relative; display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding: 9px 10px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
+.au-ch { position: relative; display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding: 9px 10px; border-radius: 10px; background: rgba(16, 7, 12, 0.32); border: 2px solid var(--ink); box-shadow: 0 3px 0 var(--ink); }
 .au-ch .ic { font-size: 22px; text-align: center; }
 .au-ch .tx { font-weight: 700; font-size: 14px; color: #fff; }
 .au-ch .pb { height: 7px; border-radius: 4px; margin: 6px 0 4px; background: rgba(255,255,255,0.1); overflow: hidden; }
