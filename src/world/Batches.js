@@ -4,7 +4,8 @@ import { mergeSimple } from '../core/Assets.js'
 import { FacadeBuilder } from './Facade.js'
 
 export const CHUNK = 100
-export const chunkKey = (x, z) => `${Math.floor(x / CHUNK)}_${Math.floor(z / CHUNK)}`
+// size: coarser chunks for long, thin things out at the edge of the map (fewer draw calls)
+export const chunkKey = (x, z, size = CHUNK) => `${size === CHUNK ? '' : size + ':'}${Math.floor(x / size)}_${Math.floor(z / size)}`
 
 // Flat textured surfaces with world-space UVs (ground, sidewalks, plazas).
 export class FlatBuilder {
@@ -75,29 +76,29 @@ export class Batches {
     this.surfaces = []       // every ground rect/disc laid, with its surface kind (kept after finalize)
   }
 
-  facade(x, z) {
-    const k = chunkKey(x, z)
+  facade(x, z, size) {
+    const k = chunkKey(x, z, size)
     let f = this.facades.get(k)
     if (!f) { f = new FacadeBuilder(); this.facades.set(k, f) }
     return f
   }
 
-  vcol(x, z, kind = 'static') {
-    const k = `${kind}|${chunkKey(x, z)}`
+  vcol(x, z, kind = 'static', size) {
+    const k = `${kind}|${chunkKey(x, z, size)}`
     let e = this.vcols.get(k)
     if (!e) { e = { builder: new GeoBuilder(), kind }; this.vcols.set(k, e) }
     return e.builder
   }
 
-  atlas(x, z, geometry, matrix, kind = 'props') {
-    const k = `${kind}|${chunkKey(x, z)}`
+  atlas(x, z, geometry, matrix, kind = 'props', size) {
+    const k = `${kind}|${chunkKey(x, z, size)}`
     let e = this.atlases.get(k)
     if (!e) { e = { items: [], kind }; this.atlases.set(k, e) }
     e.items.push({ geometry, matrix })
   }
 
-  flat(x, z, surface, uvScale) {
-    const k = `${surface}|${chunkKey(x, z)}`
+  flat(x, z, surface, uvScale, size) {
+    const k = `${surface}|${chunkKey(x, z, size)}`
     let e = this.flats.get(k)
     if (!e) {
       e = { builder: new FlatBuilder(uvScale), surface }
@@ -133,7 +134,9 @@ export class Batches {
     }
     for (const [k, e] of this.flats) {
       if (e.builder.empty) continue
-      add(e.builder.build(), mats.flat[e.surface], false, true, 'flat:' + k)
+      // ground doesn't cast; a surface stood on end (a fence) can ask to
+      const cfg = shadowCfg['flat:' + e.surface] || { cast: false, recv: true }
+      add(e.builder.build(), mats.flat[e.surface], cfg.cast, cfg.recv, 'flat:' + k)
     }
     this.vcols.clear(); this.atlases.clear(); this.flats.clear(); this.facades.clear()
     return meshes

@@ -1,4 +1,4 @@
-import { H_ROADS, V_ROADS, BLOCKS, CURB_H, LANE_W, WORLD } from './CityLayout.js'
+import { H_ROADS, V_ROADS, BLOCKS, CURB_H, LANE_W, BOUNDS } from './CityLayout.js'
 import { CHUNK } from './Batches.js'
 import { FILTER } from '../physics/Physics.js'
 
@@ -69,14 +69,15 @@ export function buildGround(world) {
     split(b.ix0, b.iz0, b.ix1, b.iz1, (a, c, e, f) => B.flat((a + e) / 2, (c + f) / 2, base, base === 'grass' ? 22 : base === 'plaza' ? 8 : 12).rect(a, c, e, f, y))
   }
 
-  // ---- outskirts (outside the ring roads) -----------------------------------
+  // ---- outskirts (outside the ring roads, up to the barriers at the edge) ------
   const og = (x0, z0, x1, z1) => split(x0, z0, x1, z1, (a, c, e, f) => B.flat((a + e) / 2, (c + f) / 2, 'grass_o', 22).rect(a, c, e, f, 0.01))
   const nEdge = hFirst.z - hFirst.w / 2, sEdge = hLast.z + hLast.w / 2
   const wEdge = vFirst.x - vFirst.w / 2, eEdge = vLast.x + vLast.w / 2
-  og(WORLD.x0, WORLD.z0, WORLD.x1, nEdge - 2)
-  og(WORLD.x0, sEdge + 2, WORLD.x1, WORLD.z1)
-  og(WORLD.x0, nEdge - 2, wEdge - 2, sEdge + 2)
-  og(eEdge + 2, nEdge - 2, WORLD.x1, sEdge + 2)
+  const L = BOUNDS
+  og(L.x0, L.z0, L.x1, nEdge - 2)
+  og(L.x0, sEdge + 2, L.x1, L.z1)
+  og(L.x0, nEdge - 2, wEdge - 2, sEdge + 2)
+  og(eEdge + 2, nEdge - 2, L.x1, sEdge + 2)
   // gravel verge along the ring roads
   const verge = (x0, z0, x1, z1) => split(x0, z0, x1, z1, (a, c, e, f) => B.flat((a + e) / 2, (c + f) / 2, 'dirt_o', 6).rect(a, c, e, f, 0.006))
   verge(wEdge - 2, nEdge - 2, eEdge + 2, nEdge)

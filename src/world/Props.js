@@ -15,11 +15,14 @@ const LEAF_AUTUMN = [0xc9a23a, 0xd98a2e, 0xb8b03e]
 // Trees: procedural low-poly, merged into chunk batches (tree kind = flat shaded + cutout)
 // lumpy leaf clusters: subdivided spheres pushed around by smooth noise (same noise for shared
 // vertices, so no cracks); a few variants are enough for a whole city of trees
-const BLOBS = []
-function blob(i) {
-  if (!BLOBS.length) {
+const BLOBS = [], BLOBS_LOD = []
+// lod: a fifth of the triangles, for trees nobody walks up to (the far side of the river, the
+// woods behind the retaining wall); the smooth radial normals keep them round
+function blob(i, lod = false) {
+  const list = lod ? BLOBS_LOD : BLOBS
+  if (!list.length) {
     for (let k = 0; k < 6; k++) {
-      const geo = new THREE.IcosahedronGeometry(1, 1)
+      const geo = new THREE.IcosahedronGeometry(1, lod ? 0 : 1)
       const P = geo.attributes.position, N = geo.attributes.normal
       const a = 2.1 + k * 0.37, b = 1.7 + k * 0.21, c = k * 1.3
       for (let j = 0; j < P.count; j++) {
@@ -28,10 +31,10 @@ function blob(i) {
         P.setXYZ(j, px * d, py * d * 0.92, pz * d)
         N.setXYZ(j, px, py, pz) // smooth radial normals (the geometry is non-indexed)
       }
-      BLOBS.push(geo)
+      list.push(geo)
     }
   }
-  return BLOBS[i % BLOBS.length]
+  return list[i % list.length]
 }
 
 // spruce tiers: a star-shaped skirt whose branch tips droop below the valleys between them,
@@ -83,8 +86,8 @@ function foliageShade(cy, h) {
   }
 }
 
-export function addTreeGeometry(g, x, z, rnd, kind = null) {
-  const y = CURB_H
+// y: the ground under the tree (kerb height by default); lod: see blob()
+export function addTreeGeometry(g, x, z, rnd, kind = null, { y = CURB_H, lod = false } = {}) {
   const k = kind ?? (rnd() < 0.62 ? 'broad' : rnd() < 0.55 ? 'poplar' : rnd() < 0.5 ? 'small' : 'spruce')
   const s = rnd.range(0.85, 1.25)
   const autumn = rnd() < 0.12
@@ -95,10 +98,10 @@ export function addTreeGeometry(g, x, z, rnd, kind = null) {
   let trunk = null // [bottom radius, top radius, height] of the drawn trunk
   if (k === 'broad') {
     const th = 2.7 * s
-    g.cyl(0.16 * s, 0.27 * s, th + 0.8 * s, 8, { x, y, z, color: bark, shade: trunkShade })
+    g.cyl(0.16 * s, 0.27 * s, th + 0.8 * s, lod ? 5 : 8, { x, y, z, color: bark, shade: trunkShade })
     trunk = [0.27 * s, 0.16 * s, th + 0.8 * s]
     // limbs reaching into the crown
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < (lod ? 0 : 2); i++) {
       const a = i * 3.1 + rnd() * 0.8
       g.cyl(0.05 * s, 0.11 * s, 1.9 * s, 5, { x: x + Math.cos(a) * 0.35 * s, y: y + th - 0.2 * s, z: z + Math.sin(a) * 0.35 * s, rx: Math.sin(a) * 0.7, rz: -Math.cos(a) * 0.7, color: bark })
     }
@@ -109,31 +112,31 @@ export function addTreeGeometry(g, x, z, rnd, kind = null) {
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + rnd() * 0.7, rr = rnd.range(0.55, 1.0) * R * 0.58
       const bs = rnd.range(1.45, 1.85) * s
-      g.add(blob(Math.floor(rnd() * 6)), { x: x + Math.cos(a) * rr, y: cy + rnd.range(-0.5, 0.7) * s, z: z + Math.sin(a) * rr, sx: bs, sy: bs * 0.9, sz: bs, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
+      g.add(blob(Math.floor(rnd() * 6), lod), { x: x + Math.cos(a) * rr, y: cy + rnd.range(-0.5, 0.7) * s, z: z + Math.sin(a) * rr, sx: bs, sy: bs * 0.9, sz: bs, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
     }
-    g.add(blob(Math.floor(rnd() * 6)), { x, y: cy + 0.95 * s, z, sx: 1.75 * s, sy: 1.45 * s, sz: 1.75 * s, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
+    g.add(blob(Math.floor(rnd() * 6), lod), { x, y: cy + 0.95 * s, z, sx: 1.75 * s, sy: 1.45 * s, sz: 1.75 * s, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
   } else if (k === 'poplar') {
-    g.cyl(0.13 * s, 0.24 * s, 3.4 * s, 7, { x, y, z, color: bark, shade: trunkShade })
+    g.cyl(0.13 * s, 0.24 * s, 3.4 * s, lod ? 5 : 7, { x, y, z, color: bark, shade: trunkShade })
     trunk = [0.24 * s, 0.13 * s, 3.4 * s]
     const cy = y + 5.6 * s, center = { x, y: cy, z }
     const shade = foliageShade(cy, 3.4 * s)
     for (let i = 0; i < 4; i++) {
       const bs = (1.3 - Math.abs(i - 1.3) * 0.2) * s
-      g.add(blob(i + Math.floor(rnd() * 3)), { x: x + rnd.range(-0.2, 0.2) * s, y: y + (3.0 + i * 1.6) * s, z: z + rnd.range(-0.2, 0.2) * s, sx: bs, sy: bs * 1.45, sz: bs, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.7 })
+      g.add(blob(i + Math.floor(rnd() * 3), lod), { x: x + rnd.range(-0.2, 0.2) * s, y: y + (3.0 + i * 1.6) * s, z: z + rnd.range(-0.2, 0.2) * s, sx: bs, sy: bs * 1.45, sz: bs, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.7 })
     }
   } else if (k === 'small') {
-    g.cyl(0.09 * s, 0.15 * s, 1.9 * s, 6, { x, y, z, color: bark, shade: trunkShade })
+    g.cyl(0.09 * s, 0.15 * s, 1.9 * s, lod ? 5 : 6, { x, y, z, color: bark, shade: trunkShade })
     trunk = [0.15 * s, 0.09 * s, 1.9 * s]
     const cy = y + 2.6 * s, center = { x, y: cy, z }
     const shade = foliageShade(cy, 1.1 * s)
     for (let i = 0; i < 2; i++) {
       const a = i * 3.1 + rnd(), rr = 0.4 * s
-      g.add(blob(Math.floor(rnd() * 6)), { x: x + Math.cos(a) * rr, y: cy + rnd.range(-0.2, 0.3) * s, z: z + Math.sin(a) * rr, sx: 1.1 * s, sy: 0.95 * s, sz: 1.1 * s, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
+      g.add(blob(Math.floor(rnd() * 6), lod), { x: x + Math.cos(a) * rr, y: cy + rnd.range(-0.2, 0.3) * s, z: z + Math.sin(a) * rr, sx: 1.1 * s, sy: 0.95 * s, sz: 1.1 * s, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
     }
   } else {
     // spruce: tiers of drooping star skirts, darker toward the trunk and the ground
-    g.cyl(0.12 * s, 0.2 * s, 2.2 * s, 7, { x, y, z, color: 0x46342a, shade: trunkShade })
-    const tiers = 6, H = 7.6 * s
+    g.cyl(0.12 * s, 0.2 * s, 2.2 * s, lod ? 5 : 7, { x, y, z, color: 0x46342a, shade: trunkShade })
+    const tiers = lod ? 4 : 6, H = 7.6 * s
     const dark = rnd() < 0.5 ? 0x264c2c : 0x2b5431
     for (let i = 0; i < tiers; i++) {
       const t = i / (tiers - 1)
@@ -176,14 +179,15 @@ export class Props {
     this.buildSigns()
   }
 
-  tree(x, z, kind) {
+  // y: the ground under it, for trees on bare ground rather than on a kerbed block
+  tree(x, z, kind, y = CURB_H) {
     const g = this.B.vcol(x, z, 'tree')
-    const t = addTreeGeometry(g, x, z, this.rnd, kind)
-    this.P.cylinder(x, CURB_H + 1.5, z, 1.5, t.r)
+    const t = addTreeGeometry(g, x, z, this.rnd, kind, { y })
+    this.P.cylinder(x, y + 1.5, z, 1.5, t.r)
   }
 
   trees() {
-    for (const t of this.w.treeSpots) this.tree(t.x, t.z, t.kind)
+    for (const t of this.w.treeSpots) this.tree(t.x, t.z, t.kind, t.y)
   }
 
   // ---- boulevard: double row of chestnut trees + benches + bins -----------
@@ -440,43 +444,7 @@ export class Props {
 
   // one mesh for every sign quad in the city (single draw call, glows at night)
   buildSigns() {
-    const pos = [], uv = [], nor = [], lit = []
-    for (const q of this.signQuads) {
-      const c = Math.cos(q.ry), s = Math.sin(q.ry)
-      const faces = q.double ? [1, -1] : [1]
-      for (const f of faces) {
-        const hw = q.w / 2, hh = q.h / 2
-        // local quad in XY plane, facing +z (or -z for the back)
-        const P = [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, -hh], [hw, hh], [-hw, hh]]
-        const order = f > 0 ? [0, 1, 2, 3, 4, 5] : [1, 0, 5, 1, 5, 4]
-        for (const k of order) {
-          let [lx, ly] = P[k]
-          const lz = f * 0.04
-          const x = q.x + lx * c + lz * s, z = q.z - lx * s + lz * c
-          pos.push(x, q.y + ly, z)
-          nor.push(s * f, 0, c * f)
-          const u = f > 0 ? (lx + hw) / q.w : 1 - (lx + hw) / q.w
-          uv.push(q.rect.u0 + (q.rect.u1 - q.rect.u0) * u, q.rect.v0 + (q.rect.v1 - q.rect.v0) * ((ly + hh) / q.h))
-          lit.push(q.lit ?? 0.4)
-        }
-      }
-    }
-    const g = new THREE.BufferGeometry()
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
-    g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3))
-    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2))
-    g.setAttribute('emit', new THREE.Float32BufferAttribute(lit, 1))
-    g.computeBoundingSphere()
-    const m = new THREE.MeshStandardMaterial({ map: this.signs.texture, roughness: 0.6, metalness: 0.0, emissive: 0xffffff, emissiveMap: this.signs.texture, emissiveIntensity: 1 })
-    m.onBeforeCompile = (sh) => {
-      sh.uniforms.uNight = SHARED.uNight
-      sh.vertexShader = 'attribute float emit;\nvarying float vEmit;\n' + sh.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\nvEmit = emit;')
-      sh.fragmentShader = 'uniform float uNight;\nvarying float vEmit;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-  totalEmissiveRadiance *= vEmit * (0.08 + uNight * 0.9);`)
-    }
-    m.customProgramCacheKey = () => 'signs-v1'
-    const mesh = new THREE.Mesh(g, m)
-    mesh.receiveShadow = true
+    const mesh = signMesh(this.signQuads, this.signs)
     this.w.scene.add(mesh)
     this.w.signMesh = mesh
   }
@@ -486,7 +454,7 @@ export class Props {
     const tex = makeGlow('rgba(255,178,96,1)', 'rgba(255,150,70,0)')
     const pos = [], uv = []
     for (const l of this.w.lamps) {
-      const r = 5.5, y = CURB_H + 0.03
+      const r = 5.5, y = (l.gy ?? CURB_H) + 0.03
       const P = [[-r, -r], [-r, r], [r, r], [-r, -r], [r, r], [r, -r]]
       const T = [[0, 0], [0, 1], [1, 1], [0, 0], [1, 1], [1, 0]]
       for (let k = 0; k < 6; k++) { pos.push(l.x + P[k][0], y, l.z + P[k][1]); uv.push(T[k][0], T[k][1]) }
@@ -508,4 +476,47 @@ export class Props {
     this.w.scene.add(mesh)
     this.w.poolMesh = mesh
   }
+}
+
+// One mesh for a list of sign quads { x, y, z, ry, w, h, rect, lit, double } drawn from a sign
+// atlas: a single draw call, and the signs glow at night.
+export function signMesh(quads, atlas) {
+  const pos = [], uv = [], nor = [], lit = []
+  for (const q of quads) {
+    const c = Math.cos(q.ry), s = Math.sin(q.ry)
+    const faces = q.double ? [1, -1] : [1]
+    for (const f of faces) {
+      const hw = q.w / 2, hh = q.h / 2
+      // local quad in XY plane, facing +z (or -z for the back)
+      const P = [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, -hh], [hw, hh], [-hw, hh]]
+      const order = f > 0 ? [0, 1, 2, 3, 4, 5] : [1, 0, 5, 1, 5, 4]
+      for (const k of order) {
+        let [lx, ly] = P[k]
+        const lz = f * 0.04
+        const x = q.x + lx * c + lz * s, z = q.z - lx * s + lz * c
+        pos.push(x, q.y + ly, z)
+        nor.push(s * f, 0, c * f)
+        const u = f > 0 ? (lx + hw) / q.w : 1 - (lx + hw) / q.w
+        uv.push(q.rect.u0 + (q.rect.u1 - q.rect.u0) * u, q.rect.v0 + (q.rect.v1 - q.rect.v0) * ((ly + hh) / q.h))
+        lit.push(q.lit ?? 0.4)
+      }
+    }
+  }
+  const g = new THREE.BufferGeometry()
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3))
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2))
+  g.setAttribute('emit', new THREE.Float32BufferAttribute(lit, 1))
+  g.computeBoundingSphere()
+  const m = new THREE.MeshStandardMaterial({ map: atlas.texture, roughness: 0.6, metalness: 0.0, emissive: 0xffffff, emissiveMap: atlas.texture, emissiveIntensity: 1 })
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uNight = SHARED.uNight
+    sh.vertexShader = 'attribute float emit;\nvarying float vEmit;\n' + sh.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\nvEmit = emit;')
+    sh.fragmentShader = 'uniform float uNight;\nvarying float vEmit;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+  totalEmissiveRadiance *= vEmit * (0.08 + uNight * 0.9);`)
+  }
+  m.customProgramCacheKey = () => 'signs-v1'
+  const mesh = new THREE.Mesh(g, m)
+  mesh.receiveShadow = true
+  return mesh
 }

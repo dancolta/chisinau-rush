@@ -461,6 +461,7 @@ export class Train {
   constructor(game, { cars = 3, track = RAIL_Z - 4 } = {}) {
     this.game = game
     this.group = new THREE.Group()
+    this.group.name = 'train' // the railway's gates at the edge of the map open for it (Edge.js)
     const g = new GeoBuilder()
     const GREEN = 0x2e6a4a, CREAM = 0xe8dfc6, DARK = 0x1b1d20, RED = 0xb0302a
     // locomotive (front at -x, the direction of travel)

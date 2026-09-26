@@ -29,15 +29,16 @@ export class Buildings {
   }
 
   // ---------------------------------------------------------------------------
-  // Soviet panel block. Front (street side) = local +z.
+  // Soviet panel block. Front (street side) = local +z. chunk: batch size (coarser for blocks out
+  // past the edge of the map)
   panel(o) {
-    const { cx, cz, len, depth = 12, floors = 9, ry = 0, seed = 1, shop = false, balconySides = [1, -1], entrances = true, y0 = CURB_H } = o
+    const { cx, cz, len, depth = 12, floors = 9, ry = 0, seed = 1, shop = false, balconySides = [1, -1], entrances = true, y0 = CURB_H, chunk } = o
     const rnd = mulberry(seed)
     const color = o.color ?? rnd.pick(PANEL_COLORS)
     const fh = 2.8, h = floors * fh + 0.7
-    const fb = this.B.facade(cx, cz)
+    const fb = this.B.facade(cx, cz, chunk)
     fb.box(cx, cz, len, depth, y0, h, ry, color, [fh, 3.2, rnd() * 100, shop ? 5 : 1], 0x57534e, [1, 0, 1, 0], 10)
-    const g = this.B.vcol(cx, cz, 'bld')
+    const g = this.B.vcol(cx, cz, 'bld', chunk)
     const W = this.frame(cx, cz, ry)
     g.box(len + 0.3, 0.75, depth + 0.3, { x: cx, y: y0, z: cz, ry, color: shade(color, 0.6) })
     const top = y0 + h
