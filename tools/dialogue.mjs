@@ -116,10 +116,13 @@ await page.keyboard.press('Digit1')
 await page.waitForFunction(() => document.querySelector('.dialog .paid .chip') || window.__talkDone, null, { timeout: 180000 }).catch(() => {})
 const paidNow = await ev(() => [...document.querySelectorAll('.dialog .paid .chip')].map((c) => c.textContent))
 await page.waitForFunction(() => document.querySelectorAll('.dialog .choice').length > 0 || window.__talkDone, null, { timeout: 180000 }).catch(() => {})
-await page.waitForTimeout(600) // choices take keys a moment after they appear (so the E that ended the line can't pick)
-const last = await ev(() => document.querySelectorAll('.dialog .choice').length)
-if (last > 0) await page.keyboard.press('Digit' + last)
-await page.waitForFunction(() => window.__talkDone, null, { timeout: 180000 }).catch(() => {})
+// choices take keys a moment after they appear (so the E that ended the line can't pick), and
+// under load that moment stretches: say goodbye (always the last choice) until the talk ends
+for (let k = 0; k < 40 && !(await ev(() => window.__talkDone)); k++) {
+  await page.waitForTimeout(1000)
+  const last = await ev(() => document.querySelectorAll('.dialog .choice').length)
+  if (last > 0) await page.keyboard.press('Digit' + last)
+}
 await page.waitForTimeout(700)
 r = await ev(async () => {
   const g = window.__game, T = window.__T
