@@ -89,7 +89,7 @@ export const SEMINTE = {
     await m.talk(JORA, fill(g, 'Nu se poate… Record nou! Respect, [[bratan|tanti]]. Na potul.'), 2.6)
     pr.addRespect('gop', 4, 'campion la semințe')
     payout(m, { aura: 100, lei: 20, why: 'Campion la semințe', title: 'RECORD NOU!', sub: `${best.toFixed(1).replace('.', ',')} m. Potul e al tău: 20 de lei.` })
-    g.side?.linger(m, [jora, ...lads], c)
+    g.side?.linger(m, [jora, ...lads], c, { lads: true })
     m.data.won = true
   },
 }

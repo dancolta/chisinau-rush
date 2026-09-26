@@ -539,9 +539,12 @@ export class Story {
         npc.lookAtPlayer = !h.anim || h.anim === 'idle'
         npc.castId = id
         npc.noCrime = true
+        // where and how they wait for the story (the yard's lads go back to it after a fight)
+        if (h.street) npc.castHome = { x: pos.x, z: pos.z, ry: pos.ry ?? 0, state: npc.state }
         this.cast[id] = npc
         this.npcs.push(npc)
-        if (h.talk) g.interaction.add({ id: 'talk_' + id, x: () => npc.pos.x, z: () => npc.pos.z, r: 2.6, label: () => this.acts.talkLabel(id) || `Vorbește cu ${SPEAKERS[id]?.name || id}`, enabled: () => !this.active && this.giverId !== id, onInteract: () => this.chat(id) })
+        // (not while a lad of the yard is mid-fight with you: see Hood.street)
+        if (h.talk) g.interaction.add({ id: 'talk_' + id, x: () => npc.pos.x, z: () => npc.pos.z, r: 2.6, label: () => this.acts.talkLabel(id) || `Vorbește cu ${SPEAKERS[id]?.name || id}`, enabled: () => !this.active && this.giverId !== id && !npc.hostile && !npc.char.ko, onInteract: () => this.chat(id) })
       } else if (!want && have) {
         g.interaction.remove('talk_' + id)
         this.removeNpc(have)

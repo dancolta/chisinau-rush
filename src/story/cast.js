@@ -25,6 +25,8 @@ const at = (place, dx = 0, dz = 0, ry = 0) => (P) => ({ x: P[place].x + dx, z: P
 
 // Persistent story characters: where they hang out and when they're around.
 // after: mission id that must be done; until: gone once this mission is done.
+// street: between missions they're the yard's own gopnik bench (Hood.syncCast): E talks to
+// them, they fight back, respect moves; in a mission they're cast again
 export const HOMES = {
   zina: {
     spec: 'zina', pos: at('banca_zina', 0, -0.35, Math.PI), anim: 'sit', talk: true, blip: 'Tanti Zina',
@@ -34,11 +36,11 @@ export const HOMES = {
           : ['Pâinea de la Linella e mai bună ca aia din Italia, să știi.', 'Uite-o pe asta de la etajul trei, iar și-a cumpărat blană. Din pensie, zice. Ha.'],
   },
   vitea: {
-    spec: 'gopnik1', pos: at('gopnici_curte', 0, 0, -0.6), anim: 'squat', talk: true, blip: 'Vitea',
+    spec: 'gopnik1', pos: at('gopnici_curte', 0, 0, -0.6), anim: 'squat', talk: true, blip: 'Vitea', street: true,
     chat: (g, s) => s.isDone('cursa') ? ['Jostko, bratan. Dacă vrei încă o cursă, zi. Pentru bani, normalno.'] : ['Șo te zgâiești, bratan? Ai o siga?', 'Noi stăm aici. Vedem tot. Da\' nu zicem nimic la nimeni. Ca la bancă.'],
   },
-  gop2: { spec: 'gopnik2', pos: at('gopnici_curte', 1.6, 0.9, -1.8), anim: 'squat', extra: true },
-  gop3: { spec: 'gopnik3', pos: at('gopnici_curte', -1.4, 1.2, 0.9), anim: 'phone', extra: true },
+  gop2: { spec: 'gopnik2', pos: at('gopnici_curte', 1.6, 0.9, -1.8), anim: 'squat', extra: true, street: true },
+  gop3: { spec: 'gopnik3', pos: at('gopnici_curte', -1.4, 1.2, 0.9), anim: 'phone', extra: true, street: true },
   vova: {
     spec: 'mecanic', pos: at('mecanic', 0, 0, 0), talk: true, blip: 'Vova (service)', after: 'paine',
     chat: (g, s) => s.isDone('taxi') ? ['Mașina bate? Adu-o aici, ți-o repar. Pentru tine, preț de prieten: tot ăla.'] : ['Jiguliul lui Vasile! Ăsta-i tanc, nu mașină.'],
