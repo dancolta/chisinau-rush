@@ -238,10 +238,20 @@ export class UI {
     setTimeout(() => { b.classList.add('out'); setTimeout(() => b.remove(), 600) }, 2600)
   }
 
-  overlay(text, secs = 2.5) {
-    const o = el('div', 'overlay-msg', `<div class="h">${text}</div>`)
+  // the big "WASTED"-style card: a dark band across the screen, the word slammed onto it; with
+  // gray the world drains to black and white, with slow it runs in slow motion underneath
+  overlay(text, secs = 2.5, { tone = 'red', gray = false, slow = 0 } = {}) {
+    const g = this.game, view = document.getElementById('viewport')
+    const o = el('div', `overlay-msg ${tone}`, `<div class="band"></div><div class="h">${text}</div>`)
     this.top.appendChild(o)
-    return new Promise((res) => setTimeout(() => { o.remove(); res() }, secs * 1000))
+    if (gray) view?.classList.add('drained')
+    const ts = g.timeScale
+    if (slow) g.timeScale = slow
+    return new Promise((res) => setTimeout(() => {
+      o.classList.add('out')
+      if (slow) g.timeScale = ts
+      setTimeout(() => { o.remove(); view?.classList.remove('drained'); res() }, 350)
+    }, secs * 1000))
   }
 
   // "hold to skip" ring shown during cutscenes

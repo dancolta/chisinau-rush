@@ -26,7 +26,7 @@ export const beciul = {
       g.police.clear()
       await m.wait(0.3)
       await m.fade(0, 800)
-      await g.ui.overlay('23:40', 1.2)
+      await g.ui.overlay('23:40', 1.2, { tone: 'white' })
     }
     // ---- the back yard -----------------------------------------------------------------------------
     const DOOR = { x: -100, z: -37.6 }
