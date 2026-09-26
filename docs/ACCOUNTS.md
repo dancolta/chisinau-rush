@@ -46,14 +46,14 @@ Good to know:
 
 ## Keeping the GitHub Pages version too
 
-GitHub Pages can't run the API. The Pages build hides **Cont** and plays exactly as before,
-unless it is built with `VITE_API_URL` pointing at the Vercel API:
+GitHub Pages can't run the API, so the Pages build talks to the Vercel one:
+`https://chisinau-rush.vercel.app/api` (`PAGES_API` in `src/net/Cloud.js`).
 
-1. GitHub → the repo → **Settings** → **Secrets and variables** → **Actions** → **Variables** →
-   **New repository variable**: `VITE_API_URL` = `https://<your-project>.vercel.app/api`
-2. Re-run the *Deploy to GitHub Pages* workflow (or push to `main`).
-3. `https://dancolta.github.io` is allowed by default. If you set `ALLOWED_ORIGINS` on Vercel,
-   include it there.
+- A different API: set the repository variable `VITE_API_URL` (GitHub → the repo →
+  **Settings** → **Secrets and variables** → **Actions** → **Variables**), then re-run the
+  *Deploy to GitHub Pages* workflow. `VITE_API_URL=off` builds Pages without accounts.
+- `https://dancolta.github.io` is allowed by default. If you set `ALLOWED_ORIGINS` on Vercel,
+  include it there.
 
 Saves in the browser belong to each site separately: a guest save made on github.io stays on
 github.io. Logging in on both is what carries the progress across.

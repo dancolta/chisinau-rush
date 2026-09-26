@@ -10,10 +10,14 @@
 // never came back (sent as the page closed).
 import { Progress } from '../gameplay/Progress.js'
 
-const ENV_API = String(import.meta.env.VITE_API_URL || '').trim()
+// GitHub Pages has no /api of its own: there the game uses the Vercel deployment's (which also
+// serves the whole game, with its /api next to it). VITE_API_URL at build time overrides both;
+// 'off' turns accounts off.
+const PAGES_API = 'https://chisinau-rush.vercel.app/api'
+const ON_PAGES = /\.github\.io$/i.test(location.hostname)
+const ENV_API = String(import.meta.env.VITE_API_URL || '').trim() || (ON_PAGES ? PAGES_API : '')
 export const API_BASE = ENV_API && ENV_API !== 'off' ? ENV_API.replace(/\/+$/, '') : '/api'
-// GitHub Pages has no /api of its own: accounts there need VITE_API_URL at build time
-export const CLOUD_ON = ENV_API !== 'off' && (!!ENV_API || !/\.github\.io$/i.test(location.hostname))
+export const CLOUD_ON = ENV_API !== 'off' && (!!ENV_API || !ON_PAGES)
 
 const AUTH_KEY = 'cr3d-auth'
 const SYNC_KEY = 'cr3d-sync'
