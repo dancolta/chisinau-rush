@@ -52,6 +52,10 @@ await ev(async () => {
   }
   const od = g.ui.dialogue.bind(g.ui)
   g.ui.dialogue = (sp, L, o) => { T.lines.push(`${sp?.name}: ${L.map((l) => (typeof l === 'string' ? l : l.text)).join(' | ')}`); return od(sp, L, o) }
+  // the progression layer's prizes (achievements, rank prizes, the daily bonus) would land in the
+  // middle of checks that count lei: on this street they don't
+  const add = g.progress.addLei.bind(g.progress)
+  g.progress.addLei = (n, reason = '') => (/^(🏆|⭐|🔥)/u.test(reason) ? undefined : add(n, reason))
 })
 await page.waitForTimeout(500)
 

@@ -83,6 +83,10 @@ await ev(async () => {
   T.busted = 0
   const obu = g.director.busted.bind(g.director)
   g.director.busted = () => { T.busted++; return obu() }
+  // the progression layer's prizes (achievements, rank prizes, the daily bonus) would land in the
+  // middle of checks that count lei: on this street they don't
+  const add = g.progress.addLei.bind(g.progress)
+  g.progress.addLei = (n, reason = '') => (/^(🏆|⭐|🔥)/u.test(reason) ? undefined : add(n, reason))
 })
 await page.waitForTimeout(300)
 let r
