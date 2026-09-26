@@ -29,6 +29,10 @@ export const ACTIONS = {
   enter: { dur: 0.45, rate: 18 },
   pickup: { dur: 0.6, rate: 18 },
   facepalm: { dur: 1.3, rate: 14 },
+  // held poses laid over whatever the body is doing (the player's own state is rewritten every
+  // frame): hands up for the police, on your heels with the lads; stop() lets go
+  surrender: { dur: 0.4, rate: 12, hold: true },
+  squatdown: { dur: 0.5, rate: 10, hold: true },
 }
 
 export class Animator {
@@ -61,6 +65,9 @@ export class Animator {
     if (name === 'knockdown') this.lieTgt = 1
     if (name === 'getup') this.lieTgt = 0
   }
+
+  // end a held pose (only that one, so a punch that replaced it isn't cut short)
+  stop(name) { if (this.action && (!name || this.action.name === name)) this.action = null }
 
   get busy() { return !!this.action && !this.action.hold }
 
@@ -158,7 +165,7 @@ export class Animator {
     const lean = 0.05 + run * 0.16 + sprint * 0.12
     this.pose('spine', lean, sn * (0.1 + run * 0.08), 0)
     this.pose('hips', 0, -sn * 0.12 * walkK, 0)
-    this.pose('head', -lean * 0.6, -sn * 0.05, 0)
+    this.pose('head', -lean * 0.6, -sn * 0.05 + this.lookYaw, 0)
     this.hipTgt = (Math.cos(ph * 2) * 0.025 - 0.015) * walkK - run * 0.04
   }
 
@@ -169,7 +176,7 @@ export class Animator {
     this.pose('legL', -1.72, 0.32, 0.14); this.pose('legR', -1.72, -0.32, -0.14)
     this.pose('shinL', 2.2); this.pose('shinR', 2.2)
     this.pose('spine', 0.55, 0, 0)
-    this.pose('head', -0.35 + Math.sin(t * 0.8) * 0.05, Math.sin(t * 0.3) * 0.4, 0)
+    this.pose('head', -0.35 + Math.sin(t * 0.8) * 0.05, Math.sin(t * 0.3) * 0.4 * (1 - Math.min(1, Math.abs(this.lookYaw) * 2)) + this.lookYaw, 0)
     this.pose('armL', -0.95, 0, 0.18); this.pose('armR', -0.95, 0, -0.18)
     const eat = Math.max(0, Math.sin(t * 1.3)) > 0.93
     this.pose('foreL', eat ? -2.1 : -0.55); this.pose('foreR', -0.55)
@@ -180,7 +187,7 @@ export class Animator {
     this.pose('legL', -1.5, 0, 0.05); this.pose('legR', -1.5, 0, -0.05)
     this.pose('shinL', 1.5); this.pose('shinR', 1.5)
     this.pose('spine', -0.06 + Math.sin(this.t * 1.6) * 0.02)
-    this.pose('head', 0.05, Math.sin(this.t * 0.25) * 0.35, 0)
+    this.pose('head', 0.05, Math.sin(this.t * 0.25) * 0.35 * (1 - Math.min(1, Math.abs(this.lookYaw) * 2)) + this.lookYaw, 0)
     this.pose('armL', -0.45, 0, 0.12); this.pose('armR', -0.45, 0, -0.12)
     this.pose('foreL', -0.55); this.pose('foreR', -0.55)
   }
@@ -200,7 +207,7 @@ export class Animator {
     this.idle()
     this.pose('armR', -0.25, 0.1, -0.55)
     this.pose('foreR', -2.35, 0, 0)
-    this.pose('head', 0.05, -0.2, -0.18)
+    this.pose('head', 0.05, -0.2 + this.lookYaw, -0.18)
     this.pose('armL', 0.05, 0, 0.25)
     this.pose('foreL', -1.4)
   }
@@ -382,6 +389,18 @@ export class Animator {
         this.pose('legL', -0.9 * s); this.pose('legR', -0.9 * s); this.pose('shinL', 1.5 * s); this.pose('shinR', 1.5 * s)
         this.pose('spine', 0.7 * s)
         this.pose('armR', -0.9 * s, 0, -0.1); this.pose('armL', -0.9 * s, 0, 0.1)
+        break
+      }
+      case 'surrender': {
+        const s = ease(k)
+        this.pose('armL', -0.2 * s, 0, 2.7 * s); this.pose('armR', -0.2 * s, 0, -2.7 * s)
+        this.pose('foreL', 0, 0, -0.3 * s); this.pose('foreR', 0, 0, 0.3 * s)
+        this.pose('head', 0.12 * s, Math.sin(this.t * 0.9) * 0.15, 0)
+        break
+      }
+      case 'squatdown': {
+        // the bone blend eases the body down on its own
+        this.squat()
         break
       }
     }

@@ -58,7 +58,7 @@ export class Combat {
     const halfArc = (w.arc ?? 1.2) / 2 + 0.25
     let hits = 0
     for (const t of this.targets()) {
-      if (t.state === 'knocked') continue
+      if (t.state === 'knocked' || t.ally) continue   // whoever's fighting on your side
       const dx = t.pos.x - p.pos.x, dz = t.pos.z - p.pos.z, d = Math.hypot(dx, dz)
       if (d > reach || Math.abs(t.pos.y - p.pos.y) > 1.6) continue
       const a = Math.abs(angleDiff(yaw, Math.atan2(dx, dz)))
@@ -131,6 +131,7 @@ export class Combat {
       g.ui?.damageFlash()
       g.fx?.hit(target.pos.x, target.pos.y + 1.4, target.pos.z)
       g.audio?.sfx(npc.personality === 'babushka' ? 'hit_body' : 'punch', { at: target.pos })
+      g.events.emit('player:hit', { by: npc, dmg })
     } else if (target.takeHit) {
       target.takeHit(dmg, npc.pos.x, npc.pos.z, 3, npc)
       g.audio?.sfx('punch', { at: target.pos })
@@ -151,6 +152,7 @@ export class Combat {
     g.cameraRig?.shake(0.6)
     g.ui?.damageFlash(0.8)
     g.audio?.sfx('hit_body', { vol: 1 })
+    g.events.emit('player:runover', { v, speed })
   }
 
   cycleWeapon(p) {

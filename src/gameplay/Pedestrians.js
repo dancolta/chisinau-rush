@@ -2,6 +2,21 @@ import { NPC, BUMPED, pickLine } from '../entities/NPC.js'
 import { BLOCKS, H_ROADS, V_ROADS, block } from '../world/CityLayout.js'
 import { randomCivilian, CAST } from '../data/outfits.js'
 
+// a kid from the blocks: short legs, a grown-up's head, a backpack half the time
+function kidSpec() {
+  const s = randomCivilian()
+  const girl = s.bottom?.style === 'skirt' || s.bottom?.style === 'dress' || ['long', 'ponytail', 'bun'].includes(s.hair?.style)
+  Object.assign(s, { height: 0.6 + Math.random() * 0.1, width: 0.8, belly: 0, headScale: 1.04 })
+  for (const k of ['mustache', 'beard', 'glasses', 'sunglasses', 'hold', 'bag']) delete s[k]
+  if (s.hat?.style === 'basma' || s.hat?.style === 'kepka') delete s.hat
+  if (s.hair?.style === 'bald') s.hair.style = 'short'
+  if (s.hair) s.hair.color = [0x2a1c12, 0x5a3a22, 0x7a5a3a, 0xc8a060][Math.floor(Math.random() * 4)]
+  if (s.top?.style === 'suit' || s.top?.style === 'coat') s.top = { style: 'jacket', color: [0xc8102e, 0x2a5aa8, 0x3a8a3a, 0xe6b84a][Math.floor(Math.random() * 4)], shirt: 0xf2f2f2 }
+  if (Math.random() < 0.5) s.backpack = [0xc8102e, 0x2a5aa8, 0xe6b84a, 0x8a3ab8][Math.floor(Math.random() * 4)]
+  if (girl) s.stockings = 0xe8d8c8
+  return s
+}
+
 // Sidewalk graph + ambient crowd management + car/pedestrian collisions.
 export class Pedestrians {
   constructor(game) {
@@ -101,6 +116,7 @@ export class Pedestrians {
       const zone = n.block.zone
       const bloc = zone === 'soviet' || zone === 'acasa' || zone === 'garaje'
       if (bloc && Math.random() < 0.2) { spec = CAST[['gopnik1', 'gopnik2', 'gopnik3'][Math.floor(Math.random() * 3)]]; opts = { personality: 'tough', archetype: 'gopnik' } }
+      else if (Math.random() < 0.07 && this.list.filter((q) => q.archetype === 'kid').length < 4) { spec = kidSpec(); opts = { personality: 'coward', archetype: 'kid', walkSpeed: 1.5, hp: 25, voice: { pitch: 1.5 + Math.random() * 0.25, type: 'female' } } }
       else if (!bloc && Math.random() < 0.05 && !this.game.police?.level && this.list.filter((q) => q.personality === 'cop').length < 2) {
         spec = CAST.cop; opts = { personality: 'cop', archetype: 'cop', hp: 60, walkSpeed: 1.15, voice: { pitch: 0.85 + Math.random() * 0.2, type: 'gruff' } }
       }
@@ -123,10 +139,13 @@ export class Pedestrians {
     return npc
   }
 
-  // everyone near a violent event runs (or joins in, if they're the type)
+  // everyone near a violent event runs (or joins in, if they're the type); most grannies stay
+  // put and give you a piece of their mind instead
   panic(pos, source, radius) {
+    this.game.crowd?.scold(pos)
     for (const n of this.list) {
-      if (n.state === 'knocked' || n.state === 'fight' || n.personality === 'cop') continue
+      if (n.state === 'knocked' || n.state === 'fight' || n.personality === 'cop' || n.crew) continue
+      if (n.archetype === 'babushka' && Math.random() < 0.7) continue
       const d2 = (n.pos.x - pos.x) ** 2 + (n.pos.z - pos.z) ** 2
       if (d2 < radius * radius && Math.random() < 0.85) n.flee(pos)
     }

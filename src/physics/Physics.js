@@ -191,6 +191,9 @@ export class Physics {
     cc.setMinSlopeSlideAngle((60 * Math.PI) / 180)
     cc.setApplyImpulsesToDynamicBodies(true)
     cc.setCharacterMass(80)
+    // the default nudge (1e-4) lets the capsule settle a hair inside the big block slabs, and
+    // from there every step reads the slab's top as a wall: the walk on grass and pavement stutters
+    cc.setNormalNudgeFactor(0.01)
     return cc
   }
 }

@@ -27,7 +27,7 @@ body { font-family: var(--body); color: var(--paper); -webkit-font-smoothing: an
 
 .boot { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #0b0a10; transition: opacity 0.8s ease; }
 .boot.hide { opacity: 0; pointer-events: none; }
-.boot-art { position: absolute; inset: 0; background: url('/title-art.jpg') center / cover no-repeat; image-rendering: pixelated; transform: scale(1.04); animation: bootpan 22s ease-in-out infinite alternate; }
+.boot-art { position: absolute; inset: 0; background: #0b0a10 center / cover no-repeat; transform: scale(1.04); animation: bootpan 22s ease-in-out infinite alternate; }
 .boot-shade { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 60%, rgba(10, 8, 14, 0.2), rgba(10, 8, 14, 0.85) 70%), linear-gradient(180deg, rgba(10, 8, 14, 0.1), rgba(10, 8, 14, 0.9)); }
 .boot-inner { position: relative; width: min(560px, 86vw); text-align: center; margin-top: 30vh; }
 .boot-logo { font-family: var(--title); font-size: clamp(48px, 9vw, 104px); letter-spacing: 3px; color: var(--gold); text-shadow: 0 5px 0 #6a2412, 0 10px 30px rgba(0, 0, 0, 0.6); line-height: 0.95; }

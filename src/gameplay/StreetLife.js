@@ -1,9 +1,12 @@
 import { GOP, BAB, CIV, COP, PAIRS, FILM } from '../data/streettalk.js'
 import { fill } from '../story/hero.js'
+import { Hood } from './Hood.js'
+import { Crowd } from './Crowd.js'
 
-// The street's own behaviour around you: gopnik benches that shout at you (or shake you down
-// when they don't know you), whole-bench fights, people filming a brawl on their phones, two
-// neighbours stopping to gossip, grannies who feed the grandchild they've adopted, bumps.
+// The street's own behaviour around you: whole-bench fights, people filming a brawl on their
+// phones, two neighbours stopping to gossip, grannies who feed the grandchild they've adopted,
+// bumps, and what happened to you (for the police report). The gopnik benches themselves live
+// in Hood.
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)]
 
@@ -14,9 +17,11 @@ export class StreetLife {
     this.chats = []
     this.filmers = []
     this.angryList = []
-    this.shake = null
+    this.incidents = []
     this.nearT = 0
     this.chatT = 2
+    this.hood = game.hood = new Hood(game)
+    this.crowd = game.crowd = new Crowd(game)
     const ev = game.events
     ev.on('npc:hit', (e) => this.onHit(e))
     ev.on('player:down', () => { for (const f of this.fights) f.lost = true })
@@ -24,6 +29,16 @@ export class StreetLife {
 
   fill(s, vars) { return fill(this.game, s, vars) }
   story() { const a = this.game.story.active; return !!(a && !a.def.activity) }
+  // a bench's man on his way over or talking to you (the old shakedown)
+  get shake() { return this.hood.enc }
+  shakeTalk(s, n) { return this.hood.tollNow(s, n) }
+
+  // something done to you, for the police report (the last few, a few game minutes each)
+  incident(kind, data = {}) {
+    this.incidents = this.incidents.filter((i) => !i.reported).slice(-3)
+    this.incidents.push({ kind, ...data, t: this.hood.clock, reported: false })
+  }
+  openIncident() { return this.incidents.find((i) => !i.reported && this.hood.clock - i.t < 600) || null }
 
   // ---- fights with a whole bench ------------------------------------------------------------------
   gopMates(n) {
@@ -102,6 +117,8 @@ export class StreetLife {
       pr.addXp(40, 'Bătaie de cartier')
       pr.addCred(2)
     } else pr.addRespect('gop', -3, how === 'fled' ? 'ai fugit' : 'ai pierdut bătaia')
+    // they started it and you lost: that's one for the police report
+    if (how === 'lost' && !f.provoked) this.incident('beaten')
     g.events.emit('street:fight', { how, n: f.members.length })
   }
 
@@ -134,7 +151,7 @@ export class StreetLife {
 
   onHit({ npc, attacker }) {
     const g = this.game
-    if (!npc || attacker !== g.player) return
+    if (!npc || attacker !== g.player || npc.ally) return
     const now = performance.now()
     if (npc.archetype === 'babushka' && now > (this.babHitT || 0)) { this.babHitT = now + 3000; g.progress.addRespect('bab', -8, 'ai lovit o bunică') }
     if (npc.personality === 'cop' && now > (this.copHitT || 0)) { this.copHitT = now + 3000; g.progress.addRespect('pol', -10) }
@@ -225,6 +242,8 @@ export class StreetLife {
       if (tier === 0 && Math.random() < 0.25 && !this.story()) { n.say(this.fill(pick(GOP.bumpAngry)), 2.4); this.groupFight(this.gopMates(n), { provoked: false }); return }
       n.say(this.fill(pick(tier >= 2 ? GOP.bumpFriend : GOP.bump)), 2.4)
     } else if (a === 'cop') n.say(pick(COP.bump), 2.2)
+    // a second shove soon after: remembered, and maybe one shove too many
+    else if (this.game.crowd?.shoved(n)) return
     else if (a === 'babushka') n.say(pick(['Obraznicule!', 'Uită-te pe unde mergi, maică!', 'Vai de capul tău!']), 2.2)
     else if (Math.random() < 0.6) n.say(pick(CIV.bump), 2.2)
   }
@@ -235,18 +254,6 @@ export class StreetLife {
     if (p.vehicle || g.ui.modalOpen || g.cutscene || p.char.ko || !p.control) return
     const now = performance.now()
     const tier = pr.tier('gop')
-    for (const s of g.ambient.spots) {
-      if (!s.npcs || s.archetype !== 'gopnik') continue
-      const d = Math.hypot(s.x - p.pos.x, s.z - p.pos.z)
-      if (d > 14 || this.fights.some((f) => f.members.some((m) => s.npcs.includes(m)))) continue
-      // they don't know you: the toll for walking through their yard
-      if (tier === 0 && d < 9 && !this.shake && s.shakeDay !== g.street.day && !this.story() && g.story.isDone('paine') && g.police.level === 0 && !g.crew.list.length) { this.startShake(s); continue }
-      if (now > (s.barkT || 0) && d < 12) {
-        s.barkT = now + 22000 + Math.random() * 15000
-        const m = pick(s.npcs.filter((n) => !n.char.ko && n.state !== 'fight' && n.state !== 'walk'))
-        if (m) m.say(this.fill(pick(GOP.bark[tier])), 2.6)
-      }
-    }
     // grannies who've adopted you
     if (pr.tier('bab') >= 2) {
       for (const n of g.ambient.npcs) {
@@ -270,55 +277,6 @@ export class StreetLife {
     }
   }
 
-  // ---- the shakedown ---------------------------------------------------------------------------------------------
-  startShake(s) {
-    const g = this.game, p = g.player
-    s.shakeDay = g.street.day
-    const lead = s.npcs.find((n) => !n.char.ko && n.state !== 'fight' && n.archetype === 'gopnik')
-    if (!lead) return
-    this.shake = { s, lead, t: 0, re: 0 }
-    lead.say(this.fill('Ei, [[bratan|tanti]]! Stai. Vino-ncoace.'), 2.4)
-    lead.walkTo(p.pos.x, p.pos.z)
-  }
-
-  updateShake(dt) {
-    const sh = this.shake
-    if (!sh) return
-    const g = this.game, p = g.player, n = sh.lead
-    sh.t += dt
-    if (n.disposed || n.char.ko || n.state === 'fight' || this.story()) { this.shake = null; return }
-    const d = Math.hypot(n.pos.x - p.pos.x, n.pos.z - p.pos.z)
-    // walked on before he got to you
-    if (d > 16 || p.vehicle) { this.shake = null; n.say(this.fill(pick(GOP.fled)), 2.4); this.goHome(n); return }
-    if (d > 1.9 && sh.t < 7) {
-      sh.re -= dt
-      if (sh.re <= 0) { sh.re = 0.4; n.walkTo(p.pos.x, p.pos.z) }
-      return
-    }
-    if (g.ui.modalOpen || g.cutscene || g.street?.talking) return
-    this.shake = null
-    this.shakeTalk(sh.s, n)
-  }
-
-  async shakeTalk(s, n) {
-    const g = this.game, pr = g.progress, p = g.player
-    n.path = []; n.state = 'talk'; n.vel.set(0, 0, 0)
-    n.char.lookAtNow(p.pos.x, p.pos.z); p.char.lookAtNow(n.pos.x, n.pos.z)
-    // the flashier your clothes, the higher the toll
-    const rich = pr.look?.rich || 0
-    const fee = 10 + rich * 15
-    const ask = rich >= 2 ? `Stai, stai. Cu așa haine, și ${fee} de lei ai. Taxă de drum, [[bratan|tanti]].` : pick(GOP.shake)
-    const i = await g.ui.dialogue(g.street.speaker(n), [this.fill(ask)], { choices: [
-      { text: `Na, ${fee} lei. Să fie pace.`, cost: `${fee} lei`, disabled: pr.lei < fee },
-      { text: this.fill('N-am, [[bratan|băieți]]. Pe bune.') },
-      { text: 'Vă bat pe toți. Pe rând sau deodată?', cost: '👊' },
-    ] })
-    if (n.disposed) return
-    if (i === 0 && pr.spend(fee)) { pr.addRespect('gop', 1); n.say(this.fill(pick(GOP.shakePaid)), 3); this.goHome(n) }
-    else if (i === 1 && Math.random() < 0.35 + pr.cred / 100) { n.say(this.fill(pick(GOP.shakeTalked)), 3); this.goHome(n) }
-    else { this.groupFight(s.npcs?.filter((m) => m.archetype === 'gopnik') || [n], { provoked: i === 2 }); n.say(this.fill(pick(GOP.shakeFight)), 2.6) }
-  }
-
   // ---- per frame ----------------------------------------------------------------------------------------------------
   update(dt) {
     const g = this.game
@@ -327,7 +285,8 @@ export class StreetLife {
     this.updateAngry(dt)
     this.updateFilmers(dt)
     this.updateChats(dt)
-    this.updateShake(dt)
+    this.hood.update(dt)
+    this.crowd.update(dt)
     this.nearT -= dt
     if (this.nearT <= 0) { this.nearT = 0.5; this.updateNear() }
     this.chatT -= dt

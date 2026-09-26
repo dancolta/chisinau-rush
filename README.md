@@ -4,7 +4,7 @@
 
 > De la *plecat peste hotare* la *primar*. Un oraș, o sută de gropi, un primar care vorbește prea des la telefon.
 
-Runs in the browser. No install, no account.
+Runs in the browser. No install; an account is optional (it keeps your save in the cloud, for playing on another device).
 
 ## Play
 
@@ -15,6 +15,10 @@ npm run build      # static build in dist/ (deployable anywhere, e.g. GitHub Pag
 ```
 
 Every push to `main` builds and publishes the game to GitHub Pages (`.github/workflows/deploy.yml`).
+
+**Accounts and cloud saves** (email + password, saves in Neon Postgres) run on Vercel: the static
+build plus the functions in `/api`. Launch steps, env vars and local dev: [docs/ACCOUNTS.md](docs/ACCOUNTS.md).
+Locally: `npm run api` next to `npm run dev`.
 
 ### Controls
 
@@ -51,7 +55,9 @@ Every clue you find becomes an **evidence card** (6 in total) that you bring to 
 
 Taxi shifts (`T` in any taxi), street races for money with Vitea, Andy's Pizza deliveries, filling potholes (hold `E`), 30 lost dossiers to collect and sell to Borea, Borea's shop (weapons, fake papers, nitro), Vova's garage (repairs, a free taxi). Seven ranks from *Plecat peste hotare* to *Primar de Chișinău*.
 
-The city also throws things at you between missions: a trolleybus that lost its poles, a granny whose shopping bags need carrying home, a purse snatcher to chase down.
+### AURA and the street
+
+Everything cool you do on the street earns **AURA** (*+54 AURA · bătaie de cartier câștigată*), everything cringe costs it (*−60 AURA · te-a bătut o bunică*); chain cool moments for a streak multiplier. AURA levels take you from *NPC de fundal* to *Nașul Chișinăului* and pay out lei, clothes nobody sells, weapons and perks. Car stunts (drifts, near misses, wrong-way runs, airtime) chain into combos, three **daily challenges** give every session a to-do list, and the neighbours' Viber group announces **street events** every few minutes of free roam: trolleybus 22 off its wires, a wedding without a DJ (dance the hora on the arrow keys), a pigeon that stole a plăcintă, a race against rutiera 117, parking on the pavement like a deputy, a Lada in a pothole, the courtyard seed-spitting championship, a granny's shopping bags, a purse snatcher. The **Aură** tab in the pause menu shows the ladder and the day's challenges. Design notes: [docs/SIDE_CONTENT.md](docs/SIDE_CONTENT.md).
 
 ### Systems
 
@@ -72,12 +78,17 @@ Open city with ~40 landmarks (PMAN, Casa Guvernului, Arcul de Triumf, Catedrala,
 ```bash
 node tools/play.mjs --from rapirea --turbo 6     # automated story playthrough (headless Chromium)
 node tools/systems.mjs                          # side systems checks (busted, shop, taxi, save…)
+node tools/aura.mjs                             # AURA, levels, stunts, daily challenges, street events
 node tools/shot.mjs --out shot.png --eval "…"   # screenshots
 node tools/gallery.mjs --missions eban,mitingul    # capture every cutscene of the given missions
 node tools/views.mjs --out views --only night,play_day  # fixed review shots (day, dusk, night, gameplay camera)
+node tools/api-dev.mjs                          # the /api functions locally (PGlite), what `npm run api` runs
+node tools/api-test.mjs [--neon]                # API handler checks (auth, saves, limits, CORS)
+node tools/account.mjs [--shots dir]            # accounts end to end: sign-up, sync, conflicts, logout
+node tools/trailer.mjs --format both               # the 18 s teaser (16:9 + 9:16), rendered offline frame by frame
 ```
 
-`?turbo=4` speeds up the simulation in dev builds; `?touch` forces touch controls on desktop.
+`?turbo=4` speeds up the simulation in dev builds; `?touch` forces touch controls on desktop; `?capture` stops the frame loop and advances the game (clock, timers, CSS animations) only through `window.__cap.step(dt)`, for offline video capture.
 
 ## Credits
 

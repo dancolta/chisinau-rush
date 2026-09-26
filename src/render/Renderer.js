@@ -209,10 +209,12 @@ export class Renderer {
     L.target.updateMatrixWorld()
   }
 
-  render(dt) {
+  // draw = false only moves the shader clocks on (offline capture fast-forwarding a scene)
+  render(dt, draw = true) {
     this.sky.follow(this.camera)
     SHARED.uTime.value += dt
     this.sky.uniforms.uTime.value += dt
+    if (!draw) return
     this.renderer.info.reset()
     if (this.composer) this.composer.render(dt)
     else this.renderer.render(this.scene, this.camera)

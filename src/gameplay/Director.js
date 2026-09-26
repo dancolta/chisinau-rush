@@ -71,6 +71,7 @@ export class Director {
     if (g.home) out.push(...g.home.blips())
     if (g.wardrobe) out.push(...g.wardrobe.blips())
     if (g.crew) out.push(...g.crew.blips())
+    if (g.side) out.push(...g.side.blips())
     if (g.police) {
       for (const o of g.police.officers) if (!o.char.ko) out.push({ kind: 'police', x: o.pos.x, z: o.pos.z })
       for (const c of g.police.cars) out.push({ kind: 'police', x: c.v.pos.x, z: c.v.pos.z })
@@ -113,7 +114,8 @@ export class Director {
     const p = g.player
     p.control = false
     if (p.vehicle) p.vehicle.throttle = 0
-    p.char.anim.set('handsup')
+    // a held pose: the player's own animation state is rewritten every frame
+    if (!p.vehicle) p.char.anim.play('surrender')
     g.audio?.sting('busted')
     const sgt = { name: 'Sergentul', role: 'Poliția Chișinău', spec: CAST.cop, id: 'cop_generic', voice: { pitch: 0.85, type: 'gruff' } }
     const bribe = Math.round((30 + lvl * 45) * (pr.tier('pol') >= 3 ? 0.5 : 1))
@@ -125,25 +127,28 @@ export class Director {
     ]
     if (actsFalse) choices.unshift({ text: 'Arăți „actele" de la Borea', cost: 'acte false' })
     let i = await g.ui.dialogue(sgt, [lvl >= 3 ? 'Stai pe loc! Mâinile pe capotă! Tu știi cât m-ai alergat?!' : 'Documentele. Știți de ce v-am oprit?'], { choices })
-    if (actsFalse) { if (i === 0) { pr.flags.acteFalse = false; await g.ui.dialogue(sgt, ['…Totul e în regulă, domnule deputat. Scuzați deranjul. Drum bun!']); g.police.clear(); this.release(); return } i-- }
+    if (actsFalse) { if (i === 0) { pr.flags.acteFalse = false; await g.ui.dialogue(sgt, ['…Totul e în regulă, domnule deputat. Scuzați deranjul. Drum bun!']); g.police.clear(); g.events.emit('police:deal', { how: 'papers' }); this.release(); return } i-- }
     if (i === 0) {
       pr.spend(bribe); pr.stats.bribes++
       await g.ui.dialogue(sgt, ['Hm. Cafeaua e bună azi. Circulați, circulați.'])
       g.police.clear()
+      g.events.emit('police:deal', { how: 'bribe' })
     } else if (i === 1) {
       const chance = 0.25 + pr.civic / 250 + (pr.respect?.pol || 0) / 250 + (pr.type === 'conductor' ? 0.25 : 0) - lvl * 0.06
-      if (Math.random() < chance) { await g.ui.dialogue(sgt, ['…Bine, bine. Ai noroc că-s bine dispus azi. Să nu te mai văd!']); g.police.clear() }
+      if (Math.random() < chance) { await g.ui.dialogue(sgt, ['…Bine, bine. Ai noroc că-s bine dispus azi. Să nu te mai văd!']); g.police.clear(); g.events.emit('police:deal', { how: 'talk' }) }
       else {
         const fine = Math.min(pr.lei, 60 + lvl * 40)
         await g.ui.dialogue(sgt, [`Frumos vorbești. Amendă: ${fine} lei. Și plimbare până la secție.`])
         pr.addLei(-fine, 'Amendă la poliție')
         pr.stats.busted++
+        g.events.emit('police:deal', { how: 'jail' })
         g.story.failActive('Ai fost reținut de poliție.')
         await this.jail()
         return
       }
     } else {
       g.police.addHeat(20)
+      g.events.emit('police:deal', { how: 'run' })
       g.cameraRig.shake(0.3)
       g.ui.notify('{r}Fugi!{/r}', 2, 'red')
       for (const o of g.police.officers) if (o.pos.distanceTo(p.pos) < 3) o.stun = 1.2
@@ -154,7 +159,7 @@ export class Director {
   release() {
     const p = this.game.player
     p.control = true
-    p.char.anim.set('idle')
+    p.char.anim.stop('surrender')
     this.game.input.clear()
   }
 

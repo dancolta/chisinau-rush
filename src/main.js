@@ -15,7 +15,10 @@ const boot = document.getElementById('boot')
 const fill = document.getElementById('boot-fill')
 const status = document.getElementById('boot-status')
 const tip = document.getElementById('boot-tip')
-document.querySelector('.boot-art').style.backgroundImage = `url(${BASE}title-art.jpg)`
+// loading art: a still rendered by the game itself (tools/trailer.mjs), so it looks like what
+// you're about to play; a different one each time
+const KEYART = ['oras', 'bulevard', 'taxi', 'bere', 'bataie', 'urmarire']
+document.querySelector('.boot-art').style.backgroundImage = `url(${BASE}keyart/${KEYART[Math.floor(Math.random() * KEYART.length)]}.jpg)`
 
 let tipIdx = Math.floor(Math.random() * TIPS.length)
 tip.textContent = TIPS[tipIdx]

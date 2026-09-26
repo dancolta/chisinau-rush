@@ -7,8 +7,11 @@ import { QUALITY } from '../render/Renderer.js'
 import { WEAPONS } from '../data/weapons.js'
 import { fmt } from './UI.js'
 import { WORLD } from '../world/CityLayout.js'
+import { padNav } from './Nav.js'
+import { renderAccount, openAccountScreen, chooseSave, cloudStatus, saveLine } from './Account.js'
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e }
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 
 // big map: short names, and which labels win when they'd collide (higher first)
 const MAP_NAME = {
@@ -39,6 +42,8 @@ export class Menus {
     this.ui = ui
     this.layer = ui.top
     this.open = null
+    // the cloud found two different saves: the player picks (see Account.js)
+    game.cloud?.setResolver((local, cloud) => chooseSave(game, local, cloud))
   }
 
   // ---- title screen ---------------------------------------------------------------------
@@ -47,35 +52,82 @@ export class Menus {
     this.close()
     g.state = 'menu'
     this.ui.showHud(false)
-    const save = Progress.hasSave()
     const m = el('div', 'mainmenu', `
       <div class="side">
         <div class="mm-logo">CHIȘINĂU<span>RUSH</span></div>
         <div class="mm-tag">De la <b class="y">plecat peste hotare</b> la <b class="y">primar</b>. Un oraș, o sută de gropi, un primar care vorbește prea des la telefon.</div>
         <div class="mm-btns"></div>
-        ${save ? `<div class="mm-save">Salvare: ${save.name} · ${RANKS[save.rankIdx || 0].name} · ${new Date(save.t).toLocaleString('ro-RO')}</div>` : ''}
+        <div class="mm-save"></div>
+        <div class="mm-cloud"></div>
         <div class="mm-foot">W/S mers · A/D rotire · Shift sprint · E acțiune · Click/J lovește · Space sari / frână · Q armă · V cameră · M hartă · Esc pauză<br>Asset-uri CC0: KayKit (Kay Lousberg), Kenney. Satiră. Orice asemănare cu primari reali e… lucrăm la asta.</div>
       </div><div></div>`)
     const btns = m.querySelector('.mm-btns')
-    const add = (label, cls, fn) => { const b = el('button', 'btn ' + cls, label); b.onclick = () => { g.audio?.resume(); g.audio?.sfx('confirm', { bus: 'ui' }); fn() }; b.onmouseenter = () => g.audio?.sfx('hover', { bus: 'ui', vol: 0.4 }); btns.appendChild(b); return b }
-    if (save) add('▶  Continuă', 'primary', () => g.director.continueGame(save))
-    add(save ? '＋  Joc nou' : '▶  Joc nou', save ? '' : 'primary', async () => {
-      if (save && !(await this.confirm('Începi un joc nou?', 'Salvarea curentă se pierde. Tanti Zina o să uite tot. Și ea uită greu.'))) return
-      this.showCreate()
-    })
-    add('⚙  Setări', '', () => this.showSettingsOnly())
+    const add = (label, cls, fn) => { const b = el('button', 'btn ' + cls, label); b.onclick = () => { g.audio?.resume(); g.audio?.sfx('confirm', { bus: 'ui' }); fn(b) }; b.onmouseenter = () => g.audio?.sfx('hover', { bus: 'ui', vol: 0.4 }); btns.appendChild(b); return b }
+    // buttons and save line follow the save on disk, which the cloud can swap while we're here
+    let shown = null
+    const paint = () => {
+      const save = Progress.hasSave(), cloud = g.cloud
+      const key = [save?.t, cloud?.loggedIn, cloud?.email].join('|')
+      if (key !== shown) {
+        shown = key
+        btns.innerHTML = ''
+        if (save) add('▶  Continuă', 'primary', (b) => this.continueSaved(b))
+        add(save ? '＋  Joc nou' : '▶  Joc nou', save ? '' : 'primary', async () => {
+          // the boot sync may still be bringing a save from the cloud: know before starting over
+          await cloud?.ready()
+          const lost = cloud?.loggedIn ? 'Salvarea curentă se pierde, și cea din cloud.' : 'Salvarea curentă se pierde.'
+          if (Progress.hasSave() && !(await this.confirm('Începi un joc nou?', `${lost} Tanti Zina o să uite tot. Și ea uită greu.`))) return
+          this.showCreate()
+        })
+        if (cloud?.enabled) add(cloud.loggedIn ? '☁  Cont' : '👤  Cont', 'acct-btn', () => this.showAccount())
+        add('🎬  Trailer', '', () => this.showTrailer())
+        add('⚙  Setări', '', () => this.showSettingsOnly())
+        m.querySelector('.mm-save').innerHTML = save ? `Salvare: ${saveLine(save)} · ${new Date(save.t).toLocaleString('ro-RO')}` : ''
+      }
+      const st = cloud?.loggedIn ? cloudStatus(cloud) : null
+      const line = m.querySelector('.mm-cloud')
+      line.className = 'mm-cloud ' + (st ? st.tone : '')
+      line.innerHTML = st ? `<i></i>${esc(cloud.email)} · ${esc(st.text)}` : ''
+    }
+    paint()
+    this.offCloud = g.cloud?.on(() => { if (this.open === m) paint() })
+    this.mainClock = setInterval(() => { if (this.open === m) paint() }, 20000)
+    this.stopNav = padNav(g, btns)
     this.layer.appendChild(m)
     this.open = m
     this.startFlyover()
     g.audio?.music('menu')
     g.audio?.ambience('city')
+    // back from a reload that switched to the cloud save: straight into the game
+    let resume = false
+    try { resume = sessionStorage.getItem('cr3d-continue') === '1'; sessionStorage.removeItem('cr3d-continue') } catch (e) { /* no session storage */ }
+    if (resume && Progress.hasSave()) this.continueSaved()
+  }
+
+  // Continue: a logged-in player waits (briefly) for the boot sync, so the right save loads
+  async continueSaved(btn) {
+    const g = this.game
+    if (this.starting) return
+    this.starting = true
+    if (g.cloud?.busy && btn) btn.textContent = '☁  Se sincronizează…'
+    await g.cloud?.ready()
+    this.starting = false
+    const save = Progress.hasSave()
+    if (save) g.director.continueGame(save)
+    else this.showMain()
+  }
+
+  showAccount() {
+    if (this.closeAccount) return
+    this.closeAccount = openAccountScreen(this.game, { onClose: () => { this.closeAccount = null } })
   }
 
   confirm(title, text) {
     return new Promise((res) => {
       const d = el('div', 'confirm', `<div class="box"><h3>${title}</h3><p>${text}</p><div class="row"><button class="btn danger yes">Da</button><button class="btn primary no">Nu</button></div></div>`)
       this.layer.appendChild(d)
-      const done = (v) => { d.remove(); this.game.audio?.sfx(v ? 'confirm' : 'back', { bus: 'ui' }); res(v) }
+      const stop = padNav(this.game, d, { back: () => { done(false); return true } })
+      const done = (v) => { stop(); d.remove(); this.game.audio?.sfx(v ? 'confirm' : 'back', { bus: 'ui' }); res(v) }
       d.querySelector('.yes').onclick = () => done(true)
       d.querySelector('.no').onclick = () => done(false)
     })
@@ -187,32 +239,67 @@ export class Menus {
     g.audio?.duck(0.35, 0.3)
     const m = el('div', 'pause', `
       <div class="top"><h1>PAUZĂ</h1><div class="tabs">
-        <button data-t="map">Hartă</button><button data-t="missions">Misiuni</button><button data-t="char">Personaj</button><button data-t="controls">Controale</button><button data-t="settings">Setări</button></div></div>
+        <button data-t="map">Hartă</button><button data-t="missions">Misiuni</button><button data-t="char">Personaj</button><button data-t="aura">Aură</button><button data-t="controls">Controale</button><button data-t="settings">Setări</button>${g.cloud?.enabled ? '<button data-t="account">Cont</button>' : ''}</div></div>
       <div class="body"></div>
       <div class="foot"><button class="btn primary resume">▶ Continuă</button><button class="btn save">💾 Salvează</button><button class="btn danger quit">Meniu principal</button></div>`)
     this.layer.appendChild(m)
     this.open = m
     const body = m.querySelector('.body')
     const tabs = [...m.querySelectorAll('.tabs button')]
+    let cur = tab
     const show = (t) => {
+      cur = t
       tabs.forEach((b) => b.classList.toggle('on', b.dataset.t === t))
+      this.tabOff?.(); this.tabOff = null
       body.innerHTML = ''
       if (t === 'map') this.renderMap(body)
       else if (t === 'missions') this.renderMissions(body)
       else if (t === 'char') this.renderChar(body)
+      else if (t === 'aura') g.side?.renderPause(body)
       else if (t === 'controls') this.renderControls(body)
+      else if (t === 'account') this.renderAccountTab(body)
       else this.renderSettings(body)
       g.audio?.sfx('click', { bus: 'ui' })
     }
     tabs.forEach((b) => (b.onclick = () => show(b.dataset.t)))
+    // gamepad: LB / RB flip through the tabs
+    let prev = g.input.padState()
+    this.pauseTimer = setInterval(() => {
+      const pad = g.input.padState()
+      const edge = (i) => pad && pad.b[i] && !(prev && prev.b[i])
+      const i = tabs.findIndex((b) => b.dataset.t === cur)
+      if (edge(4)) show(tabs[(i - 1 + tabs.length) % tabs.length].dataset.t)
+      if (edge(5)) show(tabs[(i + 1) % tabs.length].dataset.t)
+      prev = pad
+    }, 50)
     m.querySelector('.resume').onclick = () => this.closePause()
-    m.querySelector('.save').onclick = () => { g.progress.save(); this.ui.notify('Joc salvat.', 2, 'green'); g.audio?.sfx('confirm', { bus: 'ui' }) }
+    m.querySelector('.save').onclick = () => {
+      g.progress.save()
+      g.cloud?.flush()
+      this.ui.notify(g.cloud?.loggedIn ? 'Joc salvat. ☁ Pleacă și în cloud.' : 'Joc salvat.', 2, 'green')
+      g.audio?.sfx('confirm', { bus: 'ui' })
+    }
     m.querySelector('.quit').onclick = () => { g.progress.save(); location.reload() }
     show(tab)
   }
 
+  // pause menu "Cont": Esc in a field only leaves the field; B leaves the pause menu
+  renderAccountTab(body) {
+    const col = el('div', 'col acct-col')
+    body.appendChild(col)
+    this.tabOff = renderAccount(this.game, col, {
+      back: (source, typing) => {
+        if (typing) { document.activeElement.blur(); return true }
+        if (source === 'pad') { this.closePause(); return true }
+        return false
+      },
+    })
+  }
+
   closePause() {
     const g = this.game
+    this.tabOff?.(); this.tabOff = null
+    clearInterval(this.pauseTimer)
     if (this.open) this.open.remove()
     this.open = null
     g.paused = false
@@ -221,7 +308,13 @@ export class Menus {
     g.input.clear()
   }
 
-  close() { if (this.open) { this.open.remove(); this.open = null } }
+  close() {
+    if (this.open) { this.open.remove(); this.open = null }
+    this.offCloud?.(); this.offCloud = null
+    clearInterval(this.mainClock)
+    this.stopNav?.(); this.stopNav = null
+    this.closeAccount?.()
+  }
 
   renderMap(body) {
     const g = this.game
@@ -415,15 +508,36 @@ export class Menus {
     slider('brightness', 'Luminozitate', 0.8, 1.6, 0.05)
   }
 
+  // the teaser, rendered offline from the game itself (tools/trailer.mjs); the menu music
+  // steps aside while it plays
+  showTrailer() {
+    const g = this.game
+    const base = import.meta.env.BASE_URL || './'
+    // H.264 for most browsers, VP9 for the ones built without it
+    const d = el('div', 'trailer', `<div class="box"><video poster="${base}trailer-poster.jpg" controls autoplay playsinline preload="auto"><source src="${base}trailer.mp4" type="video/mp4"><source src="${base}trailer.webm" type="video/webm"></video><button class="btn close">✕  Închide</button></div>`)
+    this.layer.appendChild(d)
+    const v = d.querySelector('video')
+    v.querySelector('source:last-child').addEventListener('error', () => {
+      v.insertAdjacentHTML('afterend', `<div class="trailer-err">Browserul tău nu poate reda clipul aici. <a href="${base}trailer.mp4" target="_blank" rel="noopener">Deschide-l separat</a>.</div>`)
+    })
+    g.audio?.duck(0, 0.4)
+    const close = () => { if (!d.isConnected) return; stop(); v.pause(); d.remove(); g.audio?.duck(1, 0.6); g.audio?.sfx('back', { bus: 'ui' }) }
+    const stop = padNav(g, d, { back: () => { close(); return true } })
+    d.querySelector('.close').onclick = close
+    d.onclick = (e) => { if (e.target === d) close() }
+  }
+
   showSettingsOnly() {
     const g = this.game
     // on top of the title screen (the main menu layer sits above the in-game pause layer)
     const m = el('div', 'pause over', '<div class="top"><h1>SETĂRI</h1></div><div class="body"></div><div class="foot"><button class="btn primary">‹ Înapoi</button></div>')
     this.layer.appendChild(m)
     this.renderSettings(m.querySelector('.body'))
-    const close = () => { m.remove(); window.removeEventListener('keydown', onKey, true); g.audio?.sfx('back', { bus: 'ui' }) }
-    const onKey = (e) => { if (e.code === 'Escape' || (e.code === 'Backspace' && !/INPUT|SELECT/.test(e.target?.tagName))) { e.preventDefault(); e.stopPropagation(); close() } }
+    const close = () => { if (!m.isConnected) return; stop(); m.remove(); window.removeEventListener('keydown', onKey, true); g.audio?.sfx('back', { bus: 'ui' }) }
+    const onKey = (e) => { if (e.code === 'Backspace' && !/INPUT|SELECT/.test(e.target?.tagName)) { e.preventDefault(); e.stopPropagation(); close() } }
     window.addEventListener('keydown', onKey, true)
+    // on top of the title screen's buttons: arrows / pad move through the settings, Esc / B close
+    const stop = padNav(g, m, { back: () => { close(); return true }, selector: 'button, select, input' })
     m.querySelector('.foot button').onclick = close
   }
 }
