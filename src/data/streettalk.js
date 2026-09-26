@@ -4,7 +4,7 @@
 
 export const NAMES = {
   gopnik: ['Jora', 'Serioga', 'Dimon', 'Colea', 'Tolik', 'Slavic', 'Vadik', 'Maxim', 'Andriușa', 'Stas', 'Genea', 'Edik', 'Sanea', 'Vova Mic', 'Igoriok', 'Rusik'],
-  babushka: ['Tanti Maria', 'Baba Nina', 'Tanti Vera', 'Tanti Lida', 'Baba Frosea', 'Tanti Galea', 'Tanti Raia', 'Baba Anica'],
+  babushka: ['Tanti Maria', 'Baba Nina', 'Tanti Vera', 'Tanti Lida', 'Baba Frosea', 'Tanti Polea', 'Tanti Raia', 'Baba Anica'],
   man: ['Ion', 'Vasile', 'Petru', 'Andrei', 'Sergiu', 'Mihai', 'Dorin', 'Valeriu', 'Nicolae', 'Grigore'],
   woman: ['Ana', 'Maria', 'Elena', 'Natalia', 'Olga', 'Tatiana', 'Doina', 'Svetlana', 'Lenuța', 'Aurica'],
   cop: ['Sergentul Moraru', 'Plutonierul Cebotari', 'Sergentul Rusu', 'Locotenentul Ciobanu', 'Sergentul Lupu'],

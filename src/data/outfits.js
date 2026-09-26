@@ -41,7 +41,7 @@ export const CAST = {
 // playable-type metadata (names/perks follow the original game)
 export const PLAYER_TYPES = [
   { key: 'stroitor', name: 'Vasea „Stroika"', defName: 'Vasea', blurb: 'Opt ani pe șantiere la Londra și Moscova. Cară saci de ciment cum cară alții semințe.', perk: 'Stamina de fier · mai multă viață · pumni de betonist' },
-  { key: 'badanta', name: 'Tanti Valea, badanta', defName: 'Valea', female: true, blurb: 'Doisprezece ani la Padova, lângă Signor Giuseppe. Giuseppe s-o dus. Averea a rămas… la ea.', perk: 'Moștenirea (+1500 lei) · se tocmește: -20% peste tot · babele o respectă' },
+  { key: 'badanta', name: 'Tanti Galea, badanta', defName: 'Galea', female: true, blurb: 'Doisprezece ani la Padova, lângă Signor Giuseppe. Giuseppe s-o dus. Averea a rămas… la ea.', perk: 'Moștenirea (+1500 lei) · se tocmește: -20% peste tot · babele o respectă' },
   { key: 'hot', name: 'Marcel „Scoțianu\'"', defName: 'Marcel', blurb: 'Zice că a lucrat în Anglia „la logistică". Logistica ieșea din magazin fără casă de marcat.', perk: 'Fură mașini fără scandal · buzunărește · poliția îl uită repede' },
   { key: 'patan', name: 'Vitalik, pațanul de pe raion', defName: 'Vitalik', blurb: 'Trei ani la o spălătorie din Portugalia. S-a întors cu treningul, lanțul și respectul intacte.', perk: 'Pumni grei · gopnicii îl știu din start · semințe din belșug' },
 ]
