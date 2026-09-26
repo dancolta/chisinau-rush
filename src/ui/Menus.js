@@ -19,11 +19,12 @@ const MAP_NAME = {
   gradina: 'Grădina Publică', primaria: 'Primăria', opera: 'Opera', parlament: 'Parlamentul', usm: 'USM',
   kotovski: 'Kotovski', hotel: 'Hotel Național', teatru: 'Teatrul Eminescu', muzeu: 'Muzeul de Istorie',
   autogara: 'Autogara', circ: 'Circul', gara: 'Gara', biserica: 'Biserica', piata: 'Piața Centrală',
+  comisariat: 'Poliția',
 }
 const MAP_RANK = {
   pman: 10, gara: 9, piata: 9, guvern: 8, catedrala: 8, arc: 7, primaria: 7, parlament: 7, opera: 6, circ: 6,
   gradina: 6, autogara: 6, presedintia: 5, usm: 5, stefan: 4, teatru: 4, muzeu: 4, hotel: 4, ambasada: 4,
-  kotovski: 3, parc_catedrala: 3, clopotnita: 2, sala_orga: 2, biserica: 2,
+  kotovski: 3, parc_catedrala: 3, clopotnita: 2, sala_orga: 2, biserica: 2, comisariat: 5,
 }
 
 // cinematic loop for the title screen: [from, to, lookFrom, lookTo, secs]

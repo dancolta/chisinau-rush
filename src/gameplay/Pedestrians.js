@@ -117,7 +117,8 @@ export class Pedestrians {
       const bloc = zone === 'soviet' || zone === 'acasa' || zone === 'garaje'
       if (bloc && Math.random() < 0.2) { spec = CAST[['gopnik1', 'gopnik2', 'gopnik3'][Math.floor(Math.random() * 3)]]; opts = { personality: 'tough', archetype: 'gopnik' } }
       else if (Math.random() < 0.07 && this.list.filter((q) => q.archetype === 'kid').length < 4) { spec = kidSpec(); opts = { personality: 'coward', archetype: 'kid', walkSpeed: 1.5, hp: 25, voice: { pitch: 1.5 + Math.random() * 0.25, type: 'female' } } }
-      else if (!bloc && Math.random() < 0.05 && !this.game.police?.level && this.list.filter((q) => q.personality === 'cop').length < 2) {
+      // (the officers on the Comisariat's door don't count against the beat)
+      else if (!bloc && Math.random() < 0.05 && !this.game.police?.level && this.list.filter((q) => q.personality === 'cop' && !q.post).length < 2) {
         spec = CAST.cop; opts = { personality: 'cop', archetype: 'cop', hp: 60, walkSpeed: 1.15, voice: { pitch: 0.85 + Math.random() * 0.2, type: 'gruff' } }
       }
       const npc = this.spawn(n.x + (Math.random() - 0.5) * 2, n.z + (Math.random() - 0.5) * 2, spec, opts)
