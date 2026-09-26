@@ -342,3 +342,92 @@ table.ctl td b { color: #fff; }
 @media (max-width: 720px) { .lp { width: auto; left: var(--edge-x); top: auto; height: 58vh; } }
 
 .minimap-wrap.indoors { opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+
+/* ---- keyboard / gamepad focus (see Nav.js) ---- */
+.btn:focus-visible, .btn.nav-focus, .tabs button:focus-visible, .acct-tab:focus-visible, .acct-tab.nav-focus, .acct-eye:focus-visible, .acct-eye.nav-focus { outline: 2px solid var(--gold); outline-offset: 2px; }
+.btn.nav-focus:not(.primary) { background: linear-gradient(180deg, rgba(255,207,74,0.3), rgba(255,207,74,0.12)); border-color: rgba(255,207,74,0.75); }
+
+/* ---- account + cloud saves ---- */
+.mm-cloud { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted); margin-top: 4px; min-width: 0; overflow-wrap: anywhere; }
+.mm-cloud:empty { display: none; }
+.mm-cloud i, .acct-status i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #7a746a; }
+.mm-cloud.ok i, .acct-status.ok i { background: var(--green); box-shadow: 0 0 8px rgba(95,208,106,0.7); }
+.mm-cloud.busy i, .acct-status.busy i { background: var(--gold); animation: bob 1s infinite; }
+.mm-cloud.bad i, .acct-status.bad i { background: var(--red); }
+.pause .col.acct-col { flex: 1; display: flex; justify-content: center; align-items: flex-start; }
+.acct-screen .body { justify-content: center; overflow-y: auto; }
+.acct { width: 100%; max-width: 460px; }
+.acct-h { font-family: var(--display); color: var(--gold); letter-spacing: 1px; font-size: 15px; margin-bottom: 8px; }
+.acct-p { margin: 0 0 14px; color: #e5dccb; font-size: 14px; line-height: 1.5; }
+.acct-seg { display: flex; gap: 4px; padding: 4px; margin-bottom: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; }
+.acct-tab { flex: 1; font: 700 14px var(--body); color: #cfc8bb; background: none; border: none; border-radius: 9px; padding: 9px 10px; cursor: pointer; }
+.acct-tab.on { background: var(--gold); color: #1a1206; }
+.acct-form { display: grid; gap: 12px; }
+.acct-l { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; }
+.acct input { width: 100%; font: 600 16px var(--body); color: #fff; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.18); border-radius: 12px; padding: 11px 14px; outline: none; text-transform: none; letter-spacing: 0; user-select: text; -webkit-user-select: text; }
+.acct input:focus, .acct input.nav-focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(255,207,74,0.25); }
+.acct input::placeholder { color: rgba(255,255,255,0.35); font-weight: 400; }
+.acct-pw { position: relative; display: block; }
+.acct-pw input { padding-right: 52px; }
+.acct-eye { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); width: 40px; height: 36px; border: none; border-radius: 9px; background: rgba(255,255,255,0.08); color: #fff; font-size: 17px; cursor: pointer; }
+.acct-eye:hover { background: rgba(255,207,74,0.25); }
+.acct-err { display: none; color: #ff8a80; font-size: 13.5px; font-weight: 600; line-height: 1.4; background: rgba(255,77,77,0.1); border: 1px solid rgba(255,77,77,0.35); border-radius: 10px; padding: 8px 12px; }
+.acct-err.on { display: block; }
+.acct-go { width: 100%; text-align: center; }
+.acct-go:disabled, .acct-row .btn:disabled { opacity: 0.6; cursor: wait; transform: none; }
+.acct-note { margin-top: 14px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.acct-email { font: 700 18px var(--body); color: #fff; overflow-wrap: anywhere; margin-bottom: 8px; }
+.acct-status { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #e5dccb; margin-bottom: 10px; }
+.acct-save { font-size: 13.5px; color: #cfc8bb; background: rgba(255,255,255,0.04); border-radius: 10px; padding: 9px 12px; margin-bottom: 12px; line-height: 1.45; }
+.acct .acct-err.on { margin-bottom: 12px; }
+.acct-form .acct-err.on { margin-bottom: 0; }
+.acct-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.acct-row .btn { flex: 1 1 180px; text-align: center; }
+
+/* the "which save do you keep?" picker */
+/* flex + margin:auto rather than grid centering, so a box taller than the screen scrolls from its top */
+.savepick { position: absolute; inset: 0; z-index: 95; display: flex; padding: 12px; overflow-y: auto; background: rgba(8,6,12,0.78); backdrop-filter: blur(5px); pointer-events: auto; animation: tipin 0.3s ease; }
+.sp-box { margin: auto; width: min(720px, 100%); background: #16121d; border: 1px solid rgba(255,207,74,0.4); border-radius: 18px; padding: 20px 22px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+.sp-box h3 { margin: 0 0 6px; font-family: var(--title); font-size: 34px; letter-spacing: 1px; color: var(--gold); font-weight: 400; line-height: 1; }
+.sp-box p { margin: 0 0 16px; color: #e5dccb; line-height: 1.5; font-size: 14.5px; }
+.sp-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.sp-card { display: flex; flex-direction: column; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 14px 16px; }
+.sp-card.best { border-color: var(--gold); background: rgba(255,207,74,0.07); }
+.sp-k { font-family: var(--display); font-size: 12px; letter-spacing: 1.5px; color: var(--muted); }
+.sp-name { font: 700 19px var(--body); color: #fff; margin: 4px 0 8px; }
+.sp-name small { display: block; font-size: 12.5px; font-weight: 400; color: var(--muted); }
+.sp-row { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13.5px; color: #cfc8bb; }
+.sp-row b { color: #fff; text-align: right; }
+.sp-badge { min-height: 20px; margin: 8px 0 10px; font-size: 12.5px; font-weight: 700; color: var(--gold); }
+.sp-pick { margin-top: auto; text-align: center; }
+@media (max-width: 620px) { .sp-cards { grid-template-columns: 1fr; } .sp-box h3 { font-size: 28px; } }
+
+/* small screens (phones in landscape): the pause / settings / account screens get tighter */
+@media (max-width: 760px), (max-height: 520px) {
+  .pause .top { padding: 12px 16px 0; gap: 10px 16px; flex-wrap: wrap; }
+  .pause .top h1 { font-size: 30px; }
+  .tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .tabs button { padding: 8px 10px; white-space: nowrap; font-size: 13px; }
+  .pause .body { padding: 10px 16px 12px; gap: 14px; }
+  .pause .col { padding: 14px; }
+  .pause .foot { padding: 0 16px 12px; flex-wrap: wrap; }
+  .pause .foot .btn { padding: 9px 14px; font-size: 14px; }
+  .sp-box { padding: 14px 16px; }
+  .sp-box p { margin-bottom: 10px; }
+  .sp-row { padding: 3px 0; }
+}
+@media (max-height: 520px) {
+  .sp-box h3 { font-size: 26px; }
+  .sp-box p { font-size: 13px; }
+  .sp-card { padding: 10px 12px; }
+  .sp-name { font-size: 16px; margin: 2px 0 4px; }
+  .sp-name small { display: none; }
+  .sp-row { font-size: 12.5px; }
+  .sp-badge { min-height: 16px; margin: 4px 0 6px; }
+  .mainmenu .side { padding: 3vh 4vw; }
+  .mm-logo { font-size: clamp(36px, 11vh, 64px); }
+  .mm-tag { display: none; }
+  .mm-btns { margin-top: 2vh; gap: 6px; }
+  .mm-btns .btn { padding: 8px 16px; font-size: 15px; }
+  .mm-foot { display: none; }
+}

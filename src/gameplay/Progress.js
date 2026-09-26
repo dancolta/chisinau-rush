@@ -176,7 +176,11 @@ export class Progress {
   }
 
   save() {
+    const cloud = this.game.cloud
+    // the page is reloading into a save taken from the cloud: don't write over it on the way out
+    if (cloud?.frozen) return
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(this.serialize())) } catch (e) { /* storage blocked */ }
+    cloud?.saved()
   }
 
   static hasSave() {
