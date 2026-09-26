@@ -1,4 +1,4 @@
-/* ============== progression: the next-reward line, the card queue (achievements, the daily bonus, first-time cards) ============== */
+/* ============== progression: the next-reward line, the card queue, the Progres / Realizări pages, the title strip ============== */
 :root { --medal-bronz: radial-gradient(circle at 35% 30%, #ffe1c2, #d98a4a 45%, #7a3a14); --medal-argint: radial-gradient(circle at 35% 30%, #ffffff, #c9d2dc 45%, #6a7684);
   --medal-aur: radial-gradient(circle at 35% 30%, #fff1b0, #ffcf4a 45%, #c97a1e); --medal-single: radial-gradient(circle at 35% 30%, #e9ffe0, #6fd36a 45%, #22662e); --medal-none: radial-gradient(circle at 35% 30%, #6a6478, #3a3446 60%, #22202a); }
 
@@ -68,6 +68,110 @@
 .gstage.freeze .gcard, .gstage.freeze .gcard *, .gcard.freeze, .gcard.freeze * { animation: none !important; }
 .gstage.freeze .gcard .shine { display: none; }
 
+/* ---- the pause menu's Progres page ---- */
+.pause .col.pg, .pause .col.achp { max-width: 1180px; margin: 0 auto; }
+.pg-intro { font-size: 13.5px; color: #e5dccb; margin-bottom: 10px; line-height: 1.45; }
+.pg-intro b { color: var(--gold); }
+.pg-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+.pg-card { --c: var(--gold); display: flex; flex-direction: column; padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-top: 3px solid var(--c); }
+.pg-card.aura { --c: #b58cff; } .pg-card.respect { --c: #7ee07a; } .pg-card.lei { --c: #9cf07c; }
+.pg-card .hd { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: baseline; }
+.pg-card .hd .ic { grid-row: span 2; font-size: 22px; align-self: center; }
+.pg-card .hd .nm { font-family: var(--display); font-size: 13px; letter-spacing: 1px; color: var(--c); }
+.pg-card .hd .wt { font-size: 12px; line-height: 1.3; color: #cfc8bb; }
+.pg-card .bd { margin: 8px 0 8px; }
+.pg-card .big { font-family: var(--title); font-size: 23px; letter-spacing: 0.5px; line-height: 1.1; color: #fff; }
+.pg-card .nums { font-size: 12px; color: #cfc8bb; margin-top: 4px; }
+.pg-card .nums b { color: #fff; }
+.pg-card .nx { font-size: 12.5px; color: #fff; margin-top: 6px; line-height: 1.35; }
+.pg-card .nx b { color: var(--c); }
+.pg-card .rrow { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; font-size: 12.5px; color: #e5dccb; }
+.pg-card .rrow b { color: #8ef07a; }
+.pg-card .ft { margin-top: auto; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.07); font-size: 11.5px; line-height: 1.45; color: #a9a196; }
+.pg-card .ft span { color: #d8d0c4; font-weight: 700; }
+.gbar { height: 7px; margin-top: 5px; border-radius: 4px; background: rgba(255,255,255,0.1); overflow: hidden; }
+.gbar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #d98a2e, #ffcf4a); }
+.gbar.aura i { background: linear-gradient(90deg, #7c4dff, #b58cff 55%, #ffcf4a); }
+.gbar.resp.gop i { background: linear-gradient(90deg, #c9531a, #ff9a3a); }
+.gbar.resp.bab i { background: linear-gradient(90deg, #c83a7a, #ff7ab8); }
+.gbar.resp.pol i { background: linear-gradient(90deg, #2f6ad8, #7fb4ff); }
+.gbar.st i { background: linear-gradient(90deg, #5a8a9a, #9ed6e8); }
+.gbar.seed i { background: linear-gradient(90deg, #d99a12, #ffd23a); }
+.pg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-top: 12px; }
+.pg-sec { padding: 10px 12px; border-radius: 14px; background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.07); }
+.pg-sec h4 { margin: 0 0 6px; font-family: var(--display); font-weight: 400; font-size: 12px; letter-spacing: 1px; color: var(--gold); }
+.rgroup { padding: 7px 0 9px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.rgroup:last-child { border-bottom: none; }
+.rgroup .rh { display: flex; gap: 8px; align-items: baseline; font-size: 13.5px; color: #fff; }
+.rgroup .rh b { color: #8ef07a; }
+.rgroup .rh em { margin-left: auto; font-style: normal; font-size: 12px; color: #a9a196; white-space: nowrap; }
+.rgroup .rh small { font-size: 11px; }
+.rgroup .rp { margin-top: 4px; font-size: 12px; line-height: 1.4; color: #d8d0c4; }
+.rgroup .rp.now { color: #cfe9c8; }
+.rgroup .rp.next b { color: #fff; }
+.rgroup.small .rh { font-size: 12.5px; }
+.pg-blk { padding: 6px 0 9px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.pg-blk:last-child { border-bottom: none; }
+.pg-blk .bh { display: flex; gap: 8px; font-size: 13.5px; font-weight: 700; color: #fff; }
+.pg-blk .bh em { margin-left: auto; font-style: normal; font-weight: 400; font-size: 12px; color: #cfc8bb; }
+.pg-blk .bf { margin-top: 5px; font-size: 12px; line-height: 1.4; color: #cfc8bb; }
+.pg-blk .bf b { color: var(--gold); }
+.brow { display: grid; grid-template-columns: 22px 1fr auto; gap: 6px; align-items: center; padding: 3px 0; font-size: 12.5px; }
+.brow .i { text-align: center; }
+.brow .t { min-width: 0; color: #e5dccb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brow b { font-family: var(--num); font-weight: 400; color: #ffd95a; }
+.brow.done .t { color: #8a8494; text-decoration: line-through; }
+.brow.done .i { color: #7ee07a; }
+.rk { display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; align-items: center; padding: 5px 6px; border-radius: 8px; font-size: 13px; color: #8a8494; }
+.rk .n { font-family: var(--num); text-align: center; }
+.rk .t small { display: block; font-size: 11px; color: #7a7388; }
+.rk .x { font-size: 11.5px; white-space: nowrap; }
+.rk.got { color: #e5dccb; } .rk.got .n { color: #7ee07a; } .rk.got .t small { color: #a9a196; }
+.rk.cur { color: #fff; background: rgba(255, 207, 74, 0.1); border: 1px solid rgba(255, 207, 74, 0.45); }
+.rk.cur .n { color: var(--gold); } .rk.cur .t small { color: #ffd95a; }
+.pg-sec.totals .stat-row { font-size: 13px; padding: 5px 0; }
+
+/* ---- the Realizări page ---- */
+.ach-head .ah-t { font-family: var(--title); font-size: 30px; letter-spacing: 1px; line-height: 1; color: var(--gold); }
+.ach-head .ah-t b { font-weight: 400; color: #fff; margin-left: 6px; }
+.ach-head .ah-t small { font-size: 20px; color: #cfc8bb; }
+.ach-head .gbar { height: 9px; margin-top: 8px; }
+.ach-head .ah-s { margin-top: 6px; font-size: 12px; line-height: 1.4; color: #cfc8bb; }
+.ach-head .ah-s b { color: #9cf07c; }
+.ach-cat { display: flex; gap: 8px; margin: 14px 0 6px; font-family: var(--display); font-size: 12px; letter-spacing: 1px; color: var(--gold); }
+.ach-cat em { font-style: normal; color: #9a93b8; }
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+.ach-card { display: grid; grid-template-columns: 46px 1fr; gap: 10px; align-items: start; padding: 9px 10px; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+.ach-card .medal { width: 46px; height: 46px; font-size: 22px; box-shadow: 0 0 0 2px rgba(0,0,0,0.5); }
+.ach-card.locked .medal span { filter: grayscale(1); opacity: 0.6; }
+.ach-card.secret .medal span { font-family: var(--title); font-size: 26px; color: #9a93b8; filter: none; opacity: 1; }
+.ach-card.done { background: rgba(255, 207, 74, 0.07); border-color: rgba(255, 207, 74, 0.45); }
+.ach-card.part { border-color: rgba(255,255,255,0.16); }
+.ach-card .bd { min-width: 0; }
+.ach-card .nm { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; font-weight: 700; font-size: 14px; color: #fff; }
+.ach-card.locked .nm { color: #d8d0c4; }
+.ach-card .pips { display: inline-flex; gap: 1px; margin-left: auto; font-size: 12px; }
+.ach-card .pips i { font-style: normal; color: #5a5468; }
+.ach-card .ds { margin-top: 2px; font-size: 12px; line-height: 1.35; color: #cfc8bb; }
+.ach-card .gbar { height: 6px; }
+.ach-card .mt { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; font-size: 11.5px; color: #a9a196; }
+.ach-card .mt span:last-child { color: #9cf07c; text-align: right; }
+.ach-card.done .mt span:last-child { color: #ffd95a; }
+.ach-card .wh { margin-top: 2px; font-size: 11px; color: #8a8494; }
+
+/* ---- the title screen: today's bonus ---- */
+.mm-daily { margin-top: 14px; max-width: 340px; }
+.mm-streak { padding: 9px 12px 10px; border-radius: 12px; background: linear-gradient(100deg, rgba(70, 26, 8, 0.88), rgba(14, 11, 20, 0.82)); border: 1px solid rgba(255, 138, 58, 0.55); box-shadow: 0 8px 22px rgba(0,0,0,0.35); }
+.mm-streak .ms-h { font-family: var(--display); font-size: 11px; letter-spacing: 1px; color: #ffb35a; }
+.mm-streak .ms-h b { color: #fff; font-weight: 400; }
+.mm-streak .ms-d { display: flex; gap: 4px; margin: 7px 0 6px; }
+.mm-streak .ms-d i { flex: 1; padding: 3px 0; border-radius: 7px; text-align: center; font-style: normal; font-family: var(--num); font-size: 12px; color: #cfc8bb; background: rgba(255,255,255,0.07); }
+.mm-streak .ms-d i.got { color: #8ef07a; background: rgba(126, 224, 122, 0.18); }
+.mm-streak .ms-d i.now { color: #2a0e00; background: linear-gradient(180deg, #ffb35a, #e8641c); box-shadow: 0 0 12px rgba(255, 140, 60, 0.55); animation: dnow 0.9s ease-in-out infinite alternate; }
+.mm-streak .ms-l { font-size: 12.5px; line-height: 1.4; color: #e5dccb; }
+.mm-streak .ms-l b { color: var(--gold); }
+.mm-streak.taken { border-color: rgba(126, 224, 122, 0.45); background: linear-gradient(100deg, rgba(16, 44, 20, 0.88), rgba(14, 11, 20, 0.82)); }
+
 /* ---- small screens ---- */
 @media (max-width: 760px), (max-height: 520px) {
   .gcard { gap: 9px; padding: 7px 10px 7px 8px; border-radius: 13px; }
@@ -80,8 +184,19 @@
   .gcard .r .g, .gcard .r .a { font-size: 15px; }
   .days { gap: 3px; margin: 4px 0 3px; }
   .days .d b { font-size: 10.5px; }
+  .pg-cards { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+  .pg-card { padding: 8px 10px; }
+  .pg-card .big { font-size: 19px; }
+  .pg-grid { grid-template-columns: 1fr; }
+  .ach-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+  .ach-head .ah-t { font-size: 24px; }
 }
 @media (max-height: 520px) {
+  .mm-daily { margin-top: 8px; }
+  .mm-streak { padding: 6px 10px 7px; }
+  .mm-streak .ms-d { margin: 4px 0; }
+  .mm-streak .ms-d i { font-size: 11px; padding: 2px 0; }
+  .mm-streak .ms-l { font-size: 11.5px; }
   .gcard .f { display: none; }
   .aura-chip .next { font-size: 9.5px; }
   /* a phone scales the whole minimap column down to 60 %: the line stays readable */

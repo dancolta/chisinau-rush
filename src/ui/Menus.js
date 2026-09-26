@@ -9,6 +9,8 @@ import { fmt } from './UI.js'
 import { WORLD } from '../world/CityLayout.js'
 import { padNav } from './Nav.js'
 import { renderAccount, openAccountScreen, chooseSave, cloudStatus, saveLine } from './Account.js'
+import { GoalsUI } from '../side/GoalsUI.js'
+import { STREET_STATS } from '../data/goals.js'
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e }
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
@@ -57,6 +59,7 @@ export class Menus {
         <div class="mm-logo">CHIȘINĂU<span>RUSH</span></div>
         <div class="mm-tag">De la <b class="y">plecat peste hotare</b> la <b class="y">primar</b>. Un oraș, o sută de gropi, un primar care vorbește prea des la telefon.</div>
         <div class="mm-btns"></div>
+        <div class="mm-daily"></div>
         <div class="mm-save"></div>
         <div class="mm-cloud"></div>
         <div class="mm-foot">W/S mers · A/D rotire · Shift sprint · E acțiune · Click/J lovește · Space sari / frână · Q armă · V cameră · M hartă · Esc pauză<br>Asset-uri CC0: KayKit (Kay Lousberg), Kenney. Satiră. Orice asemănare cu primari reali e… lucrăm la asta.</div>
@@ -83,6 +86,8 @@ export class Menus {
         add('🎬  Trailer', '', () => this.showTrailer())
         add('⚙  Setări', '', () => this.showSettingsOnly())
         m.querySelector('.mm-save').innerHTML = save ? `Salvare: ${saveLine(save)} · ${new Date(save.t).toLocaleString('ro-RO')}` : ''
+        // the daily bonus: where the streak stands and what today brings (paid once you're in)
+        m.querySelector('.mm-daily').innerHTML = GoalsUI.titleStrip(save)
       }
       const st = cloud?.loggedIn ? cloudStatus(cloud) : null
       const line = m.querySelector('.mm-cloud')
@@ -239,7 +244,7 @@ export class Menus {
     g.audio?.duck(0.35, 0.3)
     const m = el('div', 'pause', `
       <div class="top"><h1>PAUZĂ</h1><div class="tabs">
-        <button data-t="map">Hartă</button><button data-t="missions">Misiuni</button><button data-t="char">Personaj</button><button data-t="aura">Aură</button><button data-t="controls">Controale</button><button data-t="settings">Setări</button>${g.cloud?.enabled ? '<button data-t="account">Cont</button>' : ''}</div></div>
+        <button data-t="map">Hartă</button><button data-t="missions">Misiuni</button><button data-t="progress">Progres</button><button data-t="ach">Realizări</button><button data-t="char">Personaj</button><button data-t="aura">Aură</button><button data-t="controls">Controale</button><button data-t="settings">Setări</button>${g.cloud?.enabled ? '<button data-t="account">Cont</button>' : ''}</div></div>
       <div class="body"></div>
       <div class="foot"><button class="btn primary resume">▶ Continuă</button><button class="btn save">💾 Salvează</button><button class="btn danger quit">Meniu principal</button></div>`)
     this.layer.appendChild(m)
@@ -254,6 +259,8 @@ export class Menus {
       body.innerHTML = ''
       if (t === 'map') this.renderMap(body)
       else if (t === 'missions') this.renderMissions(body)
+      else if (t === 'progress') g.side?.goals && new GoalsUI(g.side.goals).renderProgress(body)
+      else if (t === 'ach') g.side?.goals && new GoalsUI(g.side.goals).renderAchievements(body)
       else if (t === 'char') this.renderChar(body)
       else if (t === 'aura') g.side?.renderPause(body)
       else if (t === 'controls') this.renderControls(body)
@@ -432,7 +439,7 @@ export class Menus {
       <div style="font-size:12.5px;color:#cfc8bb">${next ? `${pr.xp} / ${next.xp} XP până la „${next.name}"` : 'Rang maxim'}</div></div></div>
       <div style="font-size:13.5px;color:#e5dccb;margin-bottom:10px">⚡ ${t.perk}</div>`
     const rows = [
-      ['Lei', pr.lei], ['Viață', `${Math.round(pr.hp)} / ${pr.maxHp}`], ['Respect pe stradă', pr.cred + ' / 100'], ['Respect civic', pr.civic + ' / 100'],
+      ['Lei', pr.lei], ['Viață', `${Math.round(pr.hp)} / ${pr.maxHp}`], [`${STREET_STATS.cred.icon} ${STREET_STATS.cred.name}`, pr.cred + ' / 100'], [`${STREET_STATS.civic.icon} ${STREET_STATS.civic.name}`, pr.civic + ' / 100'],
       ['👊 Gopnicii te știu', `${pr.tierName('gop')} · ${pr.respect.gop}${pr.look.gop ? ` (haine ${pr.look.gop > 0 ? '+' : ''}${pr.look.gop})` : ''}`], ['🥧 Babele te știu', `${pr.tierName('bab')} · ${pr.respect.bab}${pr.look.bab ? ` (haine ${pr.look.bab > 0 ? '+' : ''}${pr.look.bab})` : ''}`], ['👮 Poliția te știe', `${pr.tierName('pol')} · ${pr.respect.pol}${pr.look.pol ? ` (haine ${pr.look.pol > 0 ? '+' : ''}${pr.look.pol})` : ''}`],
       ['Vorbit cu lumea', pr.stats.talks || 0], ['Gașcă adunată', pr.stats.recruits || 0],
       ['Dosare găsite', pr.dosare.length], ['Gropi astupate', pr.potholes.length], ['Oameni puși la pământ', pr.stats.ko], ['Mașini „împrumutate"', pr.stats.cars],
