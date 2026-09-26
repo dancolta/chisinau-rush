@@ -112,7 +112,8 @@ export class Progress {
   respectEff(k) { return Math.max(0, Math.min(100, (this.respect[k] || 0) + (this.look[k] || 0))) }
   tier(k) { return respectTier(this.respectEff(k)) }
   tierName(k) { return RESPECT_NAMES[k][this.tier(k)] }
-  // respect with a crowd; a toast for anything noticeable and a bigger one on a new tier
+  // respect with a crowd: a reward chip for every change, a bigger one on a new tier (the side
+  // content then says what the new tier gets you)
   addRespect(k, n, why = '') {
     n = Math.round(n)
     if (!n || !(k in this.respect)) return
@@ -121,12 +122,11 @@ export class Progress {
     const d = this.respect[k] - before
     if (!d) return
     const t1 = this.tier(k)
-    const ui = this.game.ui
+    this.game.ui?.chip?.('respect', d, { k, why, icon: RESPECT_ICON[k], who: RESPECT_WHO[k], tier: t1 !== t0 ? RESPECT_NAMES[k][t1] : null, down: t1 < t0 })
     if (t1 !== t0) {
-      ui?.notify(`${RESPECT_ICON[k]} ${t1 > t0 ? '{g}' : '{r}'}Respect la ${RESPECT_WHO[k]}: ${RESPECT_NAMES[k][t1]}${t1 > t0 ? '{/g}' : '{/r}'}`, 3.6, t1 > t0 ? 'green' : 'red')
       if (t1 > t0) this.game.audio?.sfx('confirm', { bus: 'ui', vol: 0.7 })
       this.game.events.emit('respect', { k, tier: t1, up: t1 > t0 })
-    } else if (Math.abs(d) >= 2) ui?.notify(`${RESPECT_ICON[k]} ${d > 0 ? '+' : ''}${d} respect la ${RESPECT_WHO[k]}${why ? ' · ' + why : ''}`, 2.4, d > 0 ? '' : 'red')
+    }
   }
   addCivic(n) { this.civic = Math.max(0, Math.min(100, this.civic + n)) }
 

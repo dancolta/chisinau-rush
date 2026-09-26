@@ -1,0 +1,34 @@
+/* ============== reward chips under the money: +lei, +XP, respect, AURA bonuses (src/ui/Rewards.js) ============== */
+.rw-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; margin-top: 2px; }
+.rw-stack:empty { display: none; }
+.rw-chip { display: flex; flex-direction: column; align-items: flex-end; max-width: 320px; max-height: 64px; padding: 3px 10px 4px 12px; overflow: hidden; border-radius: 12px 4px 4px 12px;
+  background: rgba(12, 10, 18, 0.86); border-right: 3px solid #5fd06a; box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+  animation: rwin 0.42s cubic-bezier(.2,1.6,.45,1); transition: opacity 0.35s, transform 0.35s, max-height 0.35s, padding 0.35s, margin 0.35s; }
+.rw-chip .v { font-family: var(--num); font-weight: 400; font-size: 19px; line-height: 1.1; white-space: nowrap; color: #9cf07c; -webkit-text-stroke: 0.8px #08130a; text-shadow: 0 2px 0 #08130a; }
+.rw-chip .v i { font-style: normal; font-size: 13px; margin-left: 1px; }
+.rw-chip .w { font-size: 11.5px; line-height: 1.25; color: #d8d0c4; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rw-chip.neg { border-color: #ff4d4d; }
+.rw-chip.neg .v { color: #ff7a6b; -webkit-text-stroke-color: #2a0806; text-shadow: 0 2px 0 #2a0806; }
+.rw-chip.xp { border-color: var(--gold); }
+.rw-chip.xp .v { color: #ffd95a; -webkit-text-stroke-color: #2a1200; text-shadow: 0 2px 0 #2a1200; }
+.rw-chip.aura { border-color: #b58cff; }
+.rw-chip.aura .v { color: #e6d6ff; -webkit-text-stroke-color: #2a0f4a; text-shadow: 0 2px 0 #2a0f4a; }
+.rw-chip.resp.gop { border-color: #ff9a3a; } .rw-chip.resp.gop .v { color: #ffc58a; -webkit-text-stroke-color: #2a1200; text-shadow: 0 2px 0 #2a1200; }
+.rw-chip.resp.bab { border-color: #ff7ab8; } .rw-chip.resp.bab .v { color: #ffc6e0; -webkit-text-stroke-color: #2a0616; text-shadow: 0 2px 0 #2a0616; }
+.rw-chip.resp.pol { border-color: #7fb4ff; } .rw-chip.resp.pol .v { color: #c4dcff; -webkit-text-stroke-color: #04101f; text-shadow: 0 2px 0 #04101f; }
+.rw-chip.resp.neg .v { color: #ff7a6b; -webkit-text-stroke-color: #2a0806; }
+.rw-chip.resp .v i { font-family: var(--body); font-weight: 700; font-size: 11.5px; -webkit-text-stroke: 0; text-shadow: 0 1px 2px #000; }
+.rw-chip.big { padding: 5px 12px 6px 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 0 18px rgba(126, 224, 122, 0.35); }
+.rw-chip.big .w { color: #fff; font-weight: 700; }
+.rw-chip.goal, .rw-chip.seed { border-color: var(--gold); background: linear-gradient(90deg, rgba(60, 44, 8, 0.88), rgba(12, 10, 18, 0.86)); }
+.rw-chip.goal .v, .rw-chip.seed .v { font-size: 15px; color: #fff; -webkit-text-stroke: 0; text-shadow: 0 1px 2px #000; }
+.rw-chip.out { opacity: 0; transform: translateX(18px); max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: -4px; }
+.rw-chip.tuck, .toasts .toast.tuck { opacity: 0 !important; }
+.rw-stack.freeze .rw-chip { animation: none; }
+@keyframes rwin { 0% { opacity: 0; transform: translateX(34px) scale(0.7); } 60% { opacity: 1; transform: translateX(-4px) scale(1.08); } 100% { transform: none; } }
+
+@media (max-width: 760px), (max-height: 520px) {
+  .rw-chip { max-width: 240px; padding: 2px 8px 3px 10px; }
+  .rw-chip .v { font-size: 16px; }
+  .rw-chip .w { font-size: 10.5px; max-width: 210px; }
+}
