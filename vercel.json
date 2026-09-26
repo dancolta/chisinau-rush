@@ -3,7 +3,7 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "regions": ["fra1"],
+  "regions": ["iad1"],
   "functions": {
     "api/**/*.js": { "maxDuration": 15 }
   }
