@@ -58,7 +58,7 @@ export class Combat {
     const halfArc = (w.arc ?? 1.2) / 2 + 0.25
     let hits = 0
     for (const t of this.targets()) {
-      if (t.state === 'knocked') continue
+      if (t.state === 'knocked' || t.ally) continue   // whoever's fighting on your side
       const dx = t.pos.x - p.pos.x, dz = t.pos.z - p.pos.z, d = Math.hypot(dx, dz)
       if (d > reach || Math.abs(t.pos.y - p.pos.y) > 1.6) continue
       const a = Math.abs(angleDiff(yaw, Math.atan2(dx, dz)))
