@@ -157,7 +157,9 @@ export class Player {
     const canJump = this.grounded || this.airT < 0.12
     if (canJump && this.vy <= 0.5 && this.jumpBuffered > 0 && canMove) { this.vy = 6.2; this.grounded = false; this.airT = 0.2; this.jumpBuffered = 0; c.anim.play('jump'); game.audio?.sfx('jump', { vol: 0.5 }) }
     this.vy -= 22 * h
-    if (this.grounded && this.vy < 0) this.vy = -2
+    // grounded: only a light press into the floor (snap-to-ground does the rest). A hard one made
+    // the controller trip over the flat slab now and then and shove you sideways at a crawl
+    if (this.grounded && this.vy < 0) this.vy = -0.5
 
     const desired = { x: this.vel.x * h, y: this.vy * h, z: this.vel.z * h }
     // Step assist: the controller's autostep misses kerbs at some angles and you stop dead at a

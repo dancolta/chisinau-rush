@@ -92,9 +92,11 @@ export function addTreeGeometry(g, x, z, rnd, kind = null) {
   const leaf = () => { const c = new THREE.Color(base); const v = 0.9 + rnd() * 0.2; return c.setRGB(c.r * v, c.g * v, c.b * v).getHex() }
   const bark = rnd.pick([0x4e3a2b, 0x5b4331, 0x463429])
   const trunkShade = (p) => 0.7 + 0.3 * Math.min(1, (p.y - y) / 2.5)
+  let trunk = null // [bottom radius, top radius, height] of the drawn trunk
   if (k === 'broad') {
     const th = 2.7 * s
     g.cyl(0.16 * s, 0.27 * s, th + 0.8 * s, 8, { x, y, z, color: bark, shade: trunkShade })
+    trunk = [0.27 * s, 0.16 * s, th + 0.8 * s]
     // limbs reaching into the crown
     for (let i = 0; i < 2; i++) {
       const a = i * 3.1 + rnd() * 0.8
@@ -112,6 +114,7 @@ export function addTreeGeometry(g, x, z, rnd, kind = null) {
     g.add(blob(Math.floor(rnd() * 6)), { x, y: cy + 0.95 * s, z, sx: 1.75 * s, sy: 1.45 * s, sz: 1.75 * s, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
   } else if (k === 'poplar') {
     g.cyl(0.13 * s, 0.24 * s, 3.4 * s, 7, { x, y, z, color: bark, shade: trunkShade })
+    trunk = [0.24 * s, 0.13 * s, 3.4 * s]
     const cy = y + 5.6 * s, center = { x, y: cy, z }
     const shade = foliageShade(cy, 3.4 * s)
     for (let i = 0; i < 4; i++) {
@@ -120,6 +123,7 @@ export function addTreeGeometry(g, x, z, rnd, kind = null) {
     }
   } else if (k === 'small') {
     g.cyl(0.09 * s, 0.15 * s, 1.9 * s, 6, { x, y, z, color: bark, shade: trunkShade })
+    trunk = [0.15 * s, 0.09 * s, 1.9 * s]
     const cy = y + 2.6 * s, center = { x, y: cy, z }
     const shade = foliageShade(cy, 1.1 * s)
     for (let i = 0; i < 2; i++) {
@@ -141,7 +145,10 @@ export function addTreeGeometry(g, x, z, rnd, kind = null) {
     }
     g.cone(0.3 * s, 1.3 * s, 7, { x, y: y + H - 0.6 * s, z, color: 0x315f37, shade: () => 1.05 })
   }
-  return k
+  // the collider matches the drawn trunk at hip height (a spruce's skirts reach the ground, so
+  // it keeps its wider one)
+  const r = trunk ? trunk[0] + (trunk[1] - trunk[0]) * Math.min(1, 0.9 / trunk[2]) : 0.35
+  return { kind: k, r: Math.max(0.1, r) }
 }
 
 export class Props {
@@ -171,8 +178,8 @@ export class Props {
 
   tree(x, z, kind) {
     const g = this.B.vcol(x, z, 'tree')
-    const k = addTreeGeometry(g, x, z, this.rnd, kind)
-    this.P.cylinder(x, CURB_H + 1.5, z, 1.5, k === 'spruce' ? 0.35 : 0.3)
+    const t = addTreeGeometry(g, x, z, this.rnd, kind)
+    this.P.cylinder(x, CURB_H + 1.5, z, 1.5, t.r)
   }
 
   trees() {
