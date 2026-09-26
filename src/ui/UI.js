@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { Minimap } from './Minimap.js'
 import { streetName, districtAt } from '../world/CityLayout.js'
 import { NEWS } from '../data/news.js'
+import { RewardStack } from './Rewards.js'
 
 const _v = new THREE.Vector3()
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e }
@@ -110,10 +111,11 @@ export class UI {
     this.moneyEl = el('div', 'hud-money'); tr.appendChild(this.moneyEl)
     this.wantedEl = el('div', 'hud-wanted', '<span class="s">★</span><span class="s">★</span><span class="s">★</span><span class="s">★</span><span class="s">★</span>'); tr.appendChild(this.wantedEl)
     this.weaponEl = el('div', 'hud-weapon'); tr.appendChild(this.weaponEl)
-    this.popsEl = el('div'); tr.appendChild(this.popsEl)
     // notifications stack under the stats in the same column, so they can never cover the money,
     // the stars or the weapon however tall that column gets
     this.toastsEl = el('div', 'toasts'); tr.appendChild(this.toastsEl)
+    // reward chips (+lei, +XP, respect) right under the stats, above the notifications
+    this.rewards = new RewardStack(this, tr, this.toastsEl, fmt)
     // bottom-left
     const bl = el('div', 'hud-bl'); this.hud.appendChild(bl)
     const mm = this.minimapWrap = el('div', 'minimap-wrap'); bl.appendChild(mm)
@@ -186,15 +188,10 @@ export class UI {
     setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 450) }, secs * 1000)
   }
 
-  money(delta, reason) {
-    const p = el('div', 'money-pop ' + (delta > 0 ? 'plus' : 'minus'), (delta > 0 ? '+' : '−') + Math.abs(delta) + ' lei')
-    p.style.top = 58 + this.popsEl.children.length * 26 + 'px'
-    this.popsEl.appendChild(p)
-    setTimeout(() => p.remove(), 1700)
-    if (reason) this.notify(reason, 2.4, delta > 0 ? 'green' : 'red')
-  }
-
-  xp(n, why) { if (why) this.notify(`+${Math.round(n)} XP · ${why}`, 2.2, 'gold') }
+  // gains and losses: a chip in the reward stack (the reason goes on the chip, not in a toast)
+  money(delta, reason) { this.chip('lei', delta, { why: reason }) }
+  xp(n, why) { this.chip('xp', n, { why }) }
+  chip(kind, n, o) { this.rewards?.push(kind, n, o) }
 
   prompt(text, key = 'E') {
     if (!text) { if (this._prompt) { this.promptEl.classList.add('hidden'); this._prompt = null } return }
@@ -595,6 +592,8 @@ export class UI {
   update(dt) {
     const g = this.game, pr = g.progress, p = g.player
     if (!this.hudVisible || !pr || !p) return
+    // (new chips wait out a cutscene: the HUD is hidden under the letterbox)
+    if (!g.cutscene) this.rewards.update()
     // top right
     const tod = g.renderer.tod
     const pos = p.vehicle ? p.vehicle.pos : p.pos

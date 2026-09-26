@@ -25,9 +25,7 @@
 .hud-weapon { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 5px 10px 5px 8px; font-size: 13px; color: #eee; }
 .hud-weapon .ic { font-size: 20px; }
 .hud-weapon .k { font-family: var(--display); font-size: 10px; color: var(--muted); border: 1px solid rgba(255,255,255,0.25); border-radius: 4px; padding: 1px 4px; }
-.money-pop { position: absolute; right: var(--edge-x); font-family: var(--num); font-size: 24px; -webkit-text-stroke: 1px #0b1a0c; animation: moneypop 1.6s ease-out forwards; }
-.money-pop.plus { color: #9cf07c; } .money-pop.minus { color: #ff7a6b; -webkit-text-stroke: 1px #2a0806; }
-@keyframes moneypop { 0% { opacity: 0; transform: translateY(8px) scale(0.8); } 15% { opacity: 1; transform: translateY(0) scale(1.05); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-22px); } }
+/* (money, XP and respect changes: the reward chips under the stats, styles/rewards.css) */
 
 /* ---- bottom left: minimap + vitals ---- */
 .hud-bl { position: absolute; left: var(--edge-x); bottom: var(--edge-y); width: 236px; }
