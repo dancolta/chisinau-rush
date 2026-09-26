@@ -114,7 +114,7 @@ export const SHOTS = [
     keyart: [1.4],
   },
   {
-    // Tanti Valea and her cast-iron pan: slow motion into the BONG
+    // Tanti Galea and her cast-iron pan: slow motion into the BONG
     id: 'fight', beats: 5, hour: 18.45, seed: 44,
     setup(T) {
       const g = T.g, C = window.__CR.CAST, p = g.player, W = -Math.PI / 2
@@ -363,14 +363,14 @@ export const SHOTS = [
 // (xV/yV for the vertical cut); size is px at 1080p [16:9, 9:16]; anchor pins it to a world point
 export const OVERLAYS = [
   { type: 'logo', at: 0, len: 5, x: 0.5, y: 0.45, yV: 0.4, size: [236, 204] },
-  { type: 'caption', at: 8, len: 6.3, text: 'DUPĂ {y}7 ANI{/y} AFARĂ…', x: 0.5, y: 0.83, yV: 0.7, size: [110, 100] },
+  { type: 'caption', at: 8, len: 6.3, text: 'DUPĂ {y}7 ANI{/y} PESTE HOTARE…', x: 0.5, y: 0.83, yV: 0.7, size: [110, 76] },
   { type: 'bubble', at: 16.8, len: 4.1, text: 'Bratan! Te-ai întors?!', anchor: 'gop', size: [54, 58] },
   { type: 'flash', at: 23, len: 0.04, alpha: 0.4 },
   { type: 'pow', at: 23, len: 2.8, text: 'BONG!', anchor: 'bong', size: [190, 180] },
   { type: 'stars', at: 26.6, len: 5.3, n: 3, x: 0.5, y: 0.12, yV: 0.2, size: [96, 104], through: true },
   { type: 'caption', at: 32, len: 7.8, text: 'CINE S-{y}O ÎNTORS{/y}?', x: 0.5, y: 0.15, yV: 0.22, size: [110, 104] },
   { type: 'name', at: 33, len: 6.8, text: 'VASEA „STROIKA”', sub: 'OPT ANI PE ȘANTIERE', anchor: 'crew0', dy: 0.08, size: [72, 66] },
-  { type: 'name', at: 34, len: 5.8, text: 'TANTI VALEA', sub: 'BADANTĂ LA PADOVA', anchor: 'crew1', dy: 0.08, size: [72, 66] },
+  { type: 'name', at: 34, len: 5.8, text: 'TANTI GALEA', sub: 'BADANTĂ LA PADOVA', anchor: 'crew1', dy: 0.08, size: [72, 66] },
   { type: 'name', at: 35, len: 4.8, text: 'MARCEL „SCOȚIANU”', sub: '„LOGISTICĂ” ÎN ANGLIA', anchor: 'crew2', dy: 0.08, size: [72, 66] },
   { type: 'name', at: 36, len: 3.8, text: 'VITALIK', sub: 'PAȚANUL DE PE RAION', anchor: 'crew3', dy: 0.08, size: [72, 66] },
   { type: 'caption', at: 40, len: 2.35, text: 'TROLEIBUZE', x: 0.5, y: 0.84, yV: 0.72, size: [90, 86], outT: 0.08 },

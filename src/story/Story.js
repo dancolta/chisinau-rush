@@ -8,6 +8,11 @@ import { Happenings } from '../side/Happenings.js'
 import { CURB_H } from '../world/CityLayout.js'
 import { FILTER } from '../physics/Physics.js'
 import { fmt } from '../ui/UI.js'
+import { Phone } from './Phone.js'
+import { Rating, mmss } from './Rating.js'
+import { Favors } from './Favors.js'
+import { AFTER } from './hooks.js'
+import { fill } from './hero.js'
 
 export class MissionFail extends Error {
   constructor(reason, { cancel = false } = {}) { super(reason); this.reason = reason; this.cancel = cancel }
@@ -15,12 +20,20 @@ export class MissionFail extends Error {
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z)
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
+const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e }
+const pickOne = (a) => a[Math.floor(Math.random() * a.length)]
+// a trip longer than this (m) can be skipped where a mission allows it ([T] held)
+const SKIP_MIN = 110
+const GRISA_FARE = 15
+const GRISA = ['🚕 Nea Grișa: „Gata, am ajuns. Cincisprezece lei. Bacșișul nu-i obligatoriu, da\' e obligatoriu."', '🚕 Nea Grișa: „Pe scurtătură. Scurtătura are trei gropi, da\' e scurtă."', '🚕 Nea Grișa: „Am ajuns mai repede ca ambulanța. Ambulanța nici n-a plecat."']
 
 // ---------------------------------------------------------------------------
 // Everything a mission script needs. Every await throws MissionFail once the mission fails,
 // so scripts read top-to-bottom like a screenplay.
 class MissionContext {
-  constructor(story, def) {
+  // opts: replay (a passed mission played again from the pause menu), from (the checkpoint this
+  // attempt starts at) and cp (that checkpoint's record: play time, stats and data so far)
+  constructor(story, def, opts = {}) {
     this.story = story
     this.game = story.game
     this.def = def
@@ -30,6 +43,16 @@ class MissionContext {
     this.timerT = null
     this.data = {}
     this.t = 0
+    this.replay = !!opts.replay
+    this.resume = opts.from || null
+    this.cp = opts.cp || null
+    this.cpKey = this.resume
+    this.cpRec = this.cp
+    this.cpData = { ...(opts.cp?.data || {}) }
+    // for the rating: time actually played (no cutscenes, no dialogue), and what it cost
+    this.playT = opts.cp?.t || 0
+    this.stats = { crashes: 0, hpLost: 0, alert: 0, ...(opts.cp?.stats || {}) }
+    this.tries = 1
   }
   get ui() { return this.game.ui }
   get player() { return this.game.player }
@@ -94,6 +117,12 @@ class MissionContext {
 
   tick(dt) {
     this.t += dt
+    const g = this.game
+    if (!g.cutscene && !g.ui.modalOpen) this.playT += dt
+    const hp = g.progress.hp
+    if (this.lastHp != null && hp < this.lastHp) this.stats.hpLost += this.lastHp - hp
+    this.lastHp = hp
+    for (const o of this.tracked) if (o instanceof VisionCone && o.enabled) this.stats.alert = Math.max(this.stats.alert, o.alert)
     if (this.timerT !== null) {
       this.timerT -= dt
       this.ui.setTimer(this.timerT)
@@ -119,6 +148,23 @@ class MissionContext {
   music(track) { this.story.musicOverride = track || null }
   stopTimer() { this.timerT = null; this.ui.setTimer(null) }
 
+  // ---- checkpoints -------------------------------------------------------------------------
+  // A retry after a fail starts from the last checkpoint instead of from the top: the script
+  // skips what came before it (m.before), and the play time, stats and m.cpData carry over.
+  // def.checkpoints lists the keys in order; def.cpAt[key](places) is where a retry puts you.
+  checkpoint(key, label = '') {
+    const fresh = this.cpKey !== key
+    this.cpKey = key
+    this.cpRec = { key, t: this.playT, stats: { ...this.stats }, data: JSON.parse(JSON.stringify(this.cpData)) }
+    if (fresh && label && !this.skipping) this.notify(`💾 Punct de salvare: ${label}`, 2.2, 'green')
+  }
+  // true while this attempt hasn't reached `key` yet (always, unless it's a checkpoint retry)
+  before(key) {
+    if (!this.resume) return true
+    const order = this.def.checkpoints || []
+    return order.indexOf(this.resume) < order.indexOf(key)
+  }
+
   // ---- HUD ---------------------------------------------------------------------------------
   get title() { return (this.def.chapterName ? this.def.chapterName.toUpperCase() + ' · ' : '') + this.def.title.toUpperCase() }
   objective(text, opts = {}) { this.check(); this.ui.setObjective(text, { title: this.title, ...opts }) }
@@ -135,14 +181,18 @@ class MissionContext {
   tip(text, secs) { this.ui.tip(text, secs) }
   notify(text, secs, color) { this.ui.notify(text, secs, color) }
 
-  async reach(pos, r = 3, { text = null, label = '', inVehicle = null, vehicle = null, stop = false, sub = '', brokenText = '' } = {}) {
+  async reach(pos, r = 3, { text = null, label = '', inVehicle = null, vehicle = null, stop = false, sub = '', brokenText = '', skip = false } = {}) {
     const target = typeof pos === 'string' ? this.places[pos] : pos
     if (text) this.objective(text, { sub })
     this.marker(target, label)
+    // a long, empty trip (back to someone waiting for you) can be skipped: hold [T]
+    const withSkip = (s) => (skip && dist(this.P, target) > SKIP_MIN ? (s ? s + ' · ' : '') + 'Drum lung? Ține {y}[T]{/y} și ajungi direct.' : s)
+    const trip = skip ? this.tripSkip(target, r) : null
     // tell the player when they're in the wrong mode for this step (on foot / by car)
     let hint = null
-    if (inVehicle === false) { this.onFootWanted = true; hint = this.every(() => this.sub(this.player.vehicle ? 'Coboară din mașină ({y}[E]{/y}) și mergi pe jos.' : sub)) }
-    if (inVehicle === true) { this.carWanted = true; hint = this.every(() => this.sub(!this.car ? 'Ai nevoie de o mașină: urcă în una ({y}[E]{/y}).' : sub)) }
+    if (inVehicle === false) { this.onFootWanted = true; hint = this.every(() => this.sub(this.player.vehicle ? 'Coboară din mașină ({y}[E]{/y}) și mergi pe jos.' : withSkip(sub))) }
+    if (inVehicle === true) { this.carWanted = true; hint = this.every(() => this.sub(!this.car ? 'Ai nevoie de o mașină: urcă în una ({y}[E]{/y}).' : withSkip(sub))) }
+    if (skip && inVehicle === null && !vehicle) hint = this.every(() => this.sub(withSkip(sub)))
     // a specific car is needed: if the player leaves it, the waypoint points back to it
     if (vehicle) {
       let inIt = null
@@ -167,7 +217,36 @@ class MissionContext {
       return Math.hypot(q.x - target.x, q.z - target.z) < r
     })
     if (hint) { this.untrack(hint); this.onFootWanted = this.carWanted = false }
+    if (trip) this.untrack(trip)
     this.marker(null)
+  }
+
+  // hold [T] on a skippable trip: a fade, and you're a few metres short of where you were going
+  tripSkip(target, r) {
+    let holdT = 0, busy = false
+    return this.every((dt) => {
+      const g = this.game, p = this.player
+      if (busy) return
+      const ok = dist(this.P, target) > SKIP_MIN && !g.cutscene && !g.ui.modalOpen && !p.passenger && p.control && !(g.police?.level > 0)
+      holdT = ok && g.input.act('job') ? holdT + (g.rawDt || dt) : 0
+      if (holdT < 0.6) return
+      busy = true; holdT = 0
+      this.skipTrip(target, r).catch(() => {}).finally(() => { busy = false })
+    })
+  }
+
+  async skipTrip(target, r) {
+    const g = this.game, p = this.player
+    await this.ui.fade(1, 300)
+    if (this.failed) { this.ui.fade(0, 300); return }
+    const car = p.vehicle && !p.passenger ? p.vehicle : null
+    const s = this.story.arriveSpot(target, r + 7, !!car)
+    if (car) { g.vehicles.clearSpot(s.x, s.z, 6); car.teleport(s.x, g.physics.groundHeight(s.x, s.z, 3) + 0.3, s.z, s.ry); car.throttle = 0 }
+    else p.teleport(s.x, g.physics.groundHeight(s.x, s.z, 3), s.z, s.ry)
+    g.cameraRig.yaw = s.ry; g.cameraRig.target.copy(this.P); g.cameraRig.snap()
+    this.notify('⏩ Ai sărit peste drum.', 1.6)
+    await new Promise((res) => setTimeout(res, 200))
+    await this.ui.fade(0, 400)
   }
 
   // ---- talking -------------------------------------------------------------------------------
@@ -180,11 +259,11 @@ class MissionContext {
   }
   npcFor(who) { return typeof who === 'string' ? (this.story.temp[who] || this.story.cast[who]) : null }
 
-  // modal dialogue with portraits; lines: strings or { who, text }
+  // modal dialogue with portraits; lines: strings or { who, text } ([[his|hers]] follows the hero)
   async say(who, lines, opts = {}) {
     this.check()
     const sp = this.speaker(who)
-    let L = (Array.isArray(lines) ? lines : [lines]).map((l) => (typeof l === 'string' ? l : { who: this.speaker(l.who), text: l.text }))
+    let L = (Array.isArray(lines) ? lines : [lines]).map((l) => (typeof l === 'string' ? fill(this.game, l) : { who: this.speaker(l.who), text: fill(this.game, l.text) }))
     if (this.skipping) { if (!opts.choices) return null; L = L.slice(-1) }
     const npc = this.npcFor(who)
     const p = this.player
@@ -203,6 +282,7 @@ class MissionContext {
   async talk(who, text, secs = null) {
     this.check()
     if (this.skipping) return
+    text = fill(this.game, text)
     const sp = this.speaker(who)
     const s = secs ?? clamp(1.4 + text.length * 0.05, 2.2, 6.5)
     // the line stays up for as long as it lasts in game time (slow frames stretch both alike);
@@ -214,13 +294,28 @@ class MissionContext {
     try { await this.wait(s) } finally { if (this.ui.subText === text) this.ui.subtitle(null) }
   }
 
-  // big "new evidence" card; also stored in the save
+  // a phone call in the middle of a mission (the banter on a long drive): non-modal, you keep
+  // driving; it's cut off with the mission. lines: strings (the caller) or { who, text }
+  call(who, lines, opts = {}) {
+    if (this.skipping) return { stop() {}, done: Promise.resolve(false) }
+    const h = this.story.phone.now({ kind: 'call', who, lines: Array.isArray(lines) ? lines : [lines], ...opts })
+    this.track({ dispose: () => h.stop() })
+    return h
+  }
+  sms(who, text, opts = {}) {
+    const h = this.story.phone.now({ kind: 'sms', who, lines: [text], ...opts })
+    this.track({ dispose: () => h.stop() })
+    return h
+  }
+
+  // big "new evidence" card; also stored in the save (a replay has it already: no card)
   async evidence(id, title, text) {
     const pr = this.progress
     pr.flags.dovezi ||= []
     if (!pr.flags.dovezi.includes(id)) pr.flags.dovezi.push(id)
     pr.flags.doveziText ||= {}
     pr.flags.doveziText[id] = { title, text }
+    if (this.replay) return
     this.game.audio?.sting('evidence')
     await this.ui.evidence(`DOVADA ${pr.flags.dovezi.indexOf(id) + 1}`, title, text)
     this.check()
@@ -251,6 +346,18 @@ class MissionContext {
   ally(spec, x, z, { hp = 90, id = null } = {}) {
     const n = this.spawn(id, spec, x, z, { personality: 'story', hp, runSpeed: 5.6, voice: { pitch: 1, type: 'gruff' } })
     n.ally = true
+    return n
+  }
+  // a favour's giver: the one you walked up to (the mission takes them over), or a fresh one
+  // where they stand (a replay, a retry); `id` is who they are for m.say
+  giver(id) {
+    const f = this.def, gv = f.giver
+    const have = this.story.favors.take(f.id)
+    if (have) { have.missionSpawned = true; this.adoptNpc(have); this.story.temp[id] = have; return have }
+    const pos = gv.pos(this.places)
+    const sp = SPEAKERS[gv.speaker] || {}
+    const n = this.spawn(id, gv.spec || sp.spec, pos.x, pos.z, { ry: pos.ry ?? 0, name: sp.name, voice: sp.voice })
+    n.lookAtPlayer = true
     return n
   }
   down(n) { return n.char.ko && n.hp <= 0 }
@@ -495,6 +602,10 @@ export class Story {
     this.potholes = new Potholes(game)
     this.acts = new Activities(game, this)
     this.events = new Happenings(game, this)   // random street events (src/side)
+    this.phone = new Phone(game, this)          // calls and texts: hooks, favours, banter
+    this.rating = new Rating(game, this)        // stars, records, the mission passed card
+    this.favors = new Favors(game, this)        // side missions offered on the phone
+    this.tries = {}                             // attempts since the last pass (for "first try")
   }
 
   get done() { return this.game.progress.story.done }
@@ -503,20 +614,136 @@ export class Story {
   catalog() {
     const next = this.nextMission()
     let locked = false
-    return MISSIONS.filter((m) => !m.activity).map((m) => {
+    const rows = MISSIONS.filter((m) => !m.activity).map((m, i) => {
       const done = this.isDone(m.id)
       const cur = this.active?.def === m || (!this.active && next === m)
-      const row = { id: m.id, title: `${m.chapterName ? m.chapterName + ' · ' : ''}${m.title}`, desc: m.desc, done, current: cur, locked: locked && !done && !cur }
+      const row = { id: m.id, title: `${m.chapterName ? m.chapterName + ' · ' : ''}${m.title}`, desc: m.desc, done, current: cur, locked: locked && !done && !cur, top: i === 0 }
       if (!done && !cur) locked = true
       return row
     })
+    // the favours you've been offered (or done), then how many are still to come
+    const F = this.favors, fav = F.list.filter((f) => F.isOffered(f.id) || F.isDone(f.id))
+    fav.forEach((f, i) => rows.push({ id: f.id, title: `${f.icon} ${f.title}`, desc: f.desc, done: F.isDone(f.id), current: this.active?.def === f, locked: false, side: true, first: i === 0 }))
+    const more = F.list.length - fav.length
+    if (more) rows.push({ id: 'favors_more', title: `${more === 1 ? 'Încă un favor' : `Încă ${more} favoruri`}: vin la telefon, pe parcurs`, desc: '', done: false, current: false, locked: true, side: true, first: !fav.length })
+    return rows
+  }
+
+  // the pause menu's mission list (Menus.renderMissions hands each row here): the stars and
+  // best time of anything rated, ↻ to replay a passed mission for more stars, and Nea Grișa's
+  // taxi to wherever you're headed next
+  missionRow(row, m) {
+    if (m.top) {
+      const t = this.rating.totals()
+      row.before(el('div', 'mission-total', `<b>★ ${t.got}</b> din ${t.max} stele · ${t.full} ${t.full === 1 ? 'misiune' : 'misiuni'} cu ★★★${t.got < t.max ? ' · ↻ rejoacă ce-ai trecut, pentru restul' : ' · colecția e completă!'}`))
+    }
+    if (m.side && m.first) row.before(el('div', 'mission-head', `FAVORURI <small>${this.favors.st.done.length}/${this.favors.list.length} făcute</small>`))
+    const def = this.byId(m.id)
+    if (!def) return
+    const rec = this.rating.best(def.id)
+    if (this.rating.rated(def) && (m.done || rec)) {
+      const s = rec?.stars || 0
+      row.querySelector('.mt')?.insertAdjacentHTML('beforeend', `<span class="mstars">${'★'.repeat(s)}<span class="off">${'★'.repeat(3 - s)}</span>${rec ? `<small>${mmss(rec.time)}</small>` : ''}</span>`)
+    }
+    const acts = []
+    if (this.canReplay(def.id)) acts.push([rec?.stars === 3 ? '↻ Rejoacă' : '↻ Rejoacă pentru ★★★', () => this.replay(def.id)])
+    const dest = this.destination(def)
+    if (dest && dist(dest.pos, this.P()) > 140) acts.push([`🚕 Du-mă acolo · ${GRISA_FARE} lei`, () => this.taxiTo(dest.pos, { r: dest.r, label: def.title })])
+    if (!acts.length) return
+    const box = el('div', 'macts')
+    for (const [t, fn] of acts) { const b = el('button', 'btn', t); b.onclick = (e) => { e.stopPropagation(); fn() }; box.appendChild(b) }
+    row.appendChild(box)
+  }
+
+  // where a mission you haven't started yet begins (the next story mission, an offered favour)
+  destination(def) {
+    if (this.active && !this.active.def.activity) return null
+    const fav = !!def.side
+    if (fav ? !this.favors.isOffered(def.id) || this.favors.isDone(def.id) : def !== this.nextMission()) return null
+    const gv = def.giver
+    return { pos: this.giverPos(def), r: gv.auto ? (gv.r || 5) + 6 : 3.5 }
   }
 
   activities() { return ACTIVITIES.filter((a) => !a.unlock || this.isDone(a.unlock)) }
   evidence() { const f = this.game.progress.flags; return (f.dovezi || []).map((id) => ({ id, ...(f.doveziText?.[id] || { title: id, text: '' }) })) }
 
   nextMission() { return MISSIONS.find((m) => !m.activity && !this.isDone(m.id)) || null }
-  byId(id) { return MISSIONS.find((m) => m.id === id) }
+  byId(id) { return MISSIONS.find((m) => m.id === id) || this.favors.byId(id) }
+  // everything that gets stars: the story's missions with gameplay in them, and the favours
+  ratedDefs() { return [...MISSIONS, ...this.favors.list].filter((d) => this.rating.rated(d)) }
+
+  // a passed mission with a rating can be played again (from the pause menu) for more stars
+  canReplay(id) {
+    const d = this.byId(id)
+    if (!d || !this.rating.rated(d) || this.active?.def === d) return false
+    return d.side ? this.favors.isDone(id) : this.isDone(id)
+  }
+
+  async replay(id) {
+    const g = this.game, def = this.byId(id)
+    if (!def || !this.canReplay(id) || this.starting) return false
+    if (this.active && !this.active.def.activity) { g.ui.notify('Termină întâi misiunea în care ești.', 2.6, 'red'); return false }
+    if (g.menus?.open?.classList?.contains('pause')) g.menus.closePause()
+    const at = def.replayAt?.(g.world.places) || def.retryAt?.(g.world.places) || this.giverPos(def)
+    await this.travel(at, { r: 2.4 })
+    this.tries[id] = 0
+    this.run(def, { replay: true })
+    return true
+  }
+
+  // Nea Grișa's taxi: a fade, 15 lei, and you're standing near where the next thing starts
+  async taxiTo(pos, { r = 4, label = '' } = {}) {
+    const g = this.game, pr = g.progress
+    if (this.active && !this.active.def.activity) { g.ui.notify('Nea Grișa nu vine în mijlocul unei misiuni.', 2.4, 'red'); return false }
+    if ((g.police?.level || 0) > 0) { g.ui.notify('Cu poliția pe urme? Nea Grișa nu oprește.', 2.6, 'red'); return false }
+    if (g.menus?.open?.classList?.contains('pause')) g.menus.closePause()
+    // a side job or a street event you were in the middle of is over
+    if (this.active) { this.active.fail(new MissionFail('', { cancel: true })); for (let i = 0; i < 40 && this.active; i++) await new Promise((res) => setTimeout(res, 50)) }
+    await this.travel(pos, { r })
+    const fare = Math.min(GRISA_FARE, pr.lei)
+    if (fare) pr.addLei(-fare)
+    g.ui.notify(pickOne(GRISA), 4, 'gold')
+    g.events.emit('fasttravel', { to: label, x: pos.x, z: pos.z })
+    return true
+  }
+
+  // fade out, and in again on foot about `r` metres from pos, facing it
+  async travel(pos, { r = 3 } = {}) {
+    const g = this.game, p = g.player
+    await g.ui.fade(1, 450)
+    if (g.home?.inside) g.home.leaveNow()
+    g.police?.clear()
+    if (p.vehicle) g.vehicles.exit(true)
+    const s = this.arriveSpot(pos, r, false)
+    p.teleport(s.x, g.physics.groundHeight(s.x, s.z, 3), s.z, s.ry)
+    g.cameraRig.yaw = s.ry
+    g.cameraRig.target.copy(p.pos); g.cameraRig.snap()
+    g.progress.hp = Math.max(g.progress.hp, g.progress.maxHp * 0.8)
+    await new Promise((res) => setTimeout(res, 150))
+    await g.ui.fade(0, 450)
+  }
+
+  // somewhere to land about d metres short of a target (on the side you're coming from): a
+  // lane of the nearest road for a car, the nearest pavement node on foot; facing the target
+  arriveSpot(target, d, car = false) {
+    const g = this.game, from = this.P()
+    const dx = from.x - target.x, dz = from.z - target.z, L = Math.hypot(dx, dz) || 1
+    const want = { x: target.x + dx / L * d, z: target.z + dz / L * d }
+    let x = want.x, z = want.z, ry = null
+    if (car && g.traffic?.graph) {
+      const e = g.traffic.graph.nearestEdge(want.x, want.z)
+      if (e?.edge) { const lp = g.traffic.graph.lanePoint(e.edge, 0, e.t); x = lp.x; z = lp.z; ry = Math.atan2(e.edge.fx, e.edge.fz) }
+    } else {
+      let best = null, bd = 1e18
+      for (const n of g.peds?.nodes || []) {
+        const dd = (n.x - want.x) ** 2 + (n.z - want.z) ** 2
+        // not on top of the target (an auto-start circle must be walked into)
+        if (dd < bd && Math.hypot(n.x - target.x, n.z - target.z) > d * 0.6) { bd = dd; best = n }
+      }
+      if (best && bd < 40 * 40) { x = best.x; z = best.z }
+    }
+    return { x, z, ry: ry ?? Math.atan2(target.x - x, target.z - z) }
+  }
 
   // ---- cast -------------------------------------------------------------------------------
   removeNpc(npc) {
@@ -529,7 +756,7 @@ export class Story {
   setupCast() {
     const g = this.game
     for (const [id, h] of Object.entries(HOMES)) {
-      const want = (!h.after || this.isDone(h.after)) && (!h.until || !this.isDone(h.until)) && !this.hidden.has(id)
+      const want = (!h.after || this.isDone(h.after)) && (!h.until || !this.isDone(h.until)) && !this.hidden.has(id) && !h.away?.(this)
       const have = this.cast[id]
       if (want && !have) {
         const pos = h.pos(g.world.places)
@@ -561,15 +788,30 @@ export class Story {
     const svc = this.acts.services(id)
     if (svc) return svc()
     const lines = h.chat ? h.chat(this.game, this) : null
-    if (lines) await this.game.ui.dialogue(SPEAKERS[id], lines)
+    if (lines) await this.game.ui.dialogue(SPEAKERS[id], lines.map((l) => fill(this.game, l)))
   }
 
   // ---- mission flow ---------------------------------------------------------------------------
   giverPos(m) {
     const g = this.game, gv = m.giver
+    if (gv.pos) return gv.pos(g.world.places)
     if (gv.npc && this.cast[gv.npc]) return this.cast[gv.npc].pos
     if (gv.npc && HOMES[gv.npc]) return HOMES[gv.npc].pos(g.world.places)
     return g.world.places[gv.place]
+  }
+
+  // "📱 2 favoruri pe hartă" under the story's next step: there's always one more thing to do
+  favorsLine() {
+    const n = this.favors.open().length
+    return n ? `📱 ${n === 1 ? 'Un favor te așteaptă' : n + ' favoruri te așteaptă'} pe hartă (★)` : ''
+  }
+
+  refreshSub() {
+    if (this.active) return
+    const m = this.nextMission()
+    const sub = [m?.hint, this.favorsLine()].filter(Boolean).join(' · ')
+    const s = this.game.ui.objEl?.querySelector('.sub')
+    if (s) { s.innerHTML = fmt(sub); s.style.display = sub ? '' : 'none' }
   }
 
   showNextGiver() {
@@ -581,7 +823,7 @@ export class Story {
     if (!m) {
       this.markerActive = false
       g.ui.setMarker(g.director.waypoint, g.director.waypoint ? 'GPS' : '')
-      g.ui.setObjective('Chișinăul e al tău. Taxi, curse, gropi, dosare… primăria te așteaptă.', { title: 'JOC LIBER', flash: false })
+      g.ui.setObjective('Chișinăul e al tău. Taxi, curse, gropi, dosare… primăria te așteaptă.', { title: 'JOC LIBER', flash: false, sub: this.favorsLine() })
       return
     }
     const gv = m.giver
@@ -589,26 +831,47 @@ export class Story {
     const p0 = this.giverPos(m)
     this.markerActive = true
     g.ui.setMarker({ x: p0.x, z: p0.z, y: CURB_H }, gv.label || m.title)
-    g.ui.setObjective(m.startText || `Mergi la {y}${gv.label}{/y}.`, { title: (m.chapterName ? m.chapterName.toUpperCase() + ' · ' : '') + m.title.toUpperCase(), sub: m.hint || '' })
+    g.ui.setObjective(m.startText || `Mergi la {y}${gv.label}{/y}.`, { title: (m.chapterName ? m.chapterName.toUpperCase() + ' · ' : '') + m.title.toUpperCase(), sub: [m.hint, this.favorsLine()].filter(Boolean).join(' · ') })
     if (gv.auto) this.autoStart = { m, r: gv.r || 5, armed: Math.hypot(this.P().x - p0.x, this.P().z - p0.z) > (gv.r || 5) || m.id === 'sosire' }
     else g.interaction.add({ id: 'mission_giver', x: () => this.giverPos(m).x, z: () => this.giverPos(m).z, r: gv.r || 3, priority: 5, label: `▶ Misiune: ${m.title}`, enabled: () => !this.active || this.active.def.activity, onInteract: () => this.run(m) })
   }
 
   async startNew() {
     this.hidden.clear()
+    this.phone.clear()
+    this.favors.reset()
+    this.tries = {}
     this.setupCast()
     await this.run(MISSIONS[0])
   }
 
   async resume() {
+    this.phone.clear()
+    this.favors.reset()
+    this.tries = {}
     this.setupCast()
     this.potholes.syncFixed(this.game.progress.potholes)
     this.showNextGiver()
+    // favours that unlocked in the part of the story you've played ring again
+    this.favors.check(14)
+  }
+
+  // what rings once a mission is passed: its hook (priority), then any favour it unlocked
+  afterPass(def) {
+    for (const h of AFTER[def.id] || []) {
+      const opts = { id: 'after:' + def.id, priority: true, delay: h.delay ?? (h.call ? 2 : 1.2), dropped: !!h.dropped }
+      if (h.sms) this.phone.sms(h.sms, h.text, opts)
+      else if (h.viber) this.phone.viber(h.viber, h.text, opts)
+      else this.phone.call(h.call, h.lines, opts)
+    }
+    this.favors.check()
   }
 
   failActive(reason) { if (this.active) this.active.fail(reason) }
 
-  async run(def) {
+  // opts: replay (from the pause menu: no story progress, no base reward, only new stars pay),
+  // from + cp (a retry that starts at a checkpoint)
+  async run(def, opts = {}) {
     const g = this.game
     if (this.starting) return
     if (this.active) {
@@ -625,64 +888,94 @@ export class Story {
     this.autoStart = null
     this.retryDef = null
     g.ui.tip(null)
-    const ctx = new MissionContext(this, def)
+    const replay = !!opts.replay
+    // the story's own missions (not side jobs, not favours) move the story on
+    const story = !def.activity && !def.side
+    const rated = this.rating.rated(def)
+    const ctx = new MissionContext(this, def, opts)
+    if (rated) ctx.tries = this.tries[def.id] = (this.tries[def.id] || 0) + 1
     this.active = ctx
     ctx.marker(null)
     g.ui.setObjective(null)
-    g.events.emit('mission:start', def)
-    if (!def.activity) g.progress.story.current = def.id
+    g.events.emit('mission:start', def, { replay, from: opts.from || null })
+    if (story && !replay) g.progress.story.current = def.id
+    // one knock is one crash (contacts fire every physics step), for the rating
+    const offCrash = g.events.on('player:crash', (e) => {
+      if ((e?.force || 0) < 16 || ctx.t - (ctx.crashT ?? -9) < 1.2) return
+      ctx.crashT = ctx.t
+      ctx.stats.crashes++
+    })
     let ok = false
     try {
-      if (def.intro) { await g.ui.chapter(def.intro[0], def.intro[1], def.intro[2], 3.6); ctx.check() }
-      else if (!def.activity && !def.silentStart) g.ui.missionBanner(def.chapterName ? def.chapterName.toUpperCase() : 'MISIUNE', def.title)
+      // a chapter card only the first time through; a replay or a checkpoint just says so
+      if (def.intro && !replay && !opts.from) { await g.ui.chapter(def.intro[0], def.intro[1], def.intro[2], 3.6); ctx.check() }
+      else if (!def.activity && (!def.silentStart || replay)) g.ui.missionBanner(replay ? 'REJUCARE · ★★★' : opts.from ? 'DE LA PUNCTUL DE SALVARE' : def.side ? 'FAVOR' : def.chapterName ? def.chapterName.toUpperCase() : 'MISIUNE', def.title)
       await def.script(ctx)
       ok = !ctx.failed
     } catch (e) {
       if (!(e instanceof MissionFail)) { console.error(e); ctx.failed = new MissionFail('Ceva a mers prost. Mai încearcă.') }
       else if (!ctx.failed) ctx.failed = e
     }
+    offCrash()
     ctx.cleanup()
     this.active = null
-    g.progress.story.current = null
-    g.events.emit(ok ? 'mission:pass' : 'mission:fail', def, ctx.failed?.reason || '')
+    if (story && !replay) g.progress.story.current = null
+    // a replay isn't story progress: listeners for passes (aura, respect, saves) don't hear it
+    g.events.emit(ok ? (replay ? 'mission:replay' : 'mission:pass') : 'mission:fail', def, ctx.failed?.reason || '', { replay })
     if (ok) {
-      if (!def.activity && !this.done.includes(def.id)) this.done.push(def.id)
-      if (def.reward) ctx.reward(def.reward, def.activity ? '' : def.title)
-      if (!def.silentPass) {
+      const first = def.side ? !this.favors.isDone(def.id) : !def.activity && !this.done.includes(def.id)
+      if (story && !this.done.includes(def.id)) this.done.push(def.id)
+      if (def.side) this.favors.markDone(def.id)
+      this.tries[def.id] = 0
+      if (def.reward && (first || def.activity)) ctx.reward(def.reward, def.activity ? '' : def.title)
+      let card = null
+      if (rated) card = this.rating.passed(ctx, { first, replay })
+      else if (!def.silentPass) {
         g.audio?.sting('mission_pass')
         g.ui.bigMessage(def.passTitle || 'MISIUNE REUȘITĂ', def.passText || def.title, { secs: 3.2 })
       }
-      if (def.after) await def.after(g, this)
-      if (def.chapterEnd) { await new Promise((r) => setTimeout(r, 3600)); await g.ui.chapter('SFÂRȘIT DE CAPITOL', def.chapterEnd, def.chapterEndText || '', 3.4) }
+      if (def.after && !replay) await def.after(g, this)
+      if (def.chapterEnd && !replay) {
+        await (card || new Promise((r) => setTimeout(r, 3600)))
+        // the chapter card says what's coming
+        const nx = this.nextMission()
+        const tease = nx ? `<div class="nx">Urmează · ${nx.chapterName ? nx.chapterName + ' · ' : ''}${nx.title}</div>` : ''
+        await g.ui.chapter('SFÂRȘIT DE CAPITOL', def.chapterEnd, (def.chapterEndText || '') + tease, 3.8)
+      }
+      if (!replay && !def.activity) this.afterPass(def)
       g.progress.save()
+      // don't start the next mission over the rating card
+      if (card && def.next === 'auto' && !replay) await card
     } else if (!ctx.failed?.cancel) {
       g.audio?.sting('mission_fail')
       g.ui.bigMessage(def.failTitle || 'MISIUNE EȘUATĂ', ctx.failed?.reason || '', { color: 'red', secs: 3 })
       if (def.onFail) def.onFail(g, this)
-      if (!def.noRetry) this.offerRetry(def)
+      if (!def.noRetry) this.offerRetry(def, { replay, from: ctx.cpKey, cp: ctx.cpRec })
     }
     this.setupCast()
-    if (ok && def.next === 'auto') {
+    if (ok && def.next === 'auto' && !replay) {
       const nx = this.nextMission()
       if (nx) { this.showNextGiver(); await new Promise((r) => setTimeout(r, def.silentPass ? 400 : 2800)); if (!this.active) return this.run(nx) }
     }
     if (!this.active) this.showNextGiver()
   }
 
-  offerRetry(def) {
+  offerRetry(def, opts = {}) {
     this.retryDef = def
+    this.retryOpts = opts
     this.retryUntil = performance.now() + 14000
-    setTimeout(() => { if (this.retryDef === def) this.game.ui.tip('Apasă {y}[R]{/y} ca să reîncerci misiunea.', 10) }, 3200)
+    setTimeout(() => { if (this.retryDef === def) this.game.ui.tip(opts.from ? 'Apasă {y}[R]{/y} ca să reîncerci de la {g}punctul de salvare{/g}.' : 'Apasă {y}[R]{/y} ca să reîncerci misiunea.', 10) }, 3200)
   }
 
   async retry() {
-    const def = this.retryDef
+    const def = this.retryDef, opts = this.retryOpts || {}
     this.retryDef = null
     const g = this.game
     g.ui.tip(null)
     await g.ui.fade(1, 450)
     g.police.clear()
-    const pos = def.retryAt ? def.retryAt(g.world.places) : this.giverPos(def)
+    const P = g.world.places
+    const pos = (opts.from && def.cpAt?.[opts.from]?.(P)) || (def.retryAt ? def.retryAt(P) : this.giverPos(def))
     const ang = Math.random() * Math.PI * 2
     const x = pos.x + Math.cos(ang) * 2.2, z = pos.z + Math.sin(ang) * 2.2
     if (g.player.vehicle) g.vehicles.exit(true)
@@ -690,7 +983,7 @@ export class Story {
     g.cameraRig.target.copy(g.player.pos); g.cameraRig.snap()
     g.progress.hp = Math.max(g.progress.hp, g.progress.maxHp * 0.8)
     await g.ui.fade(0, 450)
-    this.run(def)
+    this.run(def, opts)
   }
 
   blipList() {
@@ -700,7 +993,7 @@ export class Story {
       if (!h?.blip) continue
       out.push({ kind: 'npc', x: npc.pos.x, z: npc.pos.z, label: h.blip, color: this.giverId === id ? '#ffcf4a' : '#7fd4ff' })
     }
-    return out.concat(this.acts.blips())
+    return out.concat(this.acts.blips(), this.active && !this.active.def.activity ? [] : this.favors.blips())
   }
 
   // a scripted vehicle drives off (along points, or away via the road graph) and despawns out of sight
@@ -768,8 +1061,11 @@ export class Story {
     this.potholes.update(dt)
     this.acts.update(dt)
     this.events.update(dt)
+    this.phone.update(dt)
+    this.favors.update(dt)
     const tags = []
     if (this.giverId && this.cast[this.giverId] && !this.active) tags.push({ npc: this.cast[this.giverId], icon: '!' })
+    if (!this.active || this.active.def.activity) tags.push(...this.favors.tags())
     if (g.crew) tags.push(...g.crew.tags())
     if (g.street) tags.push(...g.street.tags())
     g.ui.setTags(tags)

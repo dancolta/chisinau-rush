@@ -71,6 +71,7 @@ export class Progress {
     this.hour = 17.6
     this.passiveAcc = 0
     this.side = null           // aura, challenges, stunt records (src/side fills it in)
+    this.meta = null           // achievements, the daily streak, seed packets, cards seen (src/side/Goals.js)
   }
 
   get rank() { return RANKS[this.rankIdx] }
@@ -85,6 +86,7 @@ export class Progress {
     this.lei = Math.max(0, this.lei + n)
     this.game.ui?.money(n, reason)
     if (n > 0) this.game.audio?.sfx(n >= 50 ? 'coins_many' : 'cash', { bus: 'ui', vol: 0.7 })
+    this.game.events.emit('lei', { n, reason })
   }
 
   spend(n) {
@@ -96,6 +98,7 @@ export class Progress {
   addXp(n, why) {
     this.xp += Math.round(n)
     this.game.ui?.xp(n, why)
+    this.game.events.emit('xp', { n: Math.round(n), why })
     let idx = this.rankIdx
     while (RANKS[idx + 1] && this.xp >= RANKS[idx + 1].xp) idx++
     if (idx > this.rankIdx) {
@@ -112,7 +115,8 @@ export class Progress {
   respectEff(k) { return Math.max(0, Math.min(100, (this.respect[k] || 0) + (this.look[k] || 0))) }
   tier(k) { return respectTier(this.respectEff(k)) }
   tierName(k) { return RESPECT_NAMES[k][this.tier(k)] }
-  // respect with a crowd; a toast for anything noticeable and a bigger one on a new tier
+  // respect with a crowd: a reward chip for every change, a bigger one on a new tier (the side
+  // content then says what the new tier gets you)
   addRespect(k, n, why = '') {
     n = Math.round(n)
     if (!n || !(k in this.respect)) return
@@ -121,12 +125,11 @@ export class Progress {
     const d = this.respect[k] - before
     if (!d) return
     const t1 = this.tier(k)
-    const ui = this.game.ui
+    this.game.ui?.chip?.('respect', d, { k, why, icon: RESPECT_ICON[k], who: RESPECT_WHO[k], tier: t1 !== t0 ? RESPECT_NAMES[k][t1] : null, down: t1 < t0 })
     if (t1 !== t0) {
-      ui?.notify(`${RESPECT_ICON[k]} ${t1 > t0 ? '{g}' : '{r}'}Respect la ${RESPECT_WHO[k]}: ${RESPECT_NAMES[k][t1]}${t1 > t0 ? '{/g}' : '{/r}'}`, 3.6, t1 > t0 ? 'green' : 'red')
       if (t1 > t0) this.game.audio?.sfx('confirm', { bus: 'ui', vol: 0.7 })
       this.game.events.emit('respect', { k, tier: t1, up: t1 > t0 })
-    } else if (Math.abs(d) >= 2) ui?.notify(`${RESPECT_ICON[k]} ${d > 0 ? '+' : ''}${d} respect la ${RESPECT_WHO[k]}${why ? ' · ' + why : ''}`, 2.4, d > 0 ? '' : 'red')
+    }
   }
   addCivic(n) { this.civic = Math.max(0, Math.min(100, this.civic + n)) }
 
@@ -171,7 +174,7 @@ export class Progress {
       v: 3, name: this.name, type: this.type, lei: this.lei, hp: this.hp, maxHp: this.maxHp, hunger: this.hunger,
       xp: this.xp, rankIdx: this.rankIdx, cred: this.cred, civic: this.civic, weapons: this.weapons, weapon: this.weapon,
       flags: this.flags, story: this.story, dosare: this.dosare, potholes: this.potholes, stats: this.stats, respect: this.respect,
-      carry: this.carry, outfit: this.outfit, clothes: this.clothes, side: this.side,
+      carry: this.carry, outfit: this.outfit, clothes: this.clothes, side: this.side, meta: this.meta,
       hour: g.renderer.tod.hour, pos: p ? { x: p.pos.x, z: p.pos.z } : null, t: Date.now(),
     }
   }
@@ -193,7 +196,8 @@ export class Progress {
   load(d) {
     this.reset({ name: d.name, type: d.type })
     const fresh = this.respect
-    for (const k of ['lei', 'hp', 'maxHp', 'hunger', 'xp', 'rankIdx', 'cred', 'civic', 'weapons', 'weapon', 'flags', 'story', 'dosare', 'potholes', 'stats', 'hour', 'respect', 'carry', 'clothes', 'side']) if (d[k] !== undefined) this[k] = d[k]
+    // (meta: older saves have none; Goals starts one and counts what's already been done)
+    for (const k of ['lei', 'hp', 'maxHp', 'hunger', 'xp', 'rankIdx', 'cred', 'civic', 'weapons', 'weapon', 'flags', 'story', 'dosare', 'potholes', 'stats', 'hour', 'respect', 'carry', 'clothes', 'side', 'meta']) if (d[k] !== undefined) this[k] = d[k]
     // older saves: carry what you own (up to the limit), wear what you came in
     if (!Array.isArray(d.carry)) this.carry = WEAPON_ORDER.filter((k) => k !== 'fist' && this.weapons.includes(k)).slice(0, CARRY_MAX)
     this.carry = this.carry.filter((k) => this.weapons.includes(k))

@@ -308,7 +308,8 @@ export class Pedestrians {
       const bloc = s.zone === 'soviet' || s.zone === 'acasa' || s.zone === 'garaje'
       if (bloc && Math.random() < 0.2) { spec = this.wardrobe('gop'); opts = { personality: 'tough', archetype: 'gopnik', kind: 'gop', mesh: spec?.mesh }; spec = spec?.spec || CAST[['gopnik1', 'gopnik2', 'gopnik3'][Math.floor(Math.random() * 3)]] }
       else if (Math.random() < 0.07 && this.list.filter((q) => q.archetype === 'kid').length < 4) { const k = this.wardrobe('kid'); spec = k?.spec || kidSpec(); opts = { personality: 'coward', archetype: 'kid', kind: 'kid', mesh: k?.mesh, walkSpeed: 1.5, hp: 25, voice: { pitch: 1.5 + Math.random() * 0.25, type: 'female' } } }
-      else if (!bloc && !s.park && Math.random() < 0.05 && !this.game.police?.level && this.list.filter((q) => q.personality === 'cop').length < 2) {
+      // (the officers on the Comisariat's door don't count against the beat)
+      else if (!bloc && !s.park && Math.random() < 0.05 && !this.game.police?.level && this.list.filter((q) => q.personality === 'cop' && !q.post).length < 2) {
         spec = CAST.cop; opts = { personality: 'cop', archetype: 'cop', hp: 60, walkSpeed: 1.15, voice: { pitch: 0.85 + Math.random() * 0.2, type: 'gruff' } }
       }
       const npc = this.spawn(x, z, spec, opts)
@@ -427,7 +428,7 @@ export class Pedestrians {
     far.sort((a, b) => b[1] - a[1])
     for (const [n] of far) {
       if (over <= 0) break
-      if (n.persistent || n.crew || n.calling || n.debtor || tr?.visible(n.pos.x, n.pos.z)) continue
+      if (n.persistent || n.crew || n.calling || n.debtor || n.post || tr?.visible(n.pos.x, n.pos.z)) continue
       this.remove(n); over--
     }
   }
