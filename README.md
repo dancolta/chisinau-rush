@@ -79,6 +79,7 @@ Open city with ~40 landmarks (PMAN, Casa Guvernului, Arcul de Triumf, Catedrala,
 node tools/play.mjs --from rapirea --turbo 6     # automated story playthrough (headless Chromium)
 node tools/systems.mjs                          # side systems checks (busted, shop, taxi, save…)
 node tools/aura.mjs                             # AURA, levels, stunts, daily challenges, street events
+node tools/comisariat.mjs [--shot station.png]  # the police station, and every arrest ending on its steps
 node tools/shot.mjs --out shot.png --eval "…"   # screenshots
 node tools/gallery.mjs --missions eban,mitingul    # capture every cutscene of the given missions
 node tools/views.mjs --out views --only night,play_day  # fixed review shots (day, dusk, night, gameplay camera)
