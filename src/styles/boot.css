@@ -25,15 +25,45 @@ body { font-family: var(--body); color: var(--paper); -webkit-font-smoothing: an
 #viewport canvas { display: block; width: 100%; height: 100%; outline: none; }
 #ui { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
 
-.boot { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #0b0a10; transition: opacity 0.8s ease; }
+.boot { position: fixed; inset: 0; z-index: 100; background: #efe6d2; transition: opacity 0.8s ease; overflow: hidden; }
 .boot.hide { opacity: 0; pointer-events: none; }
-.boot-art { position: absolute; inset: 0; background: #0b0a10 center / cover no-repeat; transform: scale(1.04); animation: bootpan 22s ease-in-out infinite alternate; }
-.boot-shade { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 60%, rgba(10, 8, 14, 0.2), rgba(10, 8, 14, 0.85) 70%), linear-gradient(180deg, rgba(10, 8, 14, 0.1), rgba(10, 8, 14, 0.9)); }
-.boot-inner { position: relative; width: min(560px, 86vw); text-align: center; margin-top: 30vh; }
-.boot-logo { font-family: var(--title); font-size: clamp(48px, 9vw, 104px); letter-spacing: 3px; color: var(--gold); text-shadow: 0 5px 0 #6a2412, 0 10px 30px rgba(0, 0, 0, 0.6); line-height: 0.95; }
-.boot-logo span { color: #fff; }
-.boot-bar { height: 10px; margin: 28px auto 12px; border-radius: 6px; background: rgba(255, 255, 255, 0.1); overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.15); }
+/* the loading screen is a cover-art grid (think GTA V's box art) made of stills the game rendered
+   of itself: framed panels that slam in, pan slowly and keep swapping while the city loads */
+.boot-grid { position: absolute; inset: 0; display: grid; gap: 7px; padding: 7px;
+  grid-template-columns: 1fr 1.3fr 1.3fr 1fr; grid-template-rows: 1fr 1fr 0.9fr;
+  grid-template-areas: "a b b c" "a d d c" "e l l f"; }
+.bp { position: relative; overflow: hidden; background: #15111c; box-shadow: 0 0 0 2px #17120d;
+  opacity: 0; transform: scale(1.1) rotate(-0.6deg); transition: opacity 0.3s ease-out, transform 0.55s cubic-bezier(0.18, 0.9, 0.22, 1); }
+.bp.in { opacity: 1; transform: none; }
+.bp-a { grid-area: a; } .bp-b { grid-area: b; } .bp-c { grid-area: c; } .bp-d { grid-area: d; } .bp-e { grid-area: e; } .bp-f { grid-area: f; }
+.bp > i { position: absolute; inset: -5%; background: #15111c center / cover no-repeat; filter: saturate(1.2) contrast(1.08);
+  animation: kb 16s ease-in-out infinite alternate; transition: opacity 0.8s ease; }
+.bp > i.gone { opacity: 0; }
+.bp:nth-child(2n) > i { animation-name: kb2; animation-duration: 19s; }
+.bp:nth-child(3n) > i { animation-duration: 13s; }
+/* print texture: a fine halftone over every panel */
+.bp::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.22; mix-blend-mode: multiply;
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.55) 0.9px, transparent 1.3px) 0 0 / 4px 4px; }
+.bp-l { grid-area: l; background: #0e0b14; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2vh 3vw; }
+.bp-l::after { opacity: 0.08; mix-blend-mode: normal; }
+.boot-logo { font-family: var(--title); font-size: clamp(40px, min(6.2vw, 10.5vh), 120px); line-height: 1; white-space: nowrap; letter-spacing: 2px; text-align: center; color: var(--gold);
+  -webkit-text-stroke: 0.035em #1a0b02; paint-order: stroke fill; text-shadow: 0 0.06em 0 #6a2412, 0 0.12em 0.4em rgba(0, 0, 0, 0.6); transform: rotate(-2deg); }
+/* one line here (the panel is wide and short), so nothing can sit on the comma under the Ș */
+.boot-logo span { color: #fff; margin-left: 0.22em; }
+.boot-bar { width: min(420px, 80%); height: 8px; margin: 1.6vh auto 8px; border-radius: 5px; background: rgba(255, 255, 255, 0.1); overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.16); }
 .boot-bar i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--rust), var(--gold)); transition: width 0.25s ease; }
-.boot-status { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
-.boot-tip { margin-top: 22px; font-size: 15px; color: #e9dfcd; min-height: 40px; opacity: 0.9; }
-@keyframes bootpan { from { transform: scale(1.04) translate(0, 0); } to { transform: scale(1.1) translate(-1.5%, -1%); } }
+.boot-status { font-size: 12px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); text-align: center; }
+.boot-tip { margin-top: 1.4vh; max-width: min(560px, 94%); display: flex; gap: 10px; align-items: flex-start; text-align: left;
+  border-left: 3px solid var(--gold); padding: 2px 0 2px 12px; font-size: 14px; line-height: 1.4; color: #efe6d2; }
+.boot-tip b { font-family: var(--display); font-weight: 400; font-size: 11px; letter-spacing: 1.5px; color: var(--gold); padding-top: 2px; }
+.boot-tip span { min-height: 20px; }
+@keyframes kb { from { transform: scale(1.02) translate(0, 0); } to { transform: scale(1.12) translate(-2%, -1.5%); } }
+@keyframes kb2 { from { transform: scale(1.12) translate(-1.5%, 1%); } to { transform: scale(1.03) translate(1.5%, -1%); } }
+/* phones held upright: two columns, the three strongest panels and the logo */
+@media (max-aspect-ratio: 1/1) {
+  .boot-grid { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1.15fr 0.9fr 0.95fr; grid-template-areas: "b b" "a c" "d d" "l l"; gap: 6px; padding: 6px; }
+  .bp-e, .bp-f { display: none; }
+  .boot-tip { font-size: 13px; }
+  .boot-logo { font-size: clamp(34px, 11vw, 80px); }
+}
+@media (prefers-reduced-motion: reduce) { .bp > i { animation: none; } .bp { transition: opacity 0.3s ease; transform: none; } }

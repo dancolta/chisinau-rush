@@ -157,7 +157,7 @@
 .mainmenu { position: absolute; inset: 0; z-index: 70; pointer-events: auto; display: grid; grid-template-columns: minmax(340px, 40%) 1fr; }
 .mainmenu .side { position: relative; background: linear-gradient(90deg, rgba(10,8,14,0.92) 60%, rgba(10,8,14,0)); padding: 8vh 5vw; display: flex; flex-direction: column; }
 .mm-logo { font-family: var(--title); font-size: clamp(56px, 7.5vw, 112px); line-height: 1; color: var(--gold); -webkit-text-stroke: 2px #2a1200; text-shadow: 0 7px 0 #6a2412, 0 14px 40px rgba(0,0,0,0.6); letter-spacing: 2px; }
-.mm-logo span { color: #fff; display: block; margin-top: -0.04em; }
+.mm-logo span { color: #fff; display: block; margin-top: 0.12em; } /* clear of the comma under the Ș */
 .mm-tag { margin-top: 14px; font-size: 15px; color: #e5dccb; max-width: 380px; line-height: 1.5; }
 .mm-btns { margin-top: 5vh; display: grid; gap: 10px; max-width: 340px; }
 .mm-btns .btn { font-size: 17px; padding: 14px 20px; }
