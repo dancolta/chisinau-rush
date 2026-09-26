@@ -1,0 +1,89 @@
+/* ============== progression: the next-reward line, the card queue (achievements, the daily bonus, first-time cards) ============== */
+:root { --medal-bronz: radial-gradient(circle at 35% 30%, #ffe1c2, #d98a4a 45%, #7a3a14); --medal-argint: radial-gradient(circle at 35% 30%, #ffffff, #c9d2dc 45%, #6a7684);
+  --medal-aur: radial-gradient(circle at 35% 30%, #fff1b0, #ffcf4a 45%, #c97a1e); --medal-single: radial-gradient(circle at 35% 30%, #e9ffe0, #6fd36a 45%, #22662e); --medal-none: radial-gradient(circle at 35% 30%, #6a6478, #3a3446 60%, #22202a); }
+
+/* ---- the next-reward line inside the AURA chip ---- */
+.aura-chip .next { grid-column: 1 / -1; position: relative; display: grid; grid-template-columns: auto 1fr auto; gap: 5px; align-items: center; margin: 0 0 1px 3px; padding: 3px 0 3px; border-top: 1px solid rgba(181, 140, 255, 0.22); font-size: 10.5px; line-height: 1.2; color: #f1e6ff; }
+.aura-chip .next .ni { font-size: 11px; }
+.aura-chip .next .nt { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px #000; }
+.aura-chip .next .nl { font-family: var(--num); font-size: 11px; color: #d7c2ff; white-space: nowrap; display: inline-block; }
+.aura-chip .next .nb { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.aura-chip .next .nb b { display: block; height: 100%; transform-origin: left; transform: scaleX(0); background: #b58cff; transition: transform 0.45s ease; }
+.aura-chip .next.xp .nl { color: #ffd95a; } .aura-chip .next.xp .nb b { background: var(--gold); }
+.aura-chip .next.daily .nl { color: #9cf07c; } .aura-chip .next.daily .nb b { background: #7ee07a; }
+.aura-chip .next.flip { animation: nxflip 0.4s ease; }
+@keyframes nxflip { 0% { opacity: 0; transform: translateY(5px); } }
+
+/* ---- nudges in the side feed ---- */
+.sfeed.nudge { border-color: var(--gold); background: linear-gradient(90deg, rgba(60, 44, 8, 0.92), rgba(14, 11, 22, 0.88)); }
+
+/* ---- the Stage: one card at a time, low in the middle ---- */
+.gstage { position: absolute; inset: 0; pointer-events: none; }
+.gcard { position: absolute; bottom: calc(var(--edge-y) + 4px); display: flex; gap: 12px; align-items: center; padding: 10px 14px 10px 10px; overflow: hidden; border-radius: 16px;
+  background: linear-gradient(100deg, rgba(24, 16, 40, 0.96), rgba(12, 10, 18, 0.93)); border: 1px solid rgba(255, 207, 74, 0.55);
+  box-shadow: 0 12px 34px rgba(0,0,0,0.55), 0 0 22px rgba(255, 207, 74, 0.18); animation: gcin 0.55s cubic-bezier(.2,1.45,.45,1); transition: opacity 0.3s, transform 0.3s; }
+.gcard.held { opacity: 0; transform: translateY(14px); }
+.gcard.out { opacity: 0; transform: translateY(24px) scale(0.96); transition: opacity 0.4s, transform 0.4s; }
+@keyframes gcin { 0% { opacity: 0; transform: translateY(44px) scale(0.86); } 100% { opacity: 1; transform: none; } }
+.gcard .shine { position: absolute; top: 0; bottom: 0; left: -60%; width: 45%; background: linear-gradient(100deg, transparent, rgba(255,255,255,0.2), transparent); animation: gshine 1.3s 0.3s ease-out forwards; pointer-events: none; }
+@keyframes gshine { to { left: 130%; } }
+.gcard .medal, .ach-card .medal { flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--medal-aur); }
+.gcard .medal { width: 56px; height: 56px; font-size: 28px; box-shadow: 0 0 0 3px #1a1206, 0 0 0 5px rgba(255, 207, 74, 0.6), 0 0 24px rgba(255, 207, 74, 0.5); animation: gmedal 0.75s 0.12s cubic-bezier(.2,1.8,.4,1) both; }
+@keyframes gmedal { 0% { transform: scale(0) rotate(-50deg); } 100% { transform: none; } }
+.medal.bronz { background: var(--medal-bronz); } .medal.argint { background: var(--medal-argint); } .medal.aur { background: var(--medal-aur); }
+.medal.single { background: var(--medal-single); } .medal.none { background: var(--medal-none); }
+.medal span { filter: drop-shadow(0 2px 1px rgba(0,0,0,0.45)); }
+.gcard .bd { position: relative; min-width: 0; flex: 1; }
+.gcard .k { font-family: var(--display); font-size: 10.5px; letter-spacing: 1.4px; color: #ffd95a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gcard .k b { color: #fff; font-weight: 400; }
+.gcard .t { font-family: var(--title); font-size: 27px; letter-spacing: 1px; line-height: 1.05; color: #fff; -webkit-text-stroke: 0.6px #000; text-shadow: 0 2px 0 #000; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.gcard .r { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: baseline; margin-top: 2px; font-size: 13px; color: #e5dccb; }
+.gcard .r .g { font-family: var(--num); font-size: 18px; color: #9cf07c; -webkit-text-stroke: 0.6px #08130a; }
+.gcard .r .a { font-family: var(--num); font-size: 18px; color: #e6d6ff; -webkit-text-stroke: 0.6px #2a0f4a; }
+.gcard .r i { font-style: normal; font-size: 12px; color: #cfc8bb; }
+.gcard .r .n { margin-left: auto; font-family: var(--num); font-size: 12px; color: #a99bff; }
+.gcard .r .icons { font-size: 15px; letter-spacing: 1px; margin-right: 4px; }
+.gcard.ach.aur, .gcard.summary { border-color: #ffcf4a; box-shadow: 0 12px 34px rgba(0,0,0,0.55), 0 0 36px rgba(255, 207, 74, 0.4); }
+.gcard .ic { flex: none; width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; font-size: 26px; background: rgba(127, 212, 255, 0.12); border: 1px solid rgba(127, 212, 255, 0.4); }
+.gcard .x { font-size: 13.5px; line-height: 1.35; color: #fbf6ec; margin-top: 2px; }
+.gcard .f { font-size: 12px; line-height: 1.35; color: #cfc8bb; margin-top: 3px; }
+.gcard .f b { color: var(--gold); font-weight: 700; }
+.gcard.explain { border-color: rgba(127, 212, 255, 0.6); box-shadow: 0 12px 34px rgba(0,0,0,0.55), 0 0 22px rgba(127, 212, 255, 0.2); }
+.gcard.explain .k { color: #9fdcff; }
+.gcard.respect { border-color: rgba(126, 224, 122, 0.6); box-shadow: 0 12px 34px rgba(0,0,0,0.55), 0 0 22px rgba(126, 224, 122, 0.22); }
+.gcard.respect .k { color: #8ef07a; }
+.gcard.respect .ic { background: rgba(126, 224, 122, 0.12); border-color: rgba(126, 224, 122, 0.45); }
+.gcard.respect .t { font-size: 24px; }
+.gcard.streak { border-color: #ff8a3a; background: linear-gradient(100deg, rgba(64, 22, 8, 0.97), rgba(18, 10, 14, 0.94)); box-shadow: 0 12px 34px rgba(0,0,0,0.55), 0 0 32px rgba(255, 120, 40, 0.38); }
+.gcard.streak .k { color: #ffb35a; }
+.days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin: 6px 0 4px; }
+.days .d { text-align: center; padding: 3px 0 4px; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); }
+.days .d small { display: block; font-family: var(--display); font-size: 8.5px; line-height: 1.2; color: #9a93b8; }
+.days .d b { font-family: var(--num); font-weight: 400; font-size: 12px; color: #e5dccb; }
+.days .d.got { background: rgba(126, 224, 122, 0.14); border-color: rgba(126, 224, 122, 0.4); }
+.days .d.got b { color: #8ef07a; }
+.days .d.now { background: linear-gradient(180deg, #ffb35a, #e8641c); border-color: #ffd9a8; box-shadow: 0 0 16px rgba(255, 140, 60, 0.6); animation: dnow 0.9s ease-in-out infinite alternate; }
+.days .d.now small, .days .d.now b { color: #2a0e00; }
+@keyframes dnow { to { transform: scale(1.08); } }
+.gstage.freeze .gcard, .gstage.freeze .gcard *, .gcard.freeze, .gcard.freeze * { animation: none !important; }
+.gstage.freeze .gcard .shine { display: none; }
+
+/* ---- small screens ---- */
+@media (max-width: 760px), (max-height: 520px) {
+  .gcard { gap: 9px; padding: 7px 10px 7px 8px; border-radius: 13px; }
+  .gcard .medal { width: 42px; height: 42px; font-size: 21px; }
+  .gcard .ic { width: 36px; height: 36px; font-size: 20px; border-radius: 10px; }
+  .gcard .k { font-size: 9px; }
+  .gcard .t { font-size: 21px; }
+  .gcard .x { font-size: 12px; }
+  .gcard .f { font-size: 11px; }
+  .gcard .r .g, .gcard .r .a { font-size: 15px; }
+  .days { gap: 3px; margin: 4px 0 3px; }
+  .days .d b { font-size: 10.5px; }
+}
+@media (max-height: 520px) {
+  .gcard .f { display: none; }
+  .aura-chip .next { font-size: 9.5px; }
+  /* a phone scales the whole minimap column down to 60 %: the line stays readable */
+  html.touch .aura-chip .next, html.touch .aura-chip .next .nl { font-size: 13px; }
+}

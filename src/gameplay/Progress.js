@@ -71,6 +71,7 @@ export class Progress {
     this.hour = 17.6
     this.passiveAcc = 0
     this.side = null           // aura, challenges, stunt records (src/side fills it in)
+    this.meta = null           // achievements, the daily streak, seed packets, cards seen (src/side/Goals.js)
   }
 
   get rank() { return RANKS[this.rankIdx] }
@@ -85,6 +86,7 @@ export class Progress {
     this.lei = Math.max(0, this.lei + n)
     this.game.ui?.money(n, reason)
     if (n > 0) this.game.audio?.sfx(n >= 50 ? 'coins_many' : 'cash', { bus: 'ui', vol: 0.7 })
+    this.game.events.emit('lei', { n, reason })
   }
 
   spend(n) {
@@ -96,6 +98,7 @@ export class Progress {
   addXp(n, why) {
     this.xp += Math.round(n)
     this.game.ui?.xp(n, why)
+    this.game.events.emit('xp', { n: Math.round(n), why })
     let idx = this.rankIdx
     while (RANKS[idx + 1] && this.xp >= RANKS[idx + 1].xp) idx++
     if (idx > this.rankIdx) {
@@ -171,7 +174,7 @@ export class Progress {
       v: 3, name: this.name, type: this.type, lei: this.lei, hp: this.hp, maxHp: this.maxHp, hunger: this.hunger,
       xp: this.xp, rankIdx: this.rankIdx, cred: this.cred, civic: this.civic, weapons: this.weapons, weapon: this.weapon,
       flags: this.flags, story: this.story, dosare: this.dosare, potholes: this.potholes, stats: this.stats, respect: this.respect,
-      carry: this.carry, outfit: this.outfit, clothes: this.clothes, side: this.side,
+      carry: this.carry, outfit: this.outfit, clothes: this.clothes, side: this.side, meta: this.meta,
       hour: g.renderer.tod.hour, pos: p ? { x: p.pos.x, z: p.pos.z } : null, t: Date.now(),
     }
   }
@@ -193,7 +196,8 @@ export class Progress {
   load(d) {
     this.reset({ name: d.name, type: d.type })
     const fresh = this.respect
-    for (const k of ['lei', 'hp', 'maxHp', 'hunger', 'xp', 'rankIdx', 'cred', 'civic', 'weapons', 'weapon', 'flags', 'story', 'dosare', 'potholes', 'stats', 'hour', 'respect', 'carry', 'clothes', 'side']) if (d[k] !== undefined) this[k] = d[k]
+    // (meta: older saves have none; Goals starts one and counts what's already been done)
+    for (const k of ['lei', 'hp', 'maxHp', 'hunger', 'xp', 'rankIdx', 'cred', 'civic', 'weapons', 'weapon', 'flags', 'story', 'dosare', 'potholes', 'stats', 'hour', 'respect', 'carry', 'clothes', 'side', 'meta']) if (d[k] !== undefined) this[k] = d[k]
     // older saves: carry what you own (up to the limit), wear what you came in
     if (!Array.isArray(d.carry)) this.carry = WEAPON_ORDER.filter((k) => k !== 'fist' && this.weapons.includes(k)).slice(0, CARRY_MAX)
     this.carry = this.carry.filter((k) => this.weapons.includes(k))
