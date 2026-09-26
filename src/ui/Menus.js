@@ -80,6 +80,7 @@ export class Menus {
           this.showCreate()
         })
         if (cloud?.enabled) add(cloud.loggedIn ? '☁  Cont' : '👤  Cont', 'acct-btn', () => this.showAccount())
+        add('🎬  Trailer', '', () => this.showTrailer())
         add('⚙  Setări', '', () => this.showSettingsOnly())
         m.querySelector('.mm-save').innerHTML = save ? `Salvare: ${saveLine(save)} · ${new Date(save.t).toLocaleString('ro-RO')}` : ''
       }
@@ -505,6 +506,25 @@ export class Menus {
     slider('fov', 'Câmp vizual (FOV)', 34, 60, 1, () => { g.cameraRig.baseFov = s.fov })
     slider('camSensitivity', 'Sensibilitate cameră', 0.3, 2.5, 0.1)
     slider('brightness', 'Luminozitate', 0.8, 1.6, 0.05)
+  }
+
+  // the teaser, rendered offline from the game itself (tools/trailer.mjs); the menu music
+  // steps aside while it plays
+  showTrailer() {
+    const g = this.game
+    const base = import.meta.env.BASE_URL || './'
+    // H.264 for most browsers, VP9 for the ones built without it
+    const d = el('div', 'trailer', `<div class="box"><video poster="${base}trailer-poster.jpg" controls autoplay playsinline preload="auto"><source src="${base}trailer.mp4" type="video/mp4"><source src="${base}trailer.webm" type="video/webm"></video><button class="btn close">✕  Închide</button></div>`)
+    this.layer.appendChild(d)
+    const v = d.querySelector('video')
+    v.querySelector('source:last-child').addEventListener('error', () => {
+      v.insertAdjacentHTML('afterend', `<div class="trailer-err">Browserul tău nu poate reda clipul aici. <a href="${base}trailer.mp4" target="_blank" rel="noopener">Deschide-l separat</a>.</div>`)
+    })
+    g.audio?.duck(0, 0.4)
+    const close = () => { if (!d.isConnected) return; stop(); v.pause(); d.remove(); g.audio?.duck(1, 0.6); g.audio?.sfx('back', { bus: 'ui' }) }
+    const stop = padNav(g, d, { back: () => { close(); return true } })
+    d.querySelector('.close').onclick = close
+    d.onclick = (e) => { if (e.target === d) close() }
   }
 
   showSettingsOnly() {

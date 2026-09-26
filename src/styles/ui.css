@@ -297,6 +297,11 @@ table.ctl { width: 100%; border-collapse: collapse; font-size: 14px; }
 table.ctl th { text-align: left; font-family: var(--display); font-size: 12px; letter-spacing: 1px; color: var(--gold); padding: 6px 8px; font-weight: 400; }
 table.ctl td { padding: 7px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #e5dccb; }
 table.ctl td b { color: #fff; }
+.trailer { position: absolute; inset: 0; z-index: 91; display: grid; place-items: center; background: rgba(8,6,12,0.86); backdrop-filter: blur(6px); pointer-events: auto; }
+.trailer .box { position: relative; width: min(1280px, 92vw, calc(82vh * 16 / 9)); display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.trailer video { width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 12px; border: 1px solid rgba(255,207,74,0.35); box-shadow: 0 24px 80px rgba(0,0,0,0.7); }
+.trailer .trailer-err { align-self: stretch; text-align: center; color: #e5dccb; font-size: 14px; }
+.trailer .trailer-err a { color: var(--gold); }
 .confirm { position: absolute; inset: 0; z-index: 90; display: grid; place-items: center; background: rgba(8,6,12,0.7); backdrop-filter: blur(4px); pointer-events: auto; }
 .confirm .box { width: min(420px, 90vw); background: #16121d; border: 1px solid rgba(255,207,74,0.4); border-radius: 16px; padding: 22px 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
 .confirm h3 { margin: 0 0 8px; font-family: var(--title); font-size: 32px; letter-spacing: 1px; color: var(--gold); font-weight: 400; }
