@@ -63,8 +63,9 @@ export class Wardrobe {
     this.buildStall(st)
     this.spots.push({ kind: 'piata', x: st.x, z: st.z, ry: 0 })
     g.interaction.add({ id: 'clothes_piata', x: st.x, z: st.z, r: 2.4, label: 'Taraba lui Nicu: haine „de firmă" și altele', onInteract: () => this.stallMenu() })
-    g.ambient?.spots.push({ x: st.x, z: st.z - 3.4, hours: [7, 19], covered: true, archetype: 'vendor',
-      list: [{ spec: NICU, x: st.x + 0.4, z: st.z - 3.4, ry: 0, state: 'idle', noTalk: true, voice: 'male', say: NICU_SAYS }] })
+    this.nicuSpot = { x: st.x, z: st.z - 3.4, hours: [7, 19], covered: true, archetype: 'vendor',
+      list: [{ spec: NICU, x: st.x + 0.4, z: st.z - 3.4, ry: 0, state: 'idle', noTalk: true, voice: 'male', say: NICU_SAYS }] }
+    g.ambient?.spots.push(this.nicuSpot)
   }
 
   // tracksuits on hangers along the back of the stall, and a hand-painted sign
@@ -108,7 +109,7 @@ export class Wardrobe {
       choices.push({ text: `${w.icon} ${w.name}`, cost: `${price} lei`, disabled: pr.lei < price, k, price })
     }
     choices.push({ text: 'Nimic, mersi.' })
-    const i = await g.ui.dialogue(NICU_SPEAKER, [pick([SHOPS.piata.greet, 'Ce cauți, frate? Am de toate. Și ce n-am, aduc până mâine.', 'Tigăi, umbrele, pistoale cu apă… Și haine, frate. Haine de firmă!'])], { choices })
+    const i = await g.ui.dialogue(NICU_SPEAKER, [pick([SHOPS.piata.greet, 'Ce cauți, frate? Am de toate. Și ce n-am, aduc până mâine.', 'Tigăi, umbrele, pistoale cu apă… Și haine, frate. Haine de firmă!'])], { choices, focus: this.nicuSpot?.npcs?.[0] })
     const c = choices[i]
     if (c?.go) await this.openShop('piata', 0)
     else if (c?.k) g.gear.buy(c.k, c.price)

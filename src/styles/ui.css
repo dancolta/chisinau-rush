@@ -131,20 +131,47 @@
 .chapter.light .k { color: #f1e6cf; text-shadow: 0 1px 4px #000; }
 
 /* ---- dialogue ---- */
-.dialog { position: absolute; left: 50%; bottom: calc(var(--edge-y) + 22px); transform: translateX(-50%); width: min(900px, 94vw); display: flex; gap: 16px; align-items: flex-end; z-index: 35; pointer-events: auto; animation: dlgin 0.3s cubic-bezier(.2,1.3,.5,1); }
-@keyframes dlgin { from { transform: translate(-50%, 30px); opacity: 0; } }
-.dialog .portrait { flex: none; width: 132px; height: 132px; border-radius: 16px; background: #1b1722 center/cover; border: 3px solid var(--gold); box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
-.dialog .box { flex: 1; background: rgba(14,11,20,0.93); border: 1px solid rgba(255,207,74,0.35); border-radius: 16px; padding: 14px 18px 16px; min-height: 118px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-.dialog .name { font-family: var(--display); font-size: 14px; color: var(--gold); letter-spacing: 1px; margin-bottom: 6px; }
-.dialog .name small { font-family: var(--body); color: var(--muted); font-size: 12px; margin-left: 8px; letter-spacing: 0; }
-.dialog .text { font-size: 18px; line-height: 1.5; color: #fbf6ec; min-height: 54px; }
-.dialog .more { position: absolute; right: 16px; bottom: 10px; font-size: 12px; color: var(--muted); animation: bob 1s infinite; }
-.dialog .choices { display: grid; gap: 7px; margin-top: 12px; }
-.dialog .choice { text-align: left; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 10px; padding: 9px 12px; font: 500 15px var(--body); cursor: pointer; transition: all 0.15s; display: flex; gap: 10px; align-items: center; }
+/* while you talk the camera frames the other face and the HUD steps back */
+#ui.talking .hud-tl, #ui.talking .hud-bl, #ui.talking .ticker, #ui.talking .prompt, #ui.talking .help-keys, #ui.talking .hud-weapon, #ui.talking .hud-br,
+#ui.talking .side-hud .aura-chip, #ui.talking .side-feed, #ui.talking .stunt, #ui.talking .viber, #ui.talking .marker, #ui.talking .offer-mark { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.25s ease; }
+.dialog { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding: 0 16px calc(var(--edge-y) + 18px); z-index: 35; pointer-events: none; }
+.dialog::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 62%; background: linear-gradient(to top, rgba(8,6,12,0.8), rgba(8,6,12,0.42) 45%, rgba(8,6,12,0)); pointer-events: none; }
+.dialog .card { position: relative; width: min(820px, 100%); pointer-events: auto; background: linear-gradient(180deg, rgba(27,21,36,0.97), rgba(14,11,20,0.97)); border: 1px solid rgba(255,207,74,0.25); border-top: 3px solid var(--gold); border-radius: 14px; padding: 12px 20px 16px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); animation: dlgin 0.28s cubic-bezier(.2,1.25,.5,1); }
+@keyframes dlgin { from { transform: translateY(26px); opacity: 0; } }
+.dialog .head { display: flex; align-items: flex-end; gap: 14px; margin: -48px 0 10px; min-height: 40px; }
+.dialog .portrait { flex: none; width: 96px; height: 96px; border-radius: 50%; background: #2a2135 center/cover; border: 3px solid var(--gold); box-shadow: 0 8px 22px rgba(0,0,0,0.6), 0 0 0 5px rgba(14,11,20,0.9); }
+.dialog.no-portrait .head { margin-top: 0; min-height: 0; } .dialog.no-portrait .portrait { display: none; }
+.dialog .who { min-width: 0; padding-bottom: 2px; }
+.dialog .name { font-family: var(--display); font-size: 20px; color: var(--gold); letter-spacing: 0.5px; line-height: 1.1; text-shadow: 0 2px 0 rgba(0,0,0,0.45); }
+.dialog .role { font-size: 13px; color: var(--muted); margin-top: 4px; line-height: 1.25; }
+.dialog .role:empty { display: none; }
+.dialog .paid { margin-left: auto; display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; padding-bottom: 2px; }
+.dialog .text { font-size: 20px; line-height: 1.5; color: #fbf6ec; min-height: 30px; }
+.dialog .more { position: absolute; right: 14px; bottom: 10px; animation: bob 1s infinite; }
+.dialog .choices { display: grid; gap: 6px; margin-top: 12px; }
+.dialog .choices:empty { display: none; }
+.dialog .choice { text-align: left; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 10px; padding: 9px 12px; font: 500 16px var(--body); cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.15s; display: flex; gap: 10px; align-items: center; }
 .dialog .choice:hover, .dialog .choice.sel { background: rgba(255,207,74,0.16); border-color: rgba(255,207,74,0.6); transform: translateX(4px); }
-.dialog .choice .n { font-family: var(--display); font-size: 12px; color: #111; background: var(--gold); border-radius: 5px; padding: 1px 6px; }
-.dialog .choice .c { margin-left: auto; font-size: 12.5px; color: #9cf07c; }
-.dialog .choice.disabled { opacity: 0.4; pointer-events: none; }
+.dialog .choice .n { flex: none; font-family: var(--display); font-size: 12px; color: #111; background: var(--gold); border-radius: 5px; padding: 1px 6px; }
+.dialog .choice .t { flex: 1; min-width: 0; }
+.dialog .choice .tags { flex: none; max-width: 50%; display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end; }
+.dialog .choice.disabled { opacity: 0.42; pointer-events: none; }
+/* chips: what a choice does / what it paid */
+.chip { display: inline-flex; align-items: center; white-space: nowrap; font: 700 12px/1.2 var(--body); padding: 3px 8px; border-radius: 999px; color: #e9e4dc; background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.14); }
+.chip.xp { color: #ffd966; background: rgba(255,207,74,0.16); border-color: rgba(255,207,74,0.5); }
+.chip.gain { color: #a4f58a; background: rgba(110,220,110,0.14); border-color: rgba(110,220,110,0.45); }
+.chip.cost { color: #ffa197; background: rgba(255,90,80,0.13); border-color: rgba(255,90,80,0.45); }
+.chip.rep { color: #bcd4ff; background: rgba(120,170,255,0.15); border-color: rgba(120,170,255,0.45); }
+.chip.aura { color: #dccaff; background: rgba(181,140,255,0.17); border-color: rgba(181,140,255,0.5); }
+.chip.risk { color: #ffc47f; background: rgba(255,150,40,0.14); border-color: rgba(255,150,40,0.5); }
+.chip.chance { color: #e6c0ff; background: rgba(200,120,255,0.13); border-color: rgba(200,120,255,0.4); }
+.chip.info { color: #a8eef6; background: rgba(120,220,230,0.11); border-color: rgba(120,220,230,0.35); }
+.chip.lock { color: #9d978f; background: rgba(255,255,255,0.05); }
+.dialog .paid .chip, .paid-burst .chip { font-size: 14px; padding: 5px 11px; box-shadow: 0 4px 14px rgba(0,0,0,0.45); animation: chippop 0.5s cubic-bezier(.2,1.7,.4,1) both; animation-delay: calc(var(--i, 0) * 90ms); }
+@keyframes chippop { from { transform: scale(0.3) translateY(10px); opacity: 0; } }
+.paid-burst { position: absolute; left: 50%; bottom: calc(var(--edge-y) + 90px); transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: min(700px, 90vw); z-index: 36; pointer-events: none; animation: burstup 2.2s ease-in forwards; }
+.paid-burst .chip { background-color: rgba(14,11,20,0.92); }
+@keyframes burstup { 0%, 65% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -60px); } }
 
 /* ---- panels / menus ---- */
 .screen { position: absolute; inset: 0; z-index: 50; pointer-events: auto; display: flex; }
@@ -231,7 +258,8 @@
 @media (max-width: 760px) {
   .hud-bl { width: 160px; left: 12px; bottom: 12px; } .minimap-wrap { width: 160px; height: 160px; }
   .hud-tl { width: 60vw; left: 12px; top: 30px; } .hud-money { font-size: 26px; }
-  .dialog .portrait { width: 84px; height: 84px; } .dialog .text { font-size: 15px; }
+  .dialog .portrait { width: 68px; height: 68px; } .dialog .head { margin-top: -36px; } .dialog .name { font-size: 16px; } .dialog .text { font-size: 16px; }
+  .dialog .choice { font-size: 14px; padding: 8px 10px; } .dialog .choice .tags { max-width: 46%; } .chip { font-size: 11px; padding: 2px 7px; }
   .mainmenu, .create { grid-template-columns: 1fr; }
 }
 

@@ -27,6 +27,55 @@ function partialText(s, n) {
   return out
 }
 
+// ---- dialogue chips: what a choice does, and what it paid -----------------------------------
+const REP = { gop: '👊', bab: '🥧', pol: '👮' }
+const sign = (n) => (n > 0 ? '+' : '−') + Math.abs(Math.round(n))
+const chip = ([cls, text], i = 0) => `<span class="chip ${cls}" style="--i:${i}">${text}</span>`
+// the older free-text tags on choices, read into the same chips
+const TAG = { '👊': ['risk', '👊 bătaie'], '★': ['risk', '★ poliție'], '😠': ['risk', '😠 ceartă'], '🏃': ['', '🏃 fugi'], '📍': ['info', '📍 pe hartă'], 'hoț': ['info', '🧤 hoț'],
+  '💰': ['gain', '💰 bani'], '🍎': ['risk', '🍎 furt'], '💸': ['gain', '💸 datoria'], '🌻': ['', '🌻 stai cu ei'], '🤥': ['risk', '🤥 minți'], '😒': ['risk', '😒 refuzi'], gratis: ['gain', 'gratis'] }
+// o.out: { xp, lei, gop, bab, pol, aura, hp, chance (true or 0..1), risk: 'fight' | 'police' | 'rude', info }
+function costChip(c) {
+  let m
+  if (TAG[c]) return TAG[c]
+  if (c.includes('★')) return [/^[−-]/.test(c) ? 'gain' : 'risk', c]
+  if ((m = c.match(/^(\d+)\s*%$/))) return ['chance', `🎲 ${m[1]}%`]
+  if ((m = c.match(/^[−-]?\s*(\d+)\s*(lei|leu)$/))) return ['cost', `−${m[1]} ${m[2]}`]
+  if (c.startsWith('🔒')) return ['lock', c]
+  if (c.startsWith('🗣')) return ['chance', c.replace(/^🗣\uFE0F?/u, '🎲')]
+  if (c.startsWith('+')) return ['gain', c]
+  if (/^[−-]/.test(c)) return ['cost', c]
+  return ['', c]
+}
+export function choiceChips(o) {
+  const out = []
+  const c = o.cost != null ? String(o.cost).trim() : ''
+  if (c) for (const part of c.split(' · ')) if (part.trim()) out.push(costChip(part.trim()))
+  const x = o.out
+  if (x) {
+    if (x.lei) out.push([x.lei > 0 ? 'gain' : 'cost', `${sign(x.lei)} lei`])
+    if (x.xp) out.push(['xp', `+${x.xp} XP`])
+    for (const k of ['gop', 'bab', 'pol']) if (x[k]) out.push([x[k] > 0 ? 'rep' : 'cost', `${REP[k]} ${sign(x[k])} respect`])
+    if (x.aura) out.push(['aura', x.aura > 0 ? '✨ +aura' : '✨ −aura'])
+    if (x.hp) out.push(['gain', `❤ +${x.hp}`])
+    if (x.chance) out.push(['chance', x.chance === true ? '🎲 noroc' : `🎲 ${Math.round(x.chance * 100)}%`])
+    if (x.risk) out.push(['risk', { fight: '👊 bătaie', police: '★ poliție', rude: '😠 ceartă' }[x.risk] || x.risk])
+    if (x.info) out.push(['info', x.info])
+  }
+  return out
+}
+// what changed between two snapshots of the hero's numbers
+function paidChips(a, b) {
+  if (!a || !b) return []
+  const out = []
+  if (b.xp > a.xp) out.push(['xp', `+${Math.round(b.xp - a.xp)} XP`])
+  if (b.lei !== a.lei) out.push([b.lei > a.lei ? 'gain' : 'cost', `${sign(b.lei - a.lei)} lei`])
+  for (const k of ['gop', 'bab', 'pol']) if (Math.round(b[k] - a[k])) out.push([b[k] > a[k] ? 'rep' : 'cost', `${REP[k]} ${sign(b[k] - a[k])} respect`])
+  if (Math.round(b.aura - a.aura)) out.push(['aura', `✨ ${sign(b.aura - a.aura)} aura`])
+  if (b.hp - a.hp >= 3) out.push(['gain', `❤ +${Math.round(b.hp - a.hp)}`])
+  return out
+}
+
 export class UI {
   constructor(game) {
     this.game = game
@@ -344,21 +393,34 @@ export class UI {
   setIndoors(on) { this.minimapWrap?.classList.toggle('indoors', !!on) }
 
   // ---- dialogue ---------------------------------------------------------------------------
-  // lines: array of strings or { who, text } ; returns when finished. choices -> returns index
-  async dialogue(speaker, lines, { choices = null, portrait = true } = {}) {
+  // lines: array of strings or { who, text } ; returns when finished. choices -> returns index.
+  // focus: the person in the world you're talking to (the camera frames their face); a speaker
+  // can carry it as `npc` too.
+  async dialogue(speaker, lines, { choices = null, portrait = true, focus = null } = {}) {
+    const g = this.game
     this.modalOpen = true
-    this.game.audio?.duck(0.5, 0.3)
-    const d = el('div', 'dialog', `<div class="portrait"></div><div class="box"><div class="name"></div><div class="text"></div><div class="more">E ▸</div><div class="choices"></div></div>`)
+    this.talking = true
+    g.audio?.duck(0.5, 0.3)
+    // what the last pick paid (XP, lei, respect, aura), when it lands on this next line of the talk
+    const paid = this.takePaid()
+    clearTimeout(this.talkOffT)
+    this.root.classList.add('talking')
+    const partner = focus || speaker?.npc || this.castNear(speaker)
+    if (partner && g.player && !g.player.vehicle) g.cameraRig?.talkTo(partner)
+    const d = el('div', 'dialog', `<div class="card"><div class="head"><div class="portrait"></div><div class="who"><div class="name"></div><div class="role"></div></div><div class="paid"></div></div><div class="text"></div><div class="choices"></div><div class="more"><span class="key">E</span></div></div>`)
     this.top.appendChild(d)
-    const port = d.querySelector('.portrait'), nameEl = d.querySelector('.name'), textEl = d.querySelector('.text'), more = d.querySelector('.more'), chEl = d.querySelector('.choices')
+    const $ = (s) => d.querySelector(s)
+    const port = $('.portrait'), nameEl = $('.name'), roleEl = $('.role'), textEl = $('.text'), more = $('.more'), chEl = $('.choices')
+    if (paid.length) $('.paid').innerHTML = paid.map(chip).join('')
     let result = null
     try {
       for (let i = 0; i < lines.length; i++) {
         const L = typeof lines[i] === 'string' ? { who: speaker, text: lines[i] } : { who: lines[i].who || speaker, text: lines[i].text }
         const who = L.who || {}
-        nameEl.innerHTML = (who.name || '') + (who.role ? `<small>${who.role}</small>` : '')
-        const url = portrait && who.spec ? this.game.portraits?.get(who) : null
-        port.style.display = url ? '' : 'none'
+        nameEl.textContent = who.name || ''
+        roleEl.textContent = who.role || ''
+        const url = portrait && who.spec ? g.portraits?.get(who) : null
+        d.classList.toggle('no-portrait', !url)
         if (url) port.style.backgroundImage = `url(${url})`
         const isLast = i === lines.length - 1
         more.style.display = 'none'
@@ -374,10 +436,56 @@ export class UI {
     } finally {
       d.remove()
       this.modalOpen = false
-      this.game.audio?.duck(1, 0.4)
-      this.game.input.clear()
+      this.talking = false
+      g.audio?.duck(1, 0.4)
+      g.input.clear()
+      // the camera and the HUD come back once the talk is really over (the next line of the same
+      // conversation opens a moment later)
+      this.talkOffT = setTimeout(() => { if (this.talking) return; this.root.classList.remove('talking'); g.cameraRig?.talkTo(null) }, 160)
     }
+    if (choices && result != null) this.watchPaid()
     return result
+  }
+
+  // a story character standing right here (Vova at his garage, Borea at the market…)
+  castNear(sp) {
+    const s = this.game.story, p = this.game.player, id = sp?.id
+    if (!s || !p || !id || id === 'player') return null
+    const n = s.temp?.[id] || s.cast?.[id]
+    if (!n?.char?.visible || n.riding || n.disposed) return null
+    return Math.hypot(n.pos.x - p.pos.x, n.pos.z - p.pos.z) < 7 ? n : null
+  }
+
+  // ---- what a choice paid --------------------------------------------------------------------
+  playSnap() {
+    const pr = this.game.progress
+    if (!pr) return null
+    return { xp: pr.xp, lei: pr.lei, gop: pr.respect?.gop || 0, bab: pr.respect?.bab || 0, pol: pr.respect?.pol || 0, aura: pr.side?.aura?.total || 0, hp: pr.hp }
+  }
+
+  // after a pick: what it paid shows on the next line of the talk, or, when the talk ends
+  // there, rises from where the box was
+  watchPaid() {
+    const snap = this.playSnap()
+    if (!snap) return
+    const w = this.paidWatch = { t: performance.now(), snap }
+    w.timer = setTimeout(() => {
+      if (this.paidWatch !== w) return
+      this.paidWatch = null
+      const d = paidChips(w.snap, this.playSnap())
+      if (!d.length) return
+      const b = el('div', 'paid-burst', d.map(chip).join(''))
+      this.top.appendChild(b)
+      setTimeout(() => b.remove(), 2300)
+    }, 650)
+  }
+
+  takePaid() {
+    const w = this.paidWatch
+    if (!w) return []
+    clearTimeout(w.timer)
+    this.paidWatch = null
+    return performance.now() - w.t < 8000 ? paidChips(w.snap, this.playSnap()) : []
   }
 
   typeLine(textEl, text, voice) {
@@ -420,7 +528,8 @@ export class UI {
       let sel = 0
       const btns = choices.map((c, i) => {
         const o = typeof c === 'string' ? { text: c } : c
-        const b = el('button', 'choice' + (o.disabled ? ' disabled' : ''), `<span class="n">${i + 1}</span><span>${fmt(o.text)}</span>${o.cost ? `<span class="c">${o.cost}</span>` : ''}`)
+        const tags = choiceChips(o).map(chip).join('')
+        const b = el('button', 'choice' + (o.disabled ? ' disabled' : ''), `<span class="n">${i + 1}</span><span class="t">${fmt(o.text)}</span>${tags ? `<span class="tags">${tags}</span>` : ''}`)
         b.onclick = () => pick(i)
         container.appendChild(b)
         return b

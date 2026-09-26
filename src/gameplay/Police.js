@@ -621,7 +621,7 @@ export class Police {
         { text: '(O iei la fugă)', cost: '+★', k: 'run' },
       ]
       if (pr.flags.acteFalse) choices.unshift({ text: 'Arăți „actele" de la Borea', cost: 'acte false', k: 'papers' })
-      const i = await g.ui.dialogue(sp, [fill(g, lvl >= 3 ? COP.surrenderHot : pickLine(COP.surrender))], { choices })
+      const i = await g.ui.dialogue(sp, [fill(g, lvl >= 3 ? COP.surrenderHot : pickLine(COP.surrender))], { choices, focus: o })
       const k = choices[i]?.k || 'run'
       if (k === 'papers') {
         pr.flags.acteFalse = false
