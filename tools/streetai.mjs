@@ -45,7 +45,8 @@ await ev(async () => {
     },
     // a bench, spawned, memory wiped, with the player parked out of the way
     async bench(k) {
-      const s = g.ambient.spots.filter((q) => q.archetype === 'gopnik')[k]
+      // (wraps: how many yards have a bench depends on the city layout, e.g. Romașca took one)
+      const all = g.ambient.spots.filter((q) => q.archetype === 'gopnik'), s = all[k % all.length]
       if (!s) return null
       g.hood.abort(); g.hood.endHang(false)
       T.place(s.x + 30, s.z + 30)

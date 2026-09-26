@@ -139,7 +139,9 @@ export class Landmarks {
       g.box(1.8, 0.7, 0.6, { x, y: fy + 3.6, z, ry, color: BRONZE })
       const [hx, hz] = W(1.0, 0); g.box(0.5, 0.5, 0.45, { x: hx, y: fy + 4.1, z: hz, ry, color: BRONZE })
     }
-    this.solid(x, Y + pedH / 2 + 0.4, z, 1.5, pedH / 2 + 0.4, 1.5)
+    // the plinth, then the shaft as drawn (one 3 m block left 40 cm of air round the shaft)
+    this.P.box(x, Y + 0.3, z, 1.6, 0.3, 1.6)
+    this.solid(x, Y + 0.6 + (pedH + 0.4) / 2, z, 1.15, (pedH + 0.4) / 2, 1.15)
   }
 
   // arch shaped opening extruded along z (for the Arc and gates)
@@ -316,7 +318,11 @@ export class Landmarks {
     g.cyl(1.6, 2, 1.8, 12, { x: fx, y: Y, z: fz, color: 0xb5afa3 })
     g.cyl(3, 3, 0.3, 16, { x: fx, y: Y + 1.8, z: fz, color: 0xa39d92 })
     g.cyl(0.4, 0.5, 1.4, 8, { x: fx, y: Y + 2.1, z: fz, color: 0xb5afa3 })
-    this.P.cylinder(fx, Y + 0.4, fz, 0.4, 8.3)
+    for (let i = 0, n = 32; i < n; i++) {
+      const a = (i / n) * Math.PI * 2, rm = 7.85
+      this.P.box(fx + Math.sin(a) * rm, Y + 0.35, fz + Math.cos(a) * rm, (Math.PI * rm) / n + 0.06, 0.35, 0.45, { rotY: a })
+    }
+    this.P.cylinder(fx, Y + 1.05, fz, 1.05, 2)
     this.w.fountains.push({ x: fx, z: fz, y: Y + 3.4, r: 7.2 })
     this.clear(fx - 18, fz - 18, fx + 18, fz + 18)
     this.w.place('fantana', 'Fântâna din Grădina Publică', fx, fz + 11, { kind: 'spot' })
@@ -409,7 +415,8 @@ export class Landmarks {
     for (let x = -len / 2 + 2; x <= len / 2 - 2; x += 2.6) g.box(0.7, 19, 1.4, { x: cx + x, y: Y, z: cz + depth / 2 + 0.4, color: 0xfaf8f2 })
     g.box(len + 2, 1.2, depth + 3, { x: cx, y: Y + 20, z: cz + 1, color: 0xe2ded4 })
     g.box(24, 2.2, 1, { x: cx, y: Y + 16.8, z: cz + depth / 2 + 1.3, color: 0xb59a4a, emit: 0.5 })
-    this.solid(cx, Y + 10, cz, len / 2, 10, depth / 2 + 1.2)
+    // (front: the fins stand 1.2 m proud of the wall; the back face is the wall itself)
+    this.solid(cx, Y + 10, cz + 0.6, len / 2, 10, depth / 2 + 0.6)
     // forecourt with fountain
     this.patch('plaza', b.ix0 + 6, cz + depth / 2 + 2, b.ix1 - 6, b.iz1 + 0.5)
     this.clear(b.ix0 + 6, cz + depth / 2 + 2, b.ix1 - 6, b.z1)
@@ -466,7 +473,7 @@ export class Landmarks {
     // glass dome on top
     g.box(18, 3, 12, { x: cx, y: Y + 22, z: cz, color: 0xd0cabc })
     g.dome(6, { x: cx, y: Y + 25, z: cz, color: 0x8fb4c8, sy: 0.6 })
-    this.solid(cx, Y + 11, cz, len / 2, 11, depth / 2 + 3)
+    this.solid(cx, Y + 11, cz + 1.5, len / 2, 11, depth / 2 + 1.5) // colonnade in front, wall at the back
     this.flag(cx, Y + 28.6, cz, 5, 1)
     this.patch('plaza', cx - len / 2 - 2, cz + depth / 2 + 3.5, cx + len / 2 + 2, b.iz1 + 0.5)
     this.clear(cx - len / 2 - 2, cz + depth / 2 + 3.5, cx + len / 2 + 2, b.z1)
@@ -494,7 +501,7 @@ export class Landmarks {
     f.box(cx, cz, len, depth, Y, 19, 0, 0xd8c8a8, [3.8, 3.2, 6.6, 4], 0x6c6862)
     this.portico(cx, cz + depth / 2, 22, 13, 8, 0, 0xefe6d0, 3.2)
     this.g(cx, cz).box(len + 1, 1.2, depth + 1, { x: cx, y: Y + 19, z: cz, color: 0xc9b894 })
-    this.solid(cx, Y + 9.5, cz, len / 2, 9.5, depth / 2 + 3)
+    this.solid(cx, Y + 9.5, cz + 1.5, len / 2, 9.5, depth / 2 + 1.5) // portico in front, wall at the back
     const sign = this.w.signs.sign('UNIVERSITATEA DE STAT DIN MOLDOVA', { bg: '#d8c8a8', fg: '#3a2a1a', w: 1024, h: 80, weight: '700' })
     this.w.pendingSigns.push({ x: cx, y: Y + 15.2, z: cz + depth / 2 + 3.5, ry: 0, w: 18, h: 1.4, rect: sign, lit: 0.4 })
     this.bld.historic(b, { sides: ['n', 'e', 'w'], courtyard: true })
@@ -539,7 +546,7 @@ export class Landmarks {
     const g = this.g(cx, cz)
     g.box(len + 1, 1, depth + 1, { x: cx, y: Y + 15, z: cz, color: 0xdccdaf })
     for (const dx of [-12, 12]) g.box(1.2, 2.4, 1.2, { x: cx + dx, y: Y + 16, z: cz - depth / 2 + 0.6, color: 0x9a8f72 })
-    this.solid(cx, Y + 7.5, cz, len / 2, 7.5, depth / 2 + 3.4)
+    this.solid(cx, Y + 7.5, cz - 1.7, len / 2, 7.5, depth / 2 + 1.7) // portico at -z, wall at the back
     this.patch('plaza', cx - len / 2, b.iz0 - 0.5, cx + len / 2, cz - depth / 2 - 3.5)
     this.clear(cx - len / 2, b.z0, cx + len / 2, cz - depth / 2 - 3.5)
     this.bld.historic(b, { sides: ['s', 'w', 'e'], courtyard: true })
@@ -553,7 +560,7 @@ export class Landmarks {
     f.box(cx, cz, len, depth, Y, 14, Math.PI, 0xe8e2d2, [4.2, 3.6, 3.7, 4], 0x6a655c)
     this.portico(cx, cz - depth / 2, 22, 10, 8, Math.PI, STONE_L, 3.6)
     this.g(cx, cz).box(len + 1, 1, depth + 1, { x: cx, y: Y + 14, z: cz, color: 0xd6cfbd })
-    this.solid(cx, Y + 7, cz, len / 2, 7, depth / 2 + 3.8)
+    this.solid(cx, Y + 7, cz - 1.9, len / 2, 7, depth / 2 + 1.9) // portico at -z, wall at the back
     this.patch('plaza', cx - 14, b.iz0 - 0.5, cx + 14, cz - depth / 2 - 3.8)
     this.clear(cx - 14, b.z0, cx + 14, cz - depth / 2 - 3.8)
     this.statue(cx, b.iz0 + 3.4, 0, { pedH: 1.5, figure: 'wolf' })
@@ -766,7 +773,10 @@ export class Landmarks {
     // entrance canopy toward the park
     g.box(5, 0.3, 3.2, { x: tx - 7.4, y: Y + 3.2, z: tz, ry: Math.PI / 2, color: CONC_D })
     for (const s of [-1, 1]) g.box(0.3, 3.2, 0.3, { x: tx - 8.8, y: Y, z: tz + s * 2.2, color: CONC_D })
-    this.P.cylinder(tx, Y + baseH / 2, tz, baseH / 2, 6.7)
+    // the base as drawn: the plinth, the glass drum inside it and the twelve fins round it
+    this.P.cylinder(tx, Y + 0.3, tz, 0.3, 6.6)
+    this.P.cylinder(tx, Y + 0.6 + (baseH - 0.6) / 2, tz, (baseH - 0.6) / 2, 6.2)
+    for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; this.P.box(tx + Math.sin(a) * 6.5, Y + baseH / 2, tz + Math.cos(a) * 6.5, 0.35, baseH / 2, 0.6, { rotY: a }) }
     this.P.cylinder(tx, y0 + H / 2, tz, H / 2, 8.9)
     this.w.footprints.push({ x: tx, z: tz, hx: 9, hz: 9 })
     this.clear(tx - 12, tz - 12, tx + 12, tz + 12)

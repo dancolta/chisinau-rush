@@ -324,8 +324,10 @@ export class Buildings {
     }
     // slide
     g.box(1.2, 1.6, 1.2, { x: cx, y: CURB_H, z: cz + 4.5, color: 0xd94a3a })
-    g.box(0.9, 0.08, 3.2, { x: cx, y: CURB_H + 0.8, z: cz + 6.3, rx: -0.45, color: 0xc9ced4 })
-    this.P.box(cx, CURB_H + 0.8, cz + 5, 0.7, 0.8, 1.8)
+    // the plank runs down from the tower's top to the sand (it was tilted the wrong way, rising into the air)
+    g.box(0.9, 0.08, 3.2, { x: cx, y: CURB_H + 0.8, z: cz + 6.3, rx: 0.45, color: 0xc9ced4 })
+    // only the tower is solid: a box over the whole slide was 1.6 m of air over the plank
+    this.P.box(cx, CURB_H + 0.8, cz + 4.5, 0.6, 0.8, 0.6)
     this.w.playgrounds.push({ x: cx, z: cz })
   }
 }
