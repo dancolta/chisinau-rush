@@ -61,7 +61,7 @@ Everything cool you do on the street earns **AURA** (*+54 AURA · bătaie de car
 
 ### Systems
 
-Open city with ~40 landmarks (PMAN, Casa Guvernului, Arcul de Triumf, Catedrala, Primăria, Opera, Circul, Gara, Piața Centrală…), day/night cycle, rain showers with wet asphalt, street life (weddings at the Arc, market vendors, bench grannies, card players in the park), traffic with lights and trolleybuses, pedestrians who flee or fight back, wanted levels with foot and car pursuits, busted (bribe / sweet-talk / run) and fainting flows, melee combat with combos and six improvised weapons, carjacking, car damage, skid marks and smoke, photo mode, save and continue. Plays on phones too (on-screen stick and buttons).
+Open city with ~40 landmarks (PMAN, Casa Guvernului, Arcul de Triumf, Catedrala, Primăria, Opera, Circul, Gara, Piața Centrală…), day/night cycle, rain showers with wet asphalt, street life (weddings at the Arc, market vendors, bench grannies, card players in the park, gopniks in the yards and the parks, kids at the playgrounds), traffic with lights and trolleybuses scaled to the hour and the quality preset, pedestrians on every pavement and park path who flee or fight back, wanted levels with foot and car pursuits, busted (bribe / sweet-talk / run) and fainting flows, melee combat with combos and six improvised weapons, carjacking, car damage, skid marks and smoke, photo mode, save and continue. Plays on phones too (on-screen stick and buttons).
 
 ## Tech
 
@@ -79,6 +79,7 @@ Open city with ~40 landmarks (PMAN, Casa Guvernului, Arcul de Triumf, Catedrala,
 node tools/play.mjs --from rapirea --turbo 6     # automated story playthrough (headless Chromium)
 node tools/systems.mjs                          # side systems checks (busted, shop, taxi, save…)
 node tools/aura.mjs                             # AURA, levels, stunts, daily challenges, street events
+node tools/density.mjs [--quality low] [--perf]  # how full the streets are: people, traffic, scenes per district and hour
 node tools/shot.mjs --out shot.png --eval "…"   # screenshots
 node tools/gallery.mjs --missions eban,mitingul    # capture every cutscene of the given missions
 node tools/views.mjs --out views --only night,play_day  # fixed review shots (day, dusk, night, gameplay camera)
