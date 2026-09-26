@@ -98,6 +98,49 @@ emits: `player:hit` / `player:runover` (Combat), `police:escape` (Police), `poli
 `progress.side` (save stays v3; old saves start at level 1). `g.story.events.t = 1e9` still
 switches random events off; `g.side.auto = 'win' | 'lose'` makes the minigames play themselves.
 
+## Progression: what everything is for, achievements, the daily loop
+
+Playtest note: "make the flow of the XP and everything more clear, what it does". XP, rank, AURA,
+respect, lei and cred piled up with no story. Now each one has one job, said in the UI (Progres
+tab, the first-time cards, the HUD line):
+
+| | What it is | What it gets you |
+|---|---|---|
+| ⭐ XP → rank (Cariera) | the story career, from missions and jobs | each rank: a bonus in lei (75 … 1 000) and, at 3 and 4, the Director's weapons |
+| ✨ AURA → level | how cool the street thinks you are | clothes, perks, nitro, fake papers (the ladder above) |
+| 🤝 Respect (👊 🥧 👮) | how each crowd treats you | per tier: tolls and tips, crew size, bribe odds, gifts (`RESPECT_PERKS`) |
+| 💵 Lei | money | buying, repairs, bribes |
+
+`cred` and `civic` stay as they were but are shown as **Tupeu** and **Simț civic** (they're
+modifiers for talking your way out, not a third kind of respect). Code: `src/side/Goals.js`
+(logic), `Stage.js` (the card queue), `Seeds.js`, `GoalsUI.js` (pause pages, title strip),
+`src/ui/Rewards.js` (reward chips); numbers and words in `src/data/goals.js`; checks in
+`tools/achievements.mjs`.
+
+- **First-time cards.** The first lei, XP, AURA, respect, seed packet and achievement each get a
+  short card saying what it is for (once per save, `meta.seen`).
+- **HUD.** Under the AURA bar, one line takes turns every 6 s: the next AURA level and its prize,
+  the next rank and its bonus, the day's closest challenge; a gain turns it to that currency.
+  Every gain or loss of lei, XP, respect (and quiet AURA bonuses) shows as a chip under the money,
+  merged when it comes twice in a blink, never over the dialogue box (the rest wait).
+- **Achievements („Realizări").** 59: 12 sets of bronze/silver/gold plus 23 singles, 5 of them
+  hidden. Counted from existing events and stats plus a few counters of their own (a three-star
+  story mission comes from the story's `mission:rated`); a tier pays its lei the moment it
+  unlocks (5 give clothes nobody sells). Nudges when a tier is within 10 %.
+- **Daily streak.** The first session on a calendar day (after the prologue) pays day 1 … 7
+  (50 lei → 500 lei + 250 AURA + mama's parcel); a missed day starts it over. The title screen
+  shows where it stands.
+- **Semințe de aur.** 30 glowing packets a few steps in from pavement corners (courtyards, parks),
+  on the minimap only within 45 m; +10 lei and +15 AURA each, the achievement pays at 10/20/30.
+  A teleport onto one doesn't pick it up.
+- **One card at a time.** Achievements, the streak, first-time cards and new respect tiers share
+  one slot low in the middle of the screen, FIFO, after a calm second; a dialogue, cutscene,
+  banner, level-up, minigame or the district name puts a showing card on hold (a tall card also
+  waits out a subtitle), and four achievements in a row show as one card.
+
+Save data: `progress.meta` (save stays v3; a save without it counts what's already done once,
+quietly, in one summary card). New events: `lei`, `xp` (Progress), `achievement`, `seed`.
+
 ## Next ideas
 
 Real ramps and airtime (the car physics keeps wheels on the ground today; the stunt scorer already
