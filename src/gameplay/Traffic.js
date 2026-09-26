@@ -4,10 +4,16 @@ import { TRAFFIC_MIX } from '../data/vehicles.js'
 import { H_ROADS, V_ROADS, LANE_W } from '../world/CityLayout.js'
 import { roadProfile } from '../world/Ground.js'
 import { angleDiff } from '../entities/Character.js'
+import { hourly } from '../render/TimeOfDay.js'
+import { clearSight } from './Sight.js'
 
 const COL = { r: new THREE.Color(0xff2a1a), y: new THREE.Color(0xffb400), g: new THREE.Color(0x2aff6a), off: new THREE.Color(0x1c1c1c) }
 const CYCLE = [['g', 'r', 14], ['y', 'r', 2.5], ['r', 'r', 1.2], ['r', 'g', 10], ['r', 'y', 2.5], ['r', 'r', 1.2]] // [ew, ns, seconds]
 const CYCLE_LEN = CYCLE.reduce((a, c) => a + c[2], 0)
+// share of the quality's cars on the road by the hour: two rush hours, a quiet night of taxis
+const CARS_BY_HOUR = [[0, 0.4], [4.5, 0.3], [6, 0.6], [7.5, 1], [10, 0.8], [13, 0.85], [16.5, 0.95], [18, 1], [20, 0.8], [22, 0.58], [24, 0.4]]
+// where new cars appear: never right on top of you, never in plain view closer than VIEW_R
+const SPAWN_R0 = 60, SPAWN_R1 = 180, VIEW_R = 110
 
 // ---------------------------------------------------------------------------
 class AIDriver {
@@ -20,6 +26,9 @@ class AIDriver {
     this.wi = 0
     this.cruise = edge.speed * (0.85 + Math.random() * 0.3)
     this.stuckT = 0
+    this.waitT = 0       // standing behind something that isn't moving either
+    this.stillT = 0      // standing still, for whatever reason
+    this.squeeze = null  // { v, t }: edging past a car that won't move
     this.honkT = 0
     this.mode = 'drive'
     this.fleeT = 0
@@ -101,12 +110,26 @@ class AIDriver {
         if (light === 'r' || (light === 'y' && d > 9)) target = Math.min(target, Math.max(0, (d - 1.2) * 0.55))
       }
     }
-    // vehicles, player and pedestrians ahead
-    const obs = tr.obstacleAhead(v, 7 + Math.abs(v.speed) * 1.3)
+    // vehicles, player and pedestrians ahead, looking where we steer (coming out of a turn the
+    // bonnet points at the kerb for a moment, and at whatever is parked there)
+    const sq = this.squeeze
+    if (sq && ((sq.t -= h) <= 0 || sq.v.disposed)) this.squeeze = null
+    const obs = tr.obstacleAhead(v, 7 + Math.abs(v.speed) * 1.3, this.squeeze?.v || null, 0.6, want)
     if (obs) {
       target = Math.min(target, Math.max(0, (obs.d - 5.5) * 0.8))
       if (obs.player && Math.abs(v.speed) < 1 && (this.honkT -= h) < 0) { this.honkT = 2 + Math.random() * 3; tr.game.audio?.horn(v, 0.5) }
     }
+    // standing behind a car that isn't going anywhere either and isn't the one ahead of us in the
+    // queue (one across the junction, one coming the other way, a parked car that sticks out):
+    // after a few seconds we edge past it at walking pace instead of waiting for ever. Cars
+    // queued behind a stopped one never count as stuck, so without this one jam holds every car
+    const blocker = obs && !obs.player ? obs.v : null
+    if (blocker && Math.abs(v.speed) < 0.5 && Math.abs(blocker.speed) < 0.5) {
+      this.waitT += h
+      const queue = blocker.ai && !blocker.parked && Math.abs(angleDiff(v.heading, blocker.heading)) < 0.5
+      if (this.waitT > 4 && !queue && blocker.ai?.squeeze?.v !== v) { this.squeeze = { v: blocker, t: 3.5 }; this.waitT = 0; if (Math.random() < 0.5) tr.game.audio?.horn(v, 0.4) }
+    } else if (Math.abs(v.speed) > 1) this.waitT = 0
+    if (this.squeeze) target = Math.min(target, 3.5)
     // story cars (Nea Grișa's taxi, the minister's convoy…) have right of way: brake when one is
     // about to cross the road in front of us, whatever our light says
     const yd = tr.yieldTo(v, 9 + Math.abs(v.speed) * 1.4)
@@ -120,9 +143,13 @@ class AIDriver {
       const e = target - sp
       v.throttle = e > 0 ? Math.min(1, e * 0.45 + 0.15) : Math.max(-1, e * 0.35)
     }
-    // stuck detection (blocked by the player's car etc.)
+    // stuck (wedged against something the checks above don't see): gone once nobody's looking,
+    // or at last anyway. A car that has stood still for most of a minute out of sight goes too:
+    // whatever held it up, the street it was on is better off empty than jammed
     if (Math.abs(sp) < 0.4 && target > 2) this.stuckT += h; else this.stuckT = 0
-    if (this.stuckT > 18) this.tr.despawn(this)
+    this.stillT = Math.abs(sp) < 0.5 ? this.stillT + h : 0
+    const hidden = (this.stuckT > 18 || this.stillT > 45) && !tr.visible(v.pos.x, v.pos.z)
+    if (hidden || this.stuckT > 40) this.tr.despawn(this)
   }
 }
 
@@ -184,7 +211,9 @@ export class Traffic {
     this.game = game
     this.graph = new RoadGraph()
     this.drivers = []
-    this.target = 22
+    // a ceiling scripts and tools may lower (a race clears its circuit, a video empties the
+    // streets); how many cars there really are comes from want(): quality and the hour
+    this.target = 60
     this.spawnT = 0
     this.time = 0
     const bd = H_ROADS.find((h) => h.boulevard)
@@ -228,22 +257,25 @@ export class Traffic {
     this.game.vehicles.remove(d.v)
   }
 
-  // nearest blocking thing in the vehicle's lane corridor
-  obstacleAhead(v, range, ignore = null, margin = 0.6) {
-    const fx = Math.sin(v.heading), fz = Math.cos(v.heading)
-    const w = v.def.dims[0] + margin
+  // nearest blocking thing in the vehicle's lane corridor (along `dir`, the heading by default).
+  // A parked car stands in its bay a hand's width from the lane: it only counts when it really
+  // sticks out into it, not whenever the car drifts a little toward the kerb
+  obstacleAhead(v, range, ignore = null, margin = 0.6, dir = null) {
+    const hd = dir ?? v.heading
+    const fx = Math.sin(hd), fz = Math.cos(hd)
+    const w = v.def.dims[0] + margin, tight = v.def.dims[0] + Math.min(margin, 0.1)
     let best = null
-    const test = (x, z, halfW, player = false) => {
+    const test = (x, z, halfW, player = false, reach = w) => {
       const dx = x - v.pos.x, dz = z - v.pos.z
       const along = dx * fx + dz * fz
       if (along < 0.5 || along > range + v.def.dims[2]) return
       const side = Math.abs(dx * -fz + dz * fx)
-      if (side > w + halfW) return
+      if (side > reach + halfW) return
       const d = along - v.def.dims[2]
       if (!best || d < best.d) best = { d, player, v: cur }
     }
     let cur = null
-    for (const o of this.game.vehicles.list) if (o !== v && o !== ignore) { cur = o; test(o.pos.x, o.pos.z, o.def.dims[0], o.driver === 'player') }
+    for (const o of this.game.vehicles.list) if (o !== v && o !== ignore) { cur = o; test(o.pos.x, o.pos.z, o.def.dims[0], o.driver === 'player', o.parked && !o.driver ? tight : w) }
     cur = null
     const p = this.game.player
     if (p && !p.vehicle) test(p.pos.x, p.pos.z, 0.5, true)
@@ -322,6 +354,12 @@ export class Traffic {
     for (const k of ['r', 'y', 'g']) lamps[k].instanceColor.needsUpdate = true
   }
 
+  // how many cars drive round you now: the quality's share, by the clock
+  budget() {
+    const g = this.game
+    return Math.round((g.renderer?.q?.cars ?? 28) * hourly(CARS_BY_HOUR, g.renderer?.tod.hour ?? 12))
+  }
+
   spawnOne(px, pz) {
     const g = this.graph
     for (let tries = 0; tries < 10; tries++) {
@@ -330,9 +368,9 @@ export class Traffic {
       const lane = Math.floor(Math.random() * e.lanes)
       const p = g.lanePoint(e, lane, t)
       const d = Math.hypot(p.x - px, p.z - pz)
-      if (d < 75 || d > 190) continue
-      // not right in front of the camera
-      if (this.visible(p.x, p.z) && d < 140) continue
+      if (d < SPAWN_R0 || d > SPAWN_R1) continue
+      // not right in front of the camera (round the corner, behind a block, is fine)
+      if (d < VIEW_R && this.inSight(p.x, p.z, 1.2)) continue
       if (this.game.vehicles.list.some((o) => (o.pos.x - p.x) ** 2 + (o.pos.z - p.z) ** 2 < 100)) continue
       if (this.priority.size && this.onPriorityPath(p.x, p.z)) continue
       const kind = TRAFFIC_MIX[Math.floor(Math.random() * TRAFFIC_MIX.length)]
@@ -347,10 +385,17 @@ export class Traffic {
     return null
   }
 
+  // inside the camera's frustum (whatever is in the way)
   visible(x, z) {
-    const cam = this.game.camera
-    const v = new THREE.Vector3(x, 1, z).project(cam)
+    const v = _vis.set(x, 1, z).project(this.game.camera)
     return v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1
+  }
+
+  // in the frustum and not hidden behind a building: somebody appearing there would be seen to
+  inSight(x, z, h = 1.4) {
+    if (!this.visible(x, z)) return false
+    const c = this.game.camera.position
+    return clearSight(this.game, { x: c.x, y: c.y, z: c.z }, { x, y: this.game.physics.groundHeight(x, z, 4), z }, 0, h)
   }
 
   fixedUpdate(h) {
@@ -366,13 +411,27 @@ export class Traffic {
     const pos = this.game.focus()
     this.spawnT -= dt
     if (this.spawnT <= 0) {
-      this.spawnT = 0.35
+      this.spawnT = 0.3
       const cars = this.drivers.filter((d) => d instanceof AIDriver)
-      if (cars.length < this.target) this.spawnOne(pos.x, pos.z)
+      const budget = this.budget(), want = Math.min(this.target, budget)
+      // a street that has just emptied (you drove off, the hour turned) fills a little faster
+      if (cars.length < want) { this.spawnOne(pos.x, pos.z); if (want - cars.length > 6) this.spawnOne(pos.x, pos.z) }
+      // far away and out of sight, or too far to matter; over the budget (the night came, the
+      // quality went down), the farthest you can't see. A lowered ceiling only stops new cars:
+      // whoever lowered it may have placed cars of their own
+      let over = cars.length - budget - 2
+      const far = []
       for (const d of cars) {
         const dd = Math.hypot(d.v.pos.x - pos.x, d.v.pos.z - pos.z)
-        if (dd > 240 && !this.visible(d.v.pos.x, d.v.pos.z)) this.despawn(d)
+        if (dd > 320 || (dd > 220 && !this.visible(d.v.pos.x, d.v.pos.z))) { this.despawn(d); over--; continue }
+        if (dd > 90) far.push([d, dd])
+      }
+      if (over > 0) {
+        far.sort((a, b) => b[1] - a[1])
+        for (const [d] of far) { if (over <= 0) break; if (!this.visible(d.v.pos.x, d.v.pos.z)) { this.despawn(d); over-- } }
       }
     }
   }
 }
+
+const _vis = new THREE.Vector3()

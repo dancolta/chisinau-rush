@@ -50,6 +50,7 @@ export const GOP = {
   seedsFull: ['Mersi, [[bratan|tanti]], da\' am burta plină de coji. Mâine.', 'Azi ne-ai servit deja. Nu ne strica, că ne obișnuim.'],
   recruit: ['Davai, merg cu tine. Da\' dacă fugim, fug eu primul, că am adidași mai buni.', 'Cu cine ne batem, [[bratan|tanti]]? Numa\' să nu fie babe. Babele-s sfinte.', 'Normalno. Da\' până la zece, că la zece mă cheamă mama.'],
   crewFull: ['Ai deja gașcă, [[bratan|tanti]]. Nu-i armată.'],
+  stay: ['Nu pot, [[bratan|tanti]]. Io de-aici nu plec: cine păzește colțul?', 'Altă dată. Azi stăm aici, e colțul nostru.'],
   provoke: ['Tu pe mine m-ai făcut fraer? Pacani, sus de pe vine!', 'Oi, oi, oi. Ai greșit curtea, [[bratan|tanti]].', 'Pacani! [[Ăsta|Asta]] vrea să se bată!'],
   win: ['Ai pumn greu, [[bratan|tanti]]. Respect. Da\' să știi că m-am împiedicat.', 'Bine, bine… Ești de-al nostru. Da\' nu zice la nimeni.', 'Normalno lovești. Unde ai învățat, pe șantier?'],
   fled: ['Fugi, fugi! Ține minte curtea asta!', 'Asta a fost pentru semințe!', 'Și să nu te mai văd pe-aici!'],
@@ -141,9 +142,14 @@ export const HOOD = {
       { text: 'Din {country}. M-am întors acasă.', mood: -1, re: 'Din {country}! [[Europeanul|Europeana]]! Atunci ai euro.' },
       { text: 'Ce te privește?', mood: -2, re: 'Ohoho. Cu nervi. Nervii se plătesc separat.' },
     ] },
-    { line: 'Ce cauți în curtea noastră? Pe cine cauți?', a: [
+    { line: 'Ce cauți în curtea noastră? Pe cine cauți?', where: 'yard', a: [
       { text: 'Pe nimeni. Trec doar.', mood: 0, re: 'Trec doar. Toți trec doar. Trecerea costă.' },
       { text: 'Pe Vitea. Îl știți?', mood: 1, re: 'Pe Vitea îl știe toată Botanica. Da\' tu nu ești Vitea.' },
+      { text: 'Pe mama voastră.', mood: -2, re: 'Pe mama?! Acuș\' o vezi tu pe mama.' },
+    ] },
+    { line: 'Te plimbi prin parcul nostru? Pe cine aștepți?', where: 'park', a: [
+      { text: 'Pe nimeni. Mă plimb.', mood: 0, re: 'Te plimbi. Toți se plimbă. Plimbarea costă.' },
+      { text: 'Pe Vitea din Botanica. Îl știți?', mood: 1, re: 'Pe Vitea îl știe tot orașul. Da\' tu nu ești Vitea.' },
       { text: 'Pe mama voastră.', mood: -2, re: 'Pe mama?! Acuș\' o vezi tu pe mama.' },
     ] },
   ],

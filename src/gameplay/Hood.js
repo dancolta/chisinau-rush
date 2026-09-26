@@ -12,8 +12,11 @@ import { blockAt } from '../world/CityLayout.js'
 // favour from acquaintances, a spot on their heels for friends, a standing ovation and a cut
 // for the boss. Pay, talk your way out (the odds are on the button), refuse (insults, then
 // the whole bench) or run (two of them after you, briefly). Between visitors they banter,
-// spit husks, cheer fights and comment on your car. The story lads at Blocul 7 get the same
-// small life, never more, and only when no mission is running.
+// spit husks, cheer fights and comment on your car. The groups in the parks and on PMAN are
+// benches too (their "yard" is the park). The story lads at Blocul 7 are the yard's own bench
+// between missions (you walk up to them, they keep their corner: Vitea is where the story looks
+// for him) and cast again the moment a mission starts; Jora's lot, hanging about after the seed
+// championship, likewise (already met: no toll).
 // Brains run four times a second; timers follow game time, not the wall clock.
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)]
@@ -37,10 +40,12 @@ export class Hood {
     this.nextEnc = 0
     this.pending = []      // second halves of banter
     this.castSpot = { story: true, x: 0, z: 0, npcs: [] }
+    this.extra = new Set() // benches of story people for a while (see street())
     const ev = game.events
     ev.on('npc:hit', (e) => this.onHit(e))
     ev.on('shop:buy', (e) => this.onBuy(e))
-    ev.on('mission:start', () => { this.abort(); this.endHang(false) })
+    // (the lads at Blocul 7 are cast again before the mission's first line)
+    ev.on('mission:start', () => { this.abort(); this.endHang(false); this.syncCast() })
     ev.on('player:down', () => { this.abort(); this.endHang(false) })
   }
 
@@ -54,7 +59,14 @@ export class Hood {
     return { track: top === 'tracksuit', suit: top === 'suit', rich: pr.look?.rich || 0, gop: pr.look?.gop || 0 }
   }
   able(n) { return !!n && !n.disposed && !n.crew && !n.char.ko && !n.hostile && n.state !== 'fight' && n.state !== 'knocked' && n.state !== 'flee' }
-  benches() { return this.game.ambient.spots.filter((s) => s.archetype === 'gopnik' && s.npcs) }
+  // every bench there is right now: the yards', the parks', and story people's out of a mission
+  benches() {
+    const L = this.game.ambient.spots.filter((s) => s.archetype === 'gopnik' && s.npcs)
+    const cs = this.castSpot
+    if (cs.street && cs.npcs.some((n) => n.street && !n.disposed)) L.push(cs)
+    for (const s of this.extra) { if (s.npcs.some((n) => !n.disposed && n.street)) L.push(s); else this.extra.delete(s) }
+    return L
+  }
   inFight(s) { return this.game.life.fights.some((f) => f.members.some((m) => s.npcs?.includes(m))) }
   crewNear() { const p = this.game.player; return this.game.crew.list.filter((c) => !c.riding && !c.char.ko && dist(c.pos, p.pos) < 14) }
 
@@ -63,6 +75,13 @@ export class Hood {
     const g = this.game, pr = g.progress, m = this.mem(s), day = this.day()
     if (this.favor?.s === s && this.favor.stage === 'back') return 'back'
     const tier = pr.tier('gop')
+    // whoever just shared a scene with you (Jora's lot after the seed championship) knows you:
+    // a leu off the newcomer before the bread run, after it never a toll
+    if (s.temp) {
+      if (m.met === day) return null
+      if (!g.story.isDone('paine')) return 'newbie'
+      return tier <= 1 ? 'smoke' : tier === 2 ? 'friend' : 'boss'
+    }
     if (tier === 0 && !this.crewNear().length) {
       // before the bread run the yard is curious more than dangerous
       if (!g.story.isDone('paine')) return m.met === day ? null : 'newbie'
@@ -125,6 +144,9 @@ export class Hood {
     const free = this.canMeet()
     const yard = blockAt(P.x, P.z)
     for (const s of this.benches()) {
+      // the lads at Blocul 7 keep their corner (Vitea's where the story looks for him): you walk
+      // up to them, they don't come to you
+      if (s.story) continue
       const m = this.mem(s)
       const d = dist(s, P)
       if (d > 40) { m.alert = 0; continue }
@@ -279,9 +301,9 @@ export class Hood {
     const g = this.game, pr = g.progress, n = e.lead, s = e.s, m = this.mem(s), day = this.day()
     const newbie = kind === 'newbie'
     let mood = 0, re = ''
-    // the classic openers, first time you meet
+    // the classic openers, first time you meet (in a park it's "our park", not "our yard")
     if (kind === 'toll' || newbie) {
-      const op = pick(HOOD.open)
+      const op = pick(HOOD.open.filter((o) => !o.where || o.where === (s.park ? 'park' : 'yard')))
       const i = await this.ask(n, op.line, op.a.map((a) => ({ text: a.text, cost: a.lei ? `${a.lei} lei` : undefined, disabled: !!a.lei && pr.lei < a.lei })))
       if (!this.alive(e)) return 'home'
       const a = op.a[i] || op.a[0]
@@ -447,7 +469,8 @@ export class Hood {
     else {
       const m = this.mem(s)
       out.push({ text: 'Cota mea, pacani.', cost: m.cut === this.day() ? '✓ azi' : '💰', run: () => this.cut(s) })
-      out.push({ text: 'Vine careva cu mine?', cost: g.crew.full ? 'gașca-i plină' : 'gratis', disabled: g.crew.full, run: () => this.recruit(e) })
+      // (story people stay where the story needs them)
+      if (!s.story && !s.temp) out.push({ text: 'Vine careva cu mine?', cost: g.crew.full ? 'gașca-i plină' : 'gratis', disabled: g.crew.full, run: () => this.recruit(e) })
       out.push(favor, squat)
     }
     out.push(bye)
@@ -693,6 +716,75 @@ export class Hood {
     if (n) n.say(this.fill(pick(HOOD.squatBye)), 2.8)
   }
 
+  // ---- story people who are lads of the yard -------------------------------------------------------------
+  // Out of a mission, the lads at Blocul 7 and Jora's lot after the seed championship are a bench
+  // like any other: E talks to them (StreetTalk), a punch brings the bench down on you, and what
+  // you do moves your respect. home: where they go back to after a fight
+  street(n, s, home) {
+    if (n.street || n.disposed) return
+    n.street = true
+    n.personality = 'tough'
+    n.archetype = 'gopnik'
+    n.hittable = true
+    n.noCrime = false
+    n.spot = s
+    n.ambient = home
+  }
+
+  // …and cast again the moment a mission needs them: on their feet, in their spot, deaf to the street
+  unstreet(n) {
+    if (!n.street) return
+    n.street = false
+    const g = this.game, home = n.ambient
+    for (const f of [...(g.life?.fights || [])]) {
+      const i = f.members.indexOf(n)
+      if (i >= 0) f.members.splice(i, 1)
+      if (!f.members.length) g.life.fights.splice(g.life.fights.indexOf(f), 1)
+    }
+    if (this.enc && (this.enc.lead === n || this.enc.runners?.includes(n))) this.endEnc(false)
+    const hi = this.helpers?.indexOf(n) ?? -1
+    if (hi >= 0) this.helpers.splice(hi, 1)
+    Object.assign(n, { personality: 'story', archetype: undefined, hittable: false, noCrime: true, hostile: false, ally: false, target: null, fightMemo: null, stayDown: false, onGetUp: null, spot: null, ambient: null })
+    if (n.disposed) return
+    if (n.char.ko || n.state === 'knocked' || n.fly) {
+      const a = n.char.anim
+      n.char.ko = false; n.fly = null; n.collider.setEnabled(true)
+      a.stop(); a.lie = a.lieTgt = 0
+    }
+    n.hp = n.maxHp; n.stun = 0; n.path = []; n.onArrive = null; n.vel.set(0, 0, 0)
+    if (!home) { n.state = 'idle'; return }
+    if (Math.hypot(n.pos.x - home.x, n.pos.z - home.z) > 0.3) n.teleport(home.x, g.physics.groundHeight(home.x, home.z, 3), home.z, home.ry)
+    n.state = home.state || 'idle'
+  }
+
+  // the lads at Blocul 7: the yard's bench whenever no story mission is running
+  syncCast() {
+    const g = this.game, s = g.story, cs = this.castSpot
+    const busy = !!s.active && !s.active.def.activity
+    this.castBench()
+    for (const k of ['vitea', 'gop2', 'gop3']) {
+      const n = s.cast[k]
+      if (!n || n.disposed || !n.castHome) continue
+      if (busy || !n.char.visible) { this.unstreet(n); continue }
+      this.street(n, cs, n.castHome)
+      // knocked over by a car, up and away: they find their way back to the corner
+      if (n.state === 'walk' && !n.onArrive && this.able(n)) g.life.goHome(n)
+    }
+    cs.street = !busy
+    if (busy) for (const t of this.extra) for (const n of t.npcs) this.unstreet(n)
+  }
+
+  // story people who stay a while after their scene (SideContent.linger): a bench of their own,
+  // already met today (they've just had their say)
+  addTemp(npcs, at) {
+    const s = { x: at.x, z: at.z, temp: true, npcs: npcs.slice() }
+    const m = this.mem(s)
+    m.met = m.paid = this.day()
+    for (const n of npcs) this.street(n, s, { x: n.pos.x, z: n.pos.z, ry: n.char.heading, state: n.state === 'squat' || n.state === 'sit' || n.state === 'phone' ? n.state : 'idle' })
+    this.extra.add(s)
+    return s
+  }
+
   // ---- the yard's own life ------------------------------------------------------------------------------
   castBench() {
     const g = this.game, c = g.story.cast, cs = this.castSpot
@@ -705,9 +797,10 @@ export class Hood {
   life(dt) {
     const g = this.game, p = g.player, pr = g.progress
     const P = p.vehicle ? p.vehicle.pos : p.pos
-    const list = this.benches()
+    // (the story's lads keep quiet while anything of the story's is running, side jobs too)
+    const list = this.benches().filter((s) => !s.story || !g.story.active)
     const cs = this.castBench()
-    if (cs) list.push(cs)
+    if (cs && !list.includes(cs)) list.push(cs)
     const honk = p.vehicle && this.honked
     this.honked = false
     this.backup()
@@ -858,7 +951,7 @@ export class Hood {
     this.updateHang(dt)
     this.updateFavor(dt)
     this.brainT -= dt
-    if (this.brainT <= 0) { this.brain(0.25 - this.brainT); this.brainT = 0.25 }
+    if (this.brainT <= 0) { this.syncCast(); this.brain(0.25 - this.brainT); this.brainT = 0.25 }
     this.lifeT -= dt
     if (this.lifeT <= 0) { this.lifeT = 0.5; this.life(0.5) }
   }

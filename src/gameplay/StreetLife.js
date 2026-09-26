@@ -125,7 +125,8 @@ export class StreetLife {
   // back to their spot on the bench, or on with their walk
   goHome(n) {
     const g = this.game
-    if (n.disposed || n.crew) return
+    // (story people are the story's to move: never off down the pavement)
+    if (n.disposed || n.crew || n.personality === 'story') return
     const d = n.ambient
     if (d && n.spot?.npcs?.includes(n)) n.walkTo(d.x, d.z, { face: d.ry, onArrive: (m) => { m.state = d.state || 'idle'; m.vel.set(0, 0, 0) } })
     else if (!d) { n.state = 'walk'; n.path = []; g.peds.repath(n) }

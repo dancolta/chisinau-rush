@@ -335,12 +335,15 @@ export class SideContent {
   }
 
   // ---- after an event: its people stay around until you've walked off -----------------------------------------
-  linger(m, npcs, centre) {
+  // lads: they're gopniks (Jora's lot after the seed championship): a bench of the yard while they
+  // stay, so you can talk to them, and a punch brings all of them down on you
+  linger(m, npcs, centre, { lads = false } = {}) {
     for (const n of npcs) {
       if (!n || n.disposed) continue
       m.detach(n)
       this.lingering.push({ n, t: 0, centre })
     }
+    if (lads) this.game.hood?.addTemp(npcs.filter((n) => n && !n.disposed), centre)
   }
 
   updateLingering(dt) {

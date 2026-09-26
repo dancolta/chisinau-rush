@@ -3,6 +3,7 @@ import { angleDiff } from '../entities/Character.js'
 import { streetName } from '../world/CityLayout.js'
 import { GOP, BAB, CIV, COP, VEND, CARDS, WED, CREW, NAMES, ROLES, HOOD, KID, CROWD } from '../data/streettalk.js'
 import { fill } from '../story/hero.js'
+import { HOMES } from '../story/cast.js'
 
 // Walk up to almost anyone on the street and press E: gopniks (make friends, buy them seeds,
 // recruit them, or pick a fight with the whole bench), grannies (gossip, errands, tips),
@@ -82,7 +83,7 @@ export class StreetTalk {
   underAttack() {
     const g = this.game, p = g.player
     const hot = (n) => !n.char.ko && n.state === 'fight' && n.target === p && Math.hypot(n.pos.x - p.pos.x, n.pos.z - p.pos.z) < 15
-    return g.peds.list.some(hot) || g.ambient.npcs.some(hot) || g.police.officers.some(hot) || (g.story?.npcs || []).some((n) => n.enemy && hot(n))
+    return g.peds.list.some(hot) || g.ambient.npcs.some(hot) || g.police.officers.some(hot) || (g.story?.npcs || []).some((n) => (n.enemy || n.street) && hot(n))
   }
 
   update(dt) {
@@ -108,6 +109,9 @@ export class StreetTalk {
     for (const n of g.peds.list) test(n)
     for (const n of g.ambient.npcs) test(n)
     for (const n of g.crew.list) test(n)
+    // story people out of their mission who are lads of the yard (Hood.street); the ones the story
+    // gave something to say (Vitea: his lines, his races) keep their own E
+    for (const n of g.story.npcs) if (n.street && !HOMES[n.castId]?.talk) test(n)
     // officers walking back to their car after a chase can be talked to too
     for (const n of g.police.officers) if (n.cop?.mode === 'return') test(n)
     if (!best || this.underAttack()) return
@@ -253,6 +257,8 @@ export class StreetTalk {
 
   gopRecruit(n, cost) {
     const g = this.game, pr = g.progress
+    // the story's lads (Blocul 7, Jora's lot) have a corner to mind: the story finds them there
+    if (n.castId || n.spot?.temp) return { line: pick(GOP.stay) }
     if (g.crew.full) return { line: pick(GOP.crewFull) }
     if (cost && !pr.spend(cost)) return { line: '…' }
     this.name(n)

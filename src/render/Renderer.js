@@ -8,11 +8,14 @@ import { Sky } from './Sky.js'
 import { TimeOfDay } from './TimeOfDay.js'
 import { SHARED, RES } from './Materials.js'
 
+// peds / cars: how many people walk the streets and how many cars drive round you at the busiest
+// hour (Pedestrians and Traffic scale them down by the clock); every person is a draw call of its
+// own, so phones get fewer
 export const QUALITY = {
-  low: { label: 'Scăzută', post: false, shadows: false, shadowMap: 1024, shadowSize: 50, ao: false, bloom: false, smaa: false, maxDpr: 1, antialias: false, lamps: 2, msaa: 0 },
-  medium: { label: 'Medie', post: true, shadows: true, shadowMap: 1024, shadowSize: 60, ao: false, bloom: true, smaa: true, maxDpr: 1.25, antialias: false, lamps: 4, msaa: 2 },
-  high: { label: 'Înaltă', post: true, shadows: true, shadowMap: 2048, shadowSize: 70, ao: true, bloom: true, smaa: true, maxDpr: 1.5, antialias: false, lamps: 8, msaa: 4 },
-  ultra: { label: 'Ultra', post: true, shadows: true, shadowMap: 4096, shadowSize: 90, ao: true, bloom: true, smaa: true, maxDpr: 2, antialias: false, lamps: 12, msaa: 4 },
+  low: { label: 'Scăzută', post: false, shadows: false, shadowMap: 1024, shadowSize: 50, ao: false, bloom: false, smaa: false, maxDpr: 1, antialias: false, lamps: 2, msaa: 0, peds: 30, cars: 20 },
+  medium: { label: 'Medie', post: true, shadows: true, shadowMap: 1024, shadowSize: 60, ao: false, bloom: true, smaa: true, maxDpr: 1.25, antialias: false, lamps: 4, msaa: 2, peds: 44, cars: 28 },
+  high: { label: 'Înaltă', post: true, shadows: true, shadowMap: 2048, shadowSize: 70, ao: true, bloom: true, smaa: true, maxDpr: 1.5, antialias: false, lamps: 8, msaa: 4, peds: 54, cars: 32 },
+  ultra: { label: 'Ultra', post: true, shadows: true, shadowMap: 4096, shadowSize: 90, ao: true, bloom: true, smaa: true, maxDpr: 2, antialias: false, lamps: 12, msaa: 4, peds: 64, cars: 38 },
 }
 
 const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _mi = new THREE.Matrix4()

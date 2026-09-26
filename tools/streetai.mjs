@@ -1,7 +1,8 @@
 // Dev tool: the street AI in headless Chromium: gopnik benches that notice you and come over
-// (tolls, talking your way out, fights, chases, friends, favours, the lads at Blocul 7), the
-// police (witnesses, pursuit on foot and by car, arrests, escaping, hands up, talking to cops)
-// and the crowd's reactions. Reports pass/fail per check.
+// (tolls, talking your way out, fights, chases, friends, favours, the groups in the parks, the
+// lads at Blocul 7), the police (witnesses, pursuit on foot and by car, arrests, escaping, hands
+// up, talking to cops), the crowd's reactions, and how full the streets are (people on the
+// boulevard, after a cutscene, traffic that keeps moving). Reports pass/fail per check.
 // usage: node tools/streetai.mjs [--only name,name]
 import { chromium } from 'playwright'
 import { createServer } from 'vite'
@@ -82,6 +83,10 @@ await ev(async () => {
   T.busted = 0
   const obu = g.director.busted.bind(g.director)
   g.director.busted = () => { T.busted++; return obu() }
+  // the progression layer's prizes (achievements, rank prizes, the daily bonus) would land in the
+  // middle of checks that count lei: on this street they don't
+  const add = g.progress.addLei.bind(g.progress)
+  g.progress.addLei = (n, reason = '') => (/^(🏆|⭐|🔥)/u.test(reason) ? undefined : add(n, reason))
 })
 await page.waitForTimeout(300)
 let r
@@ -353,6 +358,126 @@ if (want('cast')) {
   check('the lads at Blocul 7 greet you outside missions, stay put, stay quiet in one', r.spoke && r.still && r.quiet, JSON.stringify(r))
 }
 
+if (want('casttalk')) {
+  r = await ev(async () => {
+    const T = window.__T, g = T.g, p = g.player, pr = g.progress
+    const c = g.story.cast, gc = g.world.places.gopnici_curte
+    const who = ['vitea', 'gop2', 'gop3'].map((k) => c[k]).filter(Boolean)
+    const n = c.gop2
+    if (!n) return { none: true }
+    const auto = g.story.autoStart
+    g.story.autoStart = null
+    T.place(gc.x + 5, gc.z + 3)
+    await T.frames(3)
+    // walk up to the one who never had a word to say: E, and the street's gopnik menu
+    const a = Math.atan2(p.pos.x - n.pos.x, p.pos.z - n.pos.z) || 0.7
+    T.place(n.pos.x + Math.sin(a) * 1.4, n.pos.z + Math.cos(a) * 1.4, a + Math.PI)
+    const cand = await T.until(() => g.street.cand === n, 30)
+    await T.frames(2)
+    const prompt = document.querySelector('.prompt')?.textContent || ''
+    T.menus.length = 0
+    g.autoChoices = [0, 4]
+    await g.street.talk(n)
+    const menu = T.menus[0]
+    // the story needs him in his corner: he won't come along
+    const stays = !!g.street.gopRecruit(n, 0)?.line && !n.crew && !g.crew.list.includes(n)
+    // a punch: all three of them
+    const gop0 = pr.respect.gop
+    n.takeHit(3, p.pos.x, p.pos.z, 1, p)
+    await T.frames(3)
+    const f = g.life.fights.find((q) => q.members.includes(n))
+    const all = !!f && who.every((q) => f.members.includes(q) && q.hostile)
+    // a mission starts mid-fight: cast again, on their feet, in their corner
+    const fake = { def: { id: 'test' }, tick() {}, waiters: [], tracked: [] }
+    n.takeHit(999, p.pos.x, p.pos.z, 3, p)
+    g.story.active = fake
+    g.events.emit('mission:start', fake.def)
+    const calm = who.every((q) => !q.street && !q.hostile && q.personality === 'story' && !q.char.ko && Math.hypot(q.pos.x - q.castHome.x, q.pos.z - q.castHome.z) < 0.5 && q.state === q.castHome.state)
+    const noFight = !g.life.fights.some((q) => q.members.some((m) => who.includes(m)))
+    await T.frames(4)
+    const quiet = g.street.cand !== n
+    g.story.active = null
+    g.story.autoStart = auto
+    const back = await T.until(() => who.every((q) => q.street), 20)
+    g.police.clear(); g.crowd.cancelCalls()
+    return { cand, prompt, menu, stays, all, calm, noFight, quiet, back, dGop: pr.respect.gop - gop0 }
+  })
+  check('the lads at Blocul 7 outside missions: E talks (gopnik menu), a punch brings all three', r.cand && /Vorbește cu gopnicul/.test(r.prompt) && r.menu?.some((t) => /semințe/.test(t)) && r.stays && r.all, JSON.stringify(r))
+  check('...and a mission makes them its cast again at once (fight over, back in their corner)', r.calm && r.noFight && r.quiet && r.back, JSON.stringify(r))
+}
+
+// the gopnik group in a park (Grădina Publică first), spawned, memory wiped, player parked away
+const parkBench = async (k = 0) => ev(async (k) => {
+  const T = window.__T, g = T.g
+  const s = g.ambient.spots.filter((q) => q.archetype === 'gopnik' && q.park)[k]
+  if (!s) return null
+  g.hood.abort(); g.hood.endHang(false)
+  await T.until(() => !g.ui.modalOpen, 60)
+  T.place(s.x + 30, s.z + 30)
+  g.ambient.t = 0
+  await T.until(() => s.npcs, 60)
+  await T.until(() => s.npcs && s.npcs.every((n) => n.state !== 'walk' && n.state !== 'run'), 60)
+  s.hood = null
+  g.hood.nextEnc = 0
+  return { x: s.x, z: s.z, zone: window.__CR.blockAt(s.x, s.z)?.zone, n: s.list.length }
+}, k)
+
+if (want('parkgop')) {
+  const b = await parkBench(0)
+  r = !b ? { none: true } : await ev(async () => {
+    const T = window.__T, g = T.g, p = g.player
+    const s = g.ambient.spots.filter((q) => q.archetype === 'gopnik' && q.park)[0]
+    g.hood.nextEnc = 1e9   // (this time we go to them)
+    const n = s.npcs.find((m) => m.state === 'squat') || s.npcs[0]
+    const a = Math.atan2(p.pos.x - n.pos.x, p.pos.z - n.pos.z) || 0.7
+    T.place(n.pos.x + Math.sin(a) * 1.5, n.pos.z + Math.cos(a) * 1.5, a + Math.PI)
+    const cand = await T.until(() => s.npcs.includes(g.street.cand), 30)
+    await T.frames(2)
+    const prompt = document.querySelector('.prompt')?.textContent || ''
+    T.menus.length = 0
+    g.autoChoices = [0, 4]
+    await g.street.talk(g.street.cand || n)
+    return { cand, prompt, menu: T.menus[0], arch: n.archetype }
+  })
+  check('a gopnik group in the park: E prompt and the street-talk menu', r.cand && /Vorbește cu gopnicul/.test(r.prompt) && r.menu?.some((t) => /semințe/.test(t)), JSON.stringify({ ...b, ...r }))
+
+  await parkBench(0)
+  r = await ev(async () => {
+    const T = window.__T, g = T.g, pr = g.progress
+    pr.respect.gop = 0
+    const s = g.ambient.spots.filter((q) => q.archetype === 'gopnik' && q.park)[0]
+    T.lines.length = 0
+    const lei0 = pr.lei
+    g.autoChoices = [0, 0]
+    const at = T.near(s, 10)
+    const came = await T.until(() => g.hood.enc?.s === s, 60)
+    const kind = g.hood.enc?.kind
+    const talked = await T.until(() => T.lines.some((l) => /lei/.test(l)), 200)
+    await T.until(() => !g.ui.modalOpen && !g.hood.enc, 120)
+    return { seen: at.seen, came, kind, talked, dLei: pr.lei - lei0, opener: T.lines[0] }
+  })
+  check('the park group notices you walk up: one comes over for the toll', r.came && r.kind === 'toll' && r.talked && r.dLei < 0, JSON.stringify(r))
+
+  await parkBench(0)
+  r = await ev(async () => {
+    const T = window.__T, g = T.g, p = g.player, pr = g.progress
+    const s = g.ambient.spots.filter((q) => q.archetype === 'gopnik' && q.park)[0]
+    g.hood.nextEnc = 1e9
+    const n = s.npcs[0]
+    T.place(n.pos.x + 1.2, n.pos.z, -Math.PI / 2)
+    const gop0 = pr.respect.gop
+    n.takeHit(3, p.pos.x, p.pos.z, 1, p)
+    await T.frames(3)
+    const f = g.life.fights.find((q) => q.members.includes(n))
+    const all = !!f && s.npcs.every((m) => f.members.includes(m) && m.hostile)
+    for (const m of s.npcs) m.takeHit(999, p.pos.x, p.pos.z, 3, p)
+    const over = await T.until(() => !g.life.fights.length, 60)
+    g.police.clear(); g.crowd.cancelCalls()
+    return { all, over, dGop: pr.respect.gop - gop0 }
+  })
+  check('hit one of the park group: they all fight back, and beating them earns respect', r.all && r.over && r.dGop === 8, JSON.stringify(r))
+}
+
 // ================================ police ============================================================
 const street = async () => ev(async () => {
   const T = window.__T, g = T.g
@@ -454,7 +579,9 @@ if (want('escape')) {
   r = await ev(async () => {
     const T = window.__T, g = T.g, p = g.player
     g.police.setLevel(2)
-    await T.frames(40)
+    // off you go the moment they've had eyes on you (a fixed forty frames, on a slow machine, was
+    // long enough for one of them to have his hand on your collar: then it ends in an arrest)
+    await T.until(() => g.police.spotted && g.police.officers.length > 0, 80)
     const had = g.police.officers.length
     // gone: round the corner, into a courtyard two streets away
     const hideout = g.ambient.spots.find((q) => q.archetype === 'gopnik' && Math.hypot(q.x - p.pos.x, q.z - p.pos.z) > 150)
@@ -542,6 +669,9 @@ const quiet = async () => ev(async () => {
   const pl = g.world.places.pman
   T.place(pl.x - 6, pl.z + 14, 0)
   for (const n of [...g.peds.list]) if (n.personality === 'cop' || Math.hypot(n.pos.x - g.player.pos.x, n.pos.z - g.player.pos.z) < 40) g.peds.remove(n)
+  // and nobody new walks up while a check sets its own scene (the street refills in seconds)
+  T.pedTarget ??= g.peds.target
+  g.peds.target = 0
   g.crowd.nextCall = 0
   await T.frames(3)
 })
@@ -776,6 +906,83 @@ if (want('dog')) {
     return { heel: +heel.toFixed(2), moved: +moved.toFixed(1), bark, gone: !g.crowd.dogs.list.includes(d) }
   })
   check('someone walks a dog: it keeps to heel, barks at you, goes home with its owner', r.heel < 1.6 && r.moved > 2 && r.bark && r.gone, JSON.stringify(r))
+}
+
+// ================================ the city: people and traffic ========================================
+// (at the "low" preset these checks run with, the smallest crowd any player gets. Measured with
+// tools/density.mjs --quality low: 16-18 people within 60 m on the boulevard at 18:00, where the
+// old street had 8-11; 7-12 cars on the move in Râșcani, where the old jams let 0-1 through)
+const BUSY = 14, BUSY_AFTER = 12, MOVING = 5
+const busyStreet = async () => ev(async () => {
+  const T = window.__T, g = T.g
+  if (T.pedTarget != null) g.peds.target = T.pedTarget   // (quiet() held new people back)
+  g.police.clear()
+  g.hood.abort(); g.hood.endHang(false)
+  await T.until(() => !g.ui.modalOpen, 60)
+  if (g.weather) { g.weather.set(false); g.weather.k = 0; g.weather.target = 0 }
+  g.renderer.tod.set(18)
+})
+// people within 60 m, averaged over a few seconds
+const crowdHere = async (frames = 80, n = 10) => ev(async ({ frames, n }) => {
+  const T = window.__T, g = T.g, p = g.player
+  await T.frames(frames)
+  const s = []
+  for (let i = 0; i < n; i++) { await T.frames(6); s.push(g.peds.list.filter((q) => !q.char.ko && Math.hypot(q.pos.x - p.pos.x, q.pos.z - p.pos.z) < 60).length) }
+  return { avg: +(s.reduce((a, b) => a + b, 0) / s.length).toFixed(1), min: Math.min(...s), all: g.peds.list.length, budget: g.peds.budget() }
+}, { frames, n })
+
+if (want('density')) {
+  await busyStreet()
+  await ev(() => { const T = window.__T, g = T.g; T.place(30, -15, -Math.PI / 2); g.cameraRig.yaw = -Math.PI / 2; g.cameraRig.snap() })
+  r = await crowdHere()
+  check(`the boulevard in Centru at 18:00 is busy: ${BUSY}+ people within 60 m`, r.avg >= BUSY && r.min >= BUSY - 4, JSON.stringify(r))
+}
+
+if (want('recover')) {
+  await busyStreet()
+  await ev(() => { const T = window.__T, g = T.g; T.place(30, -15, -Math.PI / 2) })
+  await crowdHere(60, 2)
+  r = await ev(async (need) => {
+    const T = window.__T, g = T.g, p = g.player
+    const near = () => g.peds.list.filter((q) => !q.char.ko && Math.hypot(q.pos.x - p.pos.x, q.pos.z - p.pos.z) < 60).length
+    // a mission's cutscene carries you across town (a fade and a teleport), then hands back control
+    const fake = { def: { id: 'test' }, tick() {}, waiters: [], tracked: [] }
+    g.story.active = fake
+    g.events.emit('mission:start', fake.def)
+    g.cutscene = true
+    const before = near()
+    T.place(-52, 200, Math.PI)
+    await T.frames(12)
+    g.cutscene = false
+    g.story.active = null
+    const f0 = g.frame
+    let got = near()
+    while (got < need && g.frame < f0 + 200) { await T.frames(4); got = near() }
+    // nobody left behind across town holding a place the street here needs
+    const left = g.peds.list.filter((q) => !q.persistent && Math.hypot(q.pos.x - p.pos.x, q.pos.z - p.pos.z) > 150).length
+    return { before, got, frames: g.frame - f0, left, all: g.peds.list.length }
+  }, BUSY_AFTER)
+  check(`after a cutscene takes you across town the street fills in again (${BUSY_AFTER}+ within 60 m)`, r.got >= BUSY_AFTER && r.left === 0, JSON.stringify(r))
+}
+
+if (want('traffic')) {
+  await busyStreet()
+  r = await ev(async () => {
+    const T = window.__T, g = T.g, p = g.player
+    // a one-lane street in Râșcani, parked cars along both kerbs
+    T.place(-52, -205, 0)
+    g.cameraRig.yaw = 0; g.cameraRig.snap()
+    await T.frames(100)
+    let moving = 0, jammed = 0
+    for (let i = 0; i < 10; i++) {
+      await T.frames(8)
+      const near = g.traffic.drivers.filter((d) => d.v && !d.v.def.trolley && Math.hypot(d.v.pos.x - p.pos.x, d.v.pos.z - p.pos.z) < 120)
+      moving += near.filter((d) => Math.abs(d.v.speed) > 1).length
+      jammed = Math.max(jammed, near.filter((d) => d.stillT > 60).length)
+    }
+    return { moving: +(moving / 10).toFixed(1), jammed, cars: g.traffic.drivers.length, budget: g.traffic.budget() }
+  })
+  check(`traffic keeps moving round you (${MOVING}+ cars on the move within 120 m, nobody stuck behind a parked car)`, r.moving >= MOVING && r.jammed === 0, JSON.stringify(r))
 }
 
 console.log(`\n${passed} passed, ${failed} failed`)
