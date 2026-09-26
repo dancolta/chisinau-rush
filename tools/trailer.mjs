@@ -36,7 +36,7 @@ const FFPROBE = process.env.FFPROBE || (fs.existsSync('/usr/local/bin/ffprobe') 
 export const SHOTS = [
   {
     // golden hour over PMAN and Bd. Ștefan cel Mare: a dive down to the Arc
-    id: 'open', beats: 6, hour: 18.5, seed: 11,
+    id: 'open', beats: 7, hour: 18.5, seed: 11,
     setup(T) {
       T.focusAt(-10, 0)
       T.boulevardTraffic([-160, 160], 18)
@@ -44,14 +44,14 @@ export const SHOTS = [
       T.preroll(4)
     },
     cam(T, t) {
-      return T.path(t / 2.4, [
+      return T.path(t / T.dur, [
         { p: [-100, 64, -118], l: [8, 0, 6], fov: 46 },
         { p: [-74, 24, -52], l: [6, 5, 20], fov: 46 },
         { p: [-46, 5.8, -6.5], l: [2, 8.5, 25], fov: 48 },
       ], 'out')
     },
     camV(T, t) {
-      return T.path(t / 2.4, [
+      return T.path(t / T.dur, [
         { p: [-92, 70, -110], l: [6, 0, 10], fov: 74 },
         { p: [-68, 26, -50], l: [4, 6, 22], fov: 72 },
         { p: [-38, 5.2, -5], l: [0, 13, 26], fov: 72 },
@@ -61,7 +61,7 @@ export const SHOTS = [
   },
   {
     // a yellow taxi through the sunset blocks of Râșcani, the camera riding alongside
-    id: 'taxi', beats: 6, hour: 18.7, seed: 22,
+    id: 'taxi', beats: 8, hour: 18.7, seed: 22,
     setup(T) {
       T.g.traffic.target = 0
       T.focusAt(-110, -150)
@@ -72,18 +72,18 @@ export const SHOTS = [
       T.preroll(1)
     },
     cam(T, t) {
-      const k = T.ease.sine(t / 2.4)
+      const k = T.ease.sine(t / T.dur)
       return T.follow(T.taxi, { side: -6.2, back: T.lerp(3.2, -0.6, k), up: 1.25, lookAhead: 0.8, lookUp: 0.9, fov: 38 })
     },
     camV(T, t) {
-      const k = T.ease.sine(t / 2.4)
+      const k = T.ease.sine(t / T.dur)
       return T.follow(T.taxi, { side: -6.8, back: T.lerp(2.6, 0.2, k), up: 1.6, lookAhead: 0.6, lookUp: 1.6, fov: 62 })
     },
     keyart: [1.6],
   },
   {
     // the lads outside „Bere la halbă", on their heels in the last sun; one gets up
-    id: 'gopniks', beats: 4, hour: 18.45, seed: 33,
+    id: 'gopniks', beats: 6, hour: 18.45, seed: 33,
     setup(T) {
       const W = -Math.PI / 2
       T.g.grass.mesh.visible = false
@@ -104,18 +104,18 @@ export const SHOTS = [
       if (T.up) { c.heading += (-Math.PI / 2 + 0.15 - c.heading) * 0.1; c.prevHeading = c.heading }
     },
     cam(T, t) {
-      const k = T.ease.sine(t / 1.6)
+      const k = T.ease.sine(t / T.dur)
       return { p: [T.lerp(302.4, 303.5, k), 0.82, T.lerp(-102.2, -102.7, k)], l: [309.4, 1.3, -103.1], fov: 37 }
     },
     camV(T, t) {
-      const k = T.ease.sine(t / 1.6)
+      const k = T.ease.sine(t / T.dur)
       return { p: [T.lerp(302.6, 303.6, k), 0.9, -102.6], l: [309.4, 1.6, -102.8], fov: 64 }
     },
     keyart: [1.4],
   },
   {
     // Tanti Valea and her cast-iron pan: slow motion into the BONG
-    id: 'fight', beats: 4, hour: 18.45, seed: 44,
+    id: 'fight', beats: 5, hour: 18.45, seed: 44,
     setup(T) {
       const g = T.g, C = window.__CR.CAST, p = g.player, W = -Math.PI / 2
       g.grass.mesh.visible = false
@@ -144,12 +144,12 @@ export const SHOTS = [
       if (T.flew && t > 1.05 && !T.cheer) { T.cheer = true; T.watch.anim.play('facepalm') }
     },
     cam(T, t) {
-      const k = T.ease.sine(t / 1.6)
+      const k = T.ease.sine(t / T.dur)
       const punch = t > 0.8 && t < 1.1 ? Math.sin((t - 0.8) / 0.3 * Math.PI) * 5 : 0
       return { p: [T.lerp(303.0, 303.7, k), 1.05, T.lerp(-100.4, -100.9, k)], l: [309.4, 1.2, -101.1], fov: 38 - punch }
     },
     camV(T, t) {
-      const k = T.ease.sine(t / 1.6)
+      const k = T.ease.sine(t / T.dur)
       const punch = t > 0.8 && t < 1.1 ? Math.sin((t - 0.8) / 0.3 * Math.PI) * 7 : 0
       return { p: [T.lerp(302.8, 303.5, k), 1.15, -100.9], l: [309.4, 1.45, -101.1], fov: 62 - punch }
     },
@@ -214,7 +214,7 @@ export const SHOTS = [
   },
   {
     // the four who came back, in PMAN at golden hour
-    id: 'crew', beats: 6, hour: 18.0, seed: 66,
+    id: 'crew', beats: 8, hour: 18.0, seed: 66,
     setup(T) {
       const C = window.__CR.CAST, z = -44
       T.focusAt(0, -44)
@@ -234,18 +234,18 @@ export const SHOTS = [
       if (t >= 0.8 && !T.w2) { T.w2 = true; b.anim.play('point') }
     },
     cam(T, t) {
-      const k = T.ease.inout(t / 2.4)
+      const k = T.ease.inout(t / T.dur)
       return { p: [T.lerp(-5.6, 5.2, k), 1.35, -38.4], l: [T.lerp(-3.6, 3.2, k), 1.02, -44], fov: 40 }
     },
     camV(T, t) {
-      const k = T.ease.inout(t / 2.4)
+      const k = T.ease.inout(t / T.dur)
       return { p: [T.lerp(-4.8, 4.8, k), 1.3, -38.6], l: [T.lerp(-4.4, 4.4, k), 1.2, -44], fov: 56 }
     },
     keyart: [2.3],
   },
   {
     // montage 1: a trolleybus sweeps past on the boulevard
-    id: 'trolley', beats: 1, hour: 17.9, seed: 71,
+    id: 'trolley', beats: 2.5, hour: 17.9, seed: 71,
     setup(T) {
       T.focusAt(-150, 8)
       const z = -T.g.traffic.bdLaneZ
@@ -257,31 +257,31 @@ export const SHOTS = [
     },
     cam(T, t) {
       const z = -T.g.traffic.bdLaneZ
-      return { p: [T.lerp(-155.6, -154.8, t / 0.4), 0.62, z + 4.6], l: [-146, 2.7, z - 0.8], fov: 50 }
+      return { p: [T.lerp(-155.6, -154.8, t / T.dur), 0.62, z + 4.6], l: [-146, 2.7, z - 0.8], fov: 50 }
     },
     camV(T, t) {
       const z = -T.g.traffic.bdLaneZ
-      return { p: [T.lerp(-155.6, -154.8, t / 0.4), 0.7, z + 4.8], l: [-148, 3.5, z - 0.4], fov: 72 }
+      return { p: [T.lerp(-155.6, -154.8, t / T.dur), 0.7, z + 4.8], l: [-148, 3.5, z - 0.4], fov: 72 }
     },
   },
   {
     // montage 2: Piața Centrală, tomatoes, and Nicu's "branded" tracksuits
-    id: 'market', beats: 1, hour: 17.3, seed: 72,
+    id: 'market', beats: 2.5, hour: 17.3, seed: 72,
     setup(T) {
       T.focusAt(230, 40)
       T.walkers(230, 40, 26, 14)
       T.preroll(2.5)
     },
     cam(T, t) {
-      return { p: [T.lerp(226.2, 227.4, t / 0.4), 1.7, 26.6], l: [T.lerp(233.2, 234.4, t / 0.4), 1.8, 33], fov: 48 }
+      return { p: [T.lerp(226.2, 227.4, t / T.dur), 1.7, 26.6], l: [T.lerp(233.2, 234.4, t / T.dur), 1.8, 33], fov: 48 }
     },
     camV(T, t) {
-      return { p: [T.lerp(229.4, 230.2, t / 0.4), 1.75, 26.2], l: [T.lerp(233.6, 234.4, t / 0.4), 2.2, 33], fov: 70 }
+      return { p: [T.lerp(229.4, 230.2, t / T.dur), 1.75, 26.2], l: [T.lerp(233.6, 234.4, t / T.dur), 2.2, 33], fov: 70 }
     },
   },
   {
     // montage 3: a wedding shoot at the Arc
-    id: 'wedding', beats: 1, hour: 17.85, seed: 73,
+    id: 'wedding', beats: 2.5, hour: 17.85, seed: 73,
     setup(T) {
       T.focusAt(0, 12)
       T.preroll(1.2)
@@ -289,16 +289,16 @@ export const SHOTS = [
       T.preroll(0.3)
     },
     cam(T, t) {
-      return { p: [T.lerp(4.9, 4.3, t / 0.4), 1.35, T.lerp(9.6, 10.1, t / 0.4)], l: [-0.3, 2.5, 22.4], fov: 50 }
+      return { p: [T.lerp(4.9, 4.3, t / T.dur), 1.35, T.lerp(9.6, 10.1, t / T.dur)], l: [-0.3, 2.5, 22.4], fov: 50 }
     },
     camV(T, t) {
-      return { p: [T.lerp(2.9, 2.5, t / 0.4), 1.35, T.lerp(10.6, 11.0, t / 0.4)], l: [-0.2, 3.4, 22.4], fov: 70 }
+      return { p: [T.lerp(2.9, 2.5, t / T.dur), 1.35, T.lerp(10.6, 11.0, t / T.dur)], l: [-0.2, 3.4, 22.4], fov: 70 }
     },
     keyart: [0.35],
   },
   {
     // montage 4: home, flat 43 in Blocul 7, the fourth wall open like a doll's house
-    id: 'flat', beats: 1, hour: 20.4, seed: 74,
+    id: 'flat', beats: 2.5, hour: 20.4, seed: 74,
     setup(T) {
       T.flat(true)
       const R = 2600
@@ -309,17 +309,17 @@ export const SHOTS = [
     },
     cam(T, t) {
       const R = 2600
-      return { p: [R + T.lerp(0.6, 0.2, t / 0.4), 1.75, R + 6.4], l: [R - 0.3, 1.3, R - 0.9], fov: 46 }
+      return { p: [R + T.lerp(0.6, 0.2, t / T.dur), 1.75, R + 6.4], l: [R - 0.3, 1.3, R - 0.9], fov: 46 }
     },
     camV(T, t) {
       const R = 2600
-      return { p: [R + T.lerp(-0.8, -1.1, t / 0.4), 1.7, R + 5.6], l: [R - 1.2, 1.25, R - 1.4], fov: 64 }
+      return { p: [R + T.lerp(-0.8, -1.1, t / T.dur), 1.7, R + 5.6], l: [R - 1.2, 1.25, R - 1.4], fov: 64 }
     },
     keyart: [0.3],
   },
   {
     // montage 5: the wardrobe, where ABIBAS becomes Lui Vuiton on the beat
-    id: 'wardrobe', beats: 2, hour: 20.4, seed: 75,
+    id: 'wardrobe', beats: 4, hour: 20.4, seed: 75,
     setup(T) {
       T.flat(true)
       const R = 2600
@@ -334,21 +334,21 @@ export const SHOTS = [
     },
     update(T, t) {
       const c = T.hero
-      if (t >= 0.4 && !T.swapped) { T.swapped = true; c.setSpec(T.looks[1]); c.heading = c.prevHeading = -Math.PI / 2 + 0.2; c.anim.play('shrug') }
+      if (t >= 0.8 && !T.swapped) { T.swapped = true; c.setSpec(T.looks[1]); c.heading = c.prevHeading = -Math.PI / 2 + 0.2; c.anim.play('shrug') }
     },
     cam(T, t) {
       const R = 2600
-      return { p: [R + T.lerp(0.2, 0.55, t / 0.8), 1.4, R + 1.3], l: [R + 3.05, 1.02, R - 0.35], fov: 44 }
+      return { p: [R + T.lerp(0.2, 0.55, t / T.dur), 1.4, R + 1.3], l: [R + 3.05, 1.02, R - 0.35], fov: 44 }
     },
     camV(T, t) {
       const R = 2600
-      return { p: [R + T.lerp(0.5, 0.8, t / 0.8), 1.3, R + 0.7], l: [R + 3.05, 1.05, R - 0.3], fov: 58 }
+      return { p: [R + T.lerp(0.5, 0.8, t / T.dur), 1.3, R + 0.7], l: [R + 3.05, 1.05, R - 0.3], fov: 58 }
     },
-    keyart: [0.7],
+    keyart: [1.2],
   },
   {
     // end card: the city from above at golden hour, held still behind the logo
-    id: 'end', beats: 7, hour: 18.15, seed: 88, still: true,
+    id: 'end', beats: 8, hour: 18.15, seed: 88, still: true,
     setup(T) {
       T.focusAt(0, 0)
       T.boulevardTraffic([-160, 160], 16)
@@ -362,24 +362,24 @@ export const SHOTS = [
 // on-screen text: at/len in beats from the start of the cut; x/y are fractions of the screen
 // (xV/yV for the vertical cut); size is px at 1080p [16:9, 9:16]; anchor pins it to a world point
 export const OVERLAYS = [
-  { type: 'logo', at: 0, len: 4, x: 0.5, y: 0.45, yV: 0.4, size: [236, 204] },
-  { type: 'caption', at: 7, len: 4.3, text: 'DUPĂ {y}7 ANI{/y} AFARĂ…', x: 0.5, y: 0.83, yV: 0.7, size: [110, 100] },
-  { type: 'bubble', at: 13.8, len: 2.1, text: 'Bratan! Te-ai întors?!', anchor: 'gop', size: [54, 58] },
-  { type: 'flash', at: 18, len: 0.04, alpha: 0.4 },
-  { type: 'pow', at: 18, len: 1.8, text: 'BONG!', anchor: 'bong', size: [190, 180] },
-  { type: 'stars', at: 20.6, len: 5.3, n: 3, x: 0.5, y: 0.12, yV: 0.2, size: [96, 104], through: true },
-  { type: 'caption', at: 26, len: 5.8, text: 'CINE S-{y}O ÎNTORS{/y}?', x: 0.5, y: 0.15, yV: 0.22, size: [110, 104] },
-  { type: 'name', at: 27, len: 4.8, text: 'VASEA „STROIKA”', sub: 'OPT ANI PE ȘANTIERE', anchor: 'crew0', dy: 0.08, size: [72, 66] },
-  { type: 'name', at: 28, len: 3.8, text: 'TANTI VALEA', sub: 'BADANTĂ LA PADOVA', anchor: 'crew1', dy: 0.08, size: [72, 66] },
-  { type: 'name', at: 29, len: 2.8, text: 'MARCEL „SCOȚIANU”', sub: '„LOGISTICĂ” ÎN ANGLIA', anchor: 'crew2', dy: 0.08, size: [72, 66] },
-  { type: 'name', at: 30, len: 1.8, text: 'VITALIK', sub: 'PAȚANUL DE PE RAION', anchor: 'crew3', dy: 0.08, size: [72, 66] },
-  { type: 'caption', at: 32, len: 0.85, text: 'TROLEIBUZE', x: 0.5, y: 0.84, yV: 0.72, size: [90, 86], outT: 0.05 },
-  { type: 'caption', at: 33, len: 0.85, text: 'PIAȚA CENTRALĂ', x: 0.5, y: 0.84, yV: 0.72, size: [90, 86], outT: 0.05 },
-  { type: 'caption', at: 34, len: 0.85, text: 'NUNȚI LA ARC', x: 0.5, y: 0.84, yV: 0.72, size: [90, 86], outT: 0.05 },
-  { type: 'caption', at: 35, len: 0.85, text: 'ACASĂ, LA BLOCUL 7', x: 0.5, y: 0.84, yV: 0.72, size: [90, 86], outT: 0.05 },
-  { type: 'brand', at: 36, len: 0.9, text: 'ABIBAS', bg: '#111', fg: '#fff', x: 0.26, y: 0.3, xV: 0.5, yV: 0.26, size: [104, 96], outT: 0.05 },
-  { type: 'brand', at: 37, len: 0.9, text: 'Lui Vuiton', bg: '#5a3a1e', fg: '#e8c872', x: 0.26, y: 0.3, xV: 0.5, yV: 0.26, size: [104, 96], outT: 0.05 },
-  { type: 'end', at: 38, len: 7, tag: 'Te-ai întors acasă.<br>{y}Chișinăul nu te-a așteptat.{/y}', cta: 'JOACĂ GRATIS ÎN BROWSER', url: 'dancolta.github.io/chisinau-rush', x: 0.5, y: 0.5, yV: 0.46, size: [214, 200] },
+  { type: 'logo', at: 0, len: 5, x: 0.5, y: 0.45, yV: 0.4, size: [236, 204] },
+  { type: 'caption', at: 8, len: 6.3, text: 'DUPĂ {y}7 ANI{/y} AFARĂ…', x: 0.5, y: 0.83, yV: 0.7, size: [110, 100] },
+  { type: 'bubble', at: 16.8, len: 4.1, text: 'Bratan! Te-ai întors?!', anchor: 'gop', size: [54, 58] },
+  { type: 'flash', at: 23, len: 0.04, alpha: 0.4 },
+  { type: 'pow', at: 23, len: 2.8, text: 'BONG!', anchor: 'bong', size: [190, 180] },
+  { type: 'stars', at: 26.6, len: 5.3, n: 3, x: 0.5, y: 0.12, yV: 0.2, size: [96, 104], through: true },
+  { type: 'caption', at: 32, len: 7.8, text: 'CINE S-{y}O ÎNTORS{/y}?', x: 0.5, y: 0.15, yV: 0.22, size: [110, 104] },
+  { type: 'name', at: 33, len: 6.8, text: 'VASEA „STROIKA”', sub: 'OPT ANI PE ȘANTIERE', anchor: 'crew0', dy: 0.08, size: [72, 66] },
+  { type: 'name', at: 34, len: 5.8, text: 'TANTI VALEA', sub: 'BADANTĂ LA PADOVA', anchor: 'crew1', dy: 0.08, size: [72, 66] },
+  { type: 'name', at: 35, len: 4.8, text: 'MARCEL „SCOȚIANU”', sub: '„LOGISTICĂ” ÎN ANGLIA', anchor: 'crew2', dy: 0.08, size: [72, 66] },
+  { type: 'name', at: 36, len: 3.8, text: 'VITALIK', sub: 'PAȚANUL DE PE RAION', anchor: 'crew3', dy: 0.08, size: [72, 66] },
+  { type: 'caption', at: 40, len: 2.35, text: 'TROLEIBUZE', x: 0.5, y: 0.84, yV: 0.72, size: [90, 86], outT: 0.08 },
+  { type: 'caption', at: 42.5, len: 2.35, text: 'PIAȚA CENTRALĂ', x: 0.5, y: 0.84, yV: 0.72, size: [90, 86], outT: 0.08 },
+  { type: 'caption', at: 45, len: 2.35, text: 'NUNȚI LA ARC', x: 0.5, y: 0.84, yV: 0.72, size: [90, 86], outT: 0.08 },
+  { type: 'caption', at: 47.5, len: 2.35, text: 'ACASĂ, LA BLOCUL 7', x: 0.5, y: 0.84, yV: 0.72, size: [90, 86], outT: 0.08 },
+  { type: 'brand', at: 50, len: 1.9, text: 'ABIBAS', bg: '#111', fg: '#fff', x: 0.26, y: 0.3, xV: 0.5, yV: 0.26, size: [104, 96], outT: 0.08 },
+  { type: 'brand', at: 52, len: 1.9, text: 'Lui Vuiton', bg: '#5a3a1e', fg: '#e8c872', x: 0.26, y: 0.3, xV: 0.5, yV: 0.26, size: [104, 96], outT: 0.08 },
+  { type: 'end', at: 54, len: 8, tag: 'Te-ai întors acasă.<br>{y}Chișinăul nu te-a așteptat.{/y}', cta: 'JOACĂ GRATIS ÎN BROWSER', url: 'dancolta.github.io/chisinau-rush', x: 0.5, y: 0.5, yV: 0.46, size: [214, 200] },
 ]
 
 // the soundtrack: the chase sârbă (D harmonic minor) at 150 BPM, stingers and sfx on the beat.
@@ -391,40 +391,42 @@ export const SCORE = {
     { at: 0, amb: 'city' },
     { at: 0, sting: 'chapter', duck: [0.5, 0.8] },
     { at: 0, sfx: 'whoosh', vol: 1.2, pitch: 0.6 },
-    { at: 6, sfx: 'whoosh', vol: 0.5, pitch: 1.1 },
-    { at: 8.5, horn: 'taxi', vol: 0.8 },
-    { at: 12, sfx: 'whoosh', vol: 0.5, pitch: 0.9 },
-    { at: 13.9, voice: { pitch: 0.82, type: 'gruff' }, text: 'Bratan! Te-ai întors?!', vol: 1.2 },
-    { at: 16, sfx: 'whoosh', vol: 0.9, pitch: 0.45 },
-    { at: 17.4, musicDuck: [0.12, 0.08] },
-    { at: 18, sfx: 'metal_hit', vol: 1.5, pitch: 0.95 },
-    { at: 18, sfx: 'punch_heavy', vol: 0.9 },
-    { at: 18.3, sfx: 'ko', vol: 0.9 },
-    { at: 18.3, musicDuck: [1, 0.15] },
-    { at: 20, sfx: 'siren_whoop', vol: 1 },
-    { at: 26, sfx: 'whoosh', vol: 0.6, pitch: 0.8 },
-    { at: 27, sfx: 'hover', vol: 0.8 },
-    { at: 28, sfx: 'hover', vol: 0.8, pitch: 1.12 },
-    { at: 29, sfx: 'hover', vol: 0.8, pitch: 1.26 },
-    { at: 30, sfx: 'hover', vol: 0.8, pitch: 1.5 },
-    { at: 32, horn: 'trolleybus', vol: 0.9 },
-    { at: 33, voice: { pitch: 1.05, type: 'female' }, text: 'Roșii de Moldova!', vol: 0.9 },
-    { at: 34, sfx: 'crowd_cheer', vol: 0.8 },
-    { at: 34, sfx: 'camera_shutter', vol: 0.9 },
-    { at: 35, sfx: 'door', vol: 0.8 },
-    { at: 36, sfx: 'cash', vol: 0.9 },
-    { at: 37, sfx: 'cash', vol: 0.9, pitch: 1.2 },
-    { at: 38, sfx: 'whoosh', vol: 1.1, pitch: 0.55 },
-    { at: 38, sfx: 'impact', vol: 0.6, pitch: 0.7 },
-    { at: 40, stop: true, fade: 0.06 },
-    { at: 40, sting: 'mission_pass', tr: 2 },
+    { at: 7, sfx: 'whoosh', vol: 0.5, pitch: 1.1 },
+    { at: 9.5, horn: 'taxi', vol: 0.8 },
+    { at: 15, sfx: 'whoosh', vol: 0.5, pitch: 0.9 },
+    { at: 16.9, voice: { pitch: 0.82, type: 'gruff' }, text: 'Bratan! Te-ai întors?!', vol: 1.2 },
+    { at: 21, sfx: 'whoosh', vol: 0.9, pitch: 0.45 },
+    { at: 22.4, musicDuck: [0.12, 0.08] },
+    { at: 23, sfx: 'metal_hit', vol: 1.5, pitch: 0.95 },
+    { at: 23, sfx: 'punch_heavy', vol: 0.9 },
+    { at: 23.3, sfx: 'ko', vol: 0.9 },
+    { at: 23.3, musicDuck: [1, 0.15] },
+    { at: 26, sfx: 'siren_whoop', vol: 1 },
+    { at: 32, sfx: 'whoosh', vol: 0.6, pitch: 0.8 },
+    { at: 33, sfx: 'hover', vol: 0.8 },
+    { at: 34, sfx: 'hover', vol: 0.8, pitch: 1.12 },
+    { at: 35, sfx: 'hover', vol: 0.8, pitch: 1.26 },
+    { at: 36, sfx: 'hover', vol: 0.8, pitch: 1.5 },
+    { at: 40, horn: 'trolleybus', vol: 0.9 },
+    { at: 42.5, voice: { pitch: 1.05, type: 'female' }, text: 'Roșii de Moldova!', vol: 0.9 },
+    { at: 45, sfx: 'crowd_cheer', vol: 0.8 },
+    { at: 45, sfx: 'camera_shutter', vol: 0.9 },
+    { at: 47.5, sfx: 'door', vol: 0.8 },
+    { at: 50, sfx: 'cash', vol: 0.9 },
+    { at: 52, sfx: 'cash', vol: 0.9, pitch: 1.2 },
+    { at: 54, sfx: 'whoosh', vol: 1.1, pitch: 0.55 },
+    { at: 54, sfx: 'impact', vol: 0.6, pitch: 0.7 },
+    { at: 56, stop: true, fade: 0.06 },
+    { at: 56, sting: 'mission_pass', tr: 2 },
   ],
+
   vehicles: [
-    { kind: 'taxi', player: true, at: 6, len: 6, speed: [13, 13], pos: [0, 0, 0] },
-    { kind: 'jiguli', player: true, at: 20, len: 6, speed: [22, 19], drift: [23.8, 25.2], pos: [0, 0, 0] },
-    { kind: 'police', siren: true, at: 20, len: 6, speed: [20, 17], pos: [6, 0, 46], pos2: [-8, 0, 26] },
-    { kind: 'police', siren: true, at: 20, len: 6, speed: [20, 17], pos: [-6, 0, 66], pos2: [8, 0, 40] },
+    { kind: 'taxi', player: true, at: 7, len: 8, speed: [13, 13], pos: [0, 0, 0] },
+    { kind: 'jiguli', player: true, at: 26, len: 6, speed: [22, 19], drift: [29.8, 31.2], pos: [0, 0, 0] },
+    { kind: 'police', siren: true, at: 26, len: 6, speed: [20, 17], pos: [6, 0, 46], pos2: [-8, 0, 26] },
+    { kind: 'police', siren: true, at: 26, len: 6, speed: [20, 17], pos: [-6, 0, 66], pos2: [8, 0, 40] },
   ],
+
 }
 
 // ---- options --------------------------------------------------------------------------------
@@ -943,7 +945,7 @@ const OVERLAY_CSS = `
 #trl .y { color: var(--gold); }
 .trl-logo { font-family: var(--title); line-height: 0.86; color: var(--gold); letter-spacing: 0.02em; text-align: center;
   -webkit-text-stroke: 0.03em #2a1200; text-shadow: 0 0.055em 0 #6a2412, 0 0.1em 0.3em rgba(0,0,0,0.55); }
-.trl-logo span { display: block; color: #fff; }
+.trl-logo span { display: block; color: #fff; margin-top: 0.32em; }
 .trl-cap { font-family: var(--title); color: #fff; letter-spacing: 0.03em; text-align: center; line-height: 1;
   -webkit-text-stroke: 0.028em #000; text-shadow: 0 0.06em 0 #000, 0 0 0.35em rgba(0,0,0,0.55); }
 .trl-kick { font-family: var(--display); color: #f6ecd8; letter-spacing: 0.3em; text-shadow: 0 0.08em 0.3em #000; }
@@ -1038,13 +1040,14 @@ async function renderFormat(name) {
     for (const [si, s] of SHOTS.entries()) {
       if (only && !only.includes(s.id)) continue
       log(`shot ${s.id} (${s.frames} frames from ${s.start})`)
-      await page.evaluate(async ({ si, hour, seed, lights }) => {
+      await page.evaluate(async ({ si, hour, seed, lights, dur }) => {
         const T = window.__T, shot = window.__SHOTS[si]
         T.reset({ hour, seed, lights })
         T.shot = shot
+        T.dur = dur
         T.t = 0
         if (shot.setup) await shot.setup(T)
-      }, { si, hour: s.hour, seed: s.seed, lights: s.lights })
+      }, { si, hour: s.hour, seed: s.seed, lights: s.lights, dur: s.frames / FPS })
       const want = at ? new Set(at.map((x) => Math.min(s.frames - 1, Math.round(x * FPS)))) : null
       for (let f = 0; f < s.frames; f++) {
         const gf = s.start + f
