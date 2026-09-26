@@ -89,7 +89,10 @@ export class Director {
     if (p.vehicle) g.vehicles.exit(true)
     p.char.anim.play('knockdown')
     g.audio?.sting('mission_fail')
+    const wasModal = g.ui.modalOpen
+    g.ui.modalOpen = true // nobody arrests or robs you while you're on the floor
     await g.ui.overlay('LEȘINAT', 2.6, { gray: true, slow: 0.3 })
+    g.ui.modalOpen = wasModal
     await g.ui.fade(1, 700)
     g.story.failActive('Ai leșinat.')
     g.police.clear()
@@ -117,6 +120,9 @@ export class Director {
     // a held pose: the player's own animation state is rewritten every frame
     if (!p.vehicle) p.char.anim.play('surrender')
     g.audio?.sting('busted')
+    // the card is part of the arrest: the cops hold still and nothing else can start (the
+    // sergeant's dialogue then takes over the modal and closes it)
+    g.ui.modalOpen = true
     await g.ui.overlay('REȚINUT', 1.9, { tone: 'blue', gray: true, slow: 0.4 })
     const sgt = { name: 'Sergentul', role: 'Poliția Chișinău', spec: CAST.cop, id: 'cop_generic', voice: { pitch: 0.85, type: 'gruff' } }
     const bribe = Math.round((30 + lvl * 45) * (pr.tier('pol') >= 3 ? 0.5 : 1))
