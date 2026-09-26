@@ -426,7 +426,9 @@ if (want('events')) {
       g.autoChoices = choices ? choices.slice() : []
       g.side.dropLingering()
       await T.frames(2)
-      const n0 = g.story.npcs.length
+      // favour givers come and go with where you stand (story/Favors.js): they aren't leftovers
+      const cast = () => g.story.npcs.filter((n) => !n.favorId).length
+      const n0 = cast()
       const a0 = g.side.aura.total, lei0 = g.progress.lei
       if (car) T.car(); else if (g.player.vehicle) g.vehicles.exit(true)
       let result = null
@@ -458,7 +460,7 @@ if (want('events')) {
           control: g.player.control,
           mg: document.querySelectorAll('.mg:not(.over)').length,
           items: [...g.interaction.items.keys()].filter((k) => k.startsWith('m_')).length,
-          extraNpcs: g.story.npcs.length - n0 - g.side.lingering.length,
+          extraNpcs: cast() - n0 - g.side.lingering.length,
           cut: !!g.cameraRig.cut,
           timer: !!document.querySelector('.objective .timer'),
         },
