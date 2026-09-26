@@ -761,10 +761,11 @@ export class Landmarks {
     // Parcul Valea Trandafirilor: a lake, paths round it, roses, benches, plenty of trees
     const lx = b.cx - 14, lz = b.cz + 6, lr = 17
     this.B.flat(lx, lz, 'dirt_o', 6).disc(lx, lz, lr + 4, Y + 0.012, 48)
+    // a knee-high stone parapet round the water: what stops you is what you see
     const w = this.st(lx, lz)
-    w.cyl(lr + 0.6, lr + 0.6, 0.35, 48, { x: lx, y: Y - 0.1, z: lz, color: 0x9d978b })
-    w.cyl(lr, lr, 0.32, 48, { x: lx, y: Y - 0.08, z: lz, color: 0x3a6f8f })
-    this.P.cylinder(lx, Y + 0.5, lz, 0.5, lr + 0.4)
+    w.cyl(lr + 0.55, lr + 0.7, 0.55, 48, { x: lx, y: Y, z: lz, color: 0x9d978b })
+    w.cyl(lr, lr, 0.52, 48, { x: lx, y: Y + 0.01, z: lz, color: 0x3a6f8f })
+    this.P.cylinder(lx, Y + 0.3, lz, 0.3, lr + 0.62)
     this.w.fountains.push({ x: lx, z: lz, y: Y + 1.5, r: 3 })
     this.clear(lx - lr - 5, lz - lr - 5, lx + lr + 5, lz + lr + 5)
     this.patch('dirt', b.ix0, lz - 2, lx - lr - 2, lz + 2, 0.011)
