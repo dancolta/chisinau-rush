@@ -416,7 +416,7 @@ export class Menus {
     col.appendChild(el('div', '', '<div style="font-family:var(--display);color:var(--gold);margin-bottom:10px">POVESTEA</div>'))
     for (const m of g.story.catalog()) {
       const cls = m.done ? 'done' : m.current ? 'cur' : ''
-      col.appendChild(el('div', 'mission-item ' + cls, `<div class="mt">${m.done ? '✔ ' : m.current ? '► ' : m.locked ? '🔒 ' : '• '}${m.title}</div><div class="md">${fmt(m.locked ? 'Se deblochează mai târziu.' : m.desc)}</div>`))
+      g.story.missionRow?.(col.appendChild(el('div', 'mission-item ' + cls, `<div class="mt">${m.done ? '✔ ' : m.current ? '► ' : m.locked ? '🔒 ' : '• '}${m.title}</div><div class="md">${fmt(m.locked ? 'Se deblochează mai târziu.' : m.desc)}</div>`)), m)
     }
     const col2 = el('div', 'col'); col2.style.flex = '1'; body.appendChild(col2)
     const ev = g.story.evidence()

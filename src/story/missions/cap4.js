@@ -1,5 +1,6 @@
 import { pathThrough } from '../Kit.js'
 import { dist, banner, crowd, cheerAll, clamp } from './common.js'
+import { GOALS, mmss } from '../Rating.js'
 
 const CH4 = 'Capitolul 4'
 
@@ -20,6 +21,7 @@ export const mitingul = {
   id: 'mitingul', chapterName: CH4, title: 'Mitingul',
   desc: 'Eban face „miting de sprijin" în PMAN. Tu vii cu martorii, dovezile și presa. În fața la toată lumea.',
   giver: { npc: 'lilia', label: 'Lilia (PMAN)' },
+  startText: 'Lilia te așteaptă în {y}PMAN{/y}, cu camera pornită. E timpul să vorbească piața.',
   intro: ['CAPITOLUL 4', 'DEMASCAREA', 'Adevărul spus în piață e greu de îngropat.'],
   next: 'auto', silentPass: true,
   async script(m) {
@@ -71,7 +73,7 @@ export const mitingul = {
       m.face(p.char, X, Z)
       await m.talk('player', 'Domnule primar! Am niște întrebări. Și niște răspunsuri.', 3.2)
       g.cameraRig.shot({ from: [X + 2.5, 1.9, Z + 3.5], look: [X, 1.55, Z], dur: 5, ease: 'out' })
-      await m.talk('eban', 'Cine-i ăsta? Paza! …Ah, presa filmează. Bine, bine. Spune, tinere. Suntem o democrație.', 4.2)
+      await m.talk('eban', 'Cine-i [[ăsta|asta]]? Paza! …Ah, presa filmează. Bine, bine. Spune, [[tinere|domnișoară]]. Suntem o democrație.', 4.2)
       // accusers, one by one
       const turn = async (id, text, pose = 'point') => {
         const w = W[id]
@@ -142,6 +144,10 @@ export const cortegiul = {
   reward: { xp: 800, cred: 20, civic: 25 },
   next: 'auto',
   passTitle: 'PRINS!', passText: 'Ceon Eban, la răcoare. Normalno.',
+  stars: [
+    GOALS.check('Takedown în sub 1:30', (m) => (m.data.chaseT ?? 999) <= 90, (m) => mmss(m.data.chaseT)),
+    GOALS.check('Mașina ta scapă întreagă (40%+)', (m) => (m.data.carHp ?? 0) >= 40, (m) => `${Math.round(m.data.carHp ?? 0)}%`),
+  ],
   chapterEnd: 'CAPITOLUL 4 · ÎNCHEIAT', chapterEndText: 'Orașul respiră. Gropile rămân. Deocamdată.',
   async script(m) {
     const g = m.game, p = m.player
@@ -174,6 +180,7 @@ export const cortegiul = {
     const startIn = m.t + 7
     await m.until(() => m.car === pol || m.t > startIn)
     const drv = m.driver(gw, [...prefix, ...loop], { speed: 21, loop: true, loopFrom: prefix.length, avoid: true })
+    const chase0 = m.playT
     await m.until(() => m.car === pol || m.t > startIn + 20, { timeout: 40, onTimeout: 'Eban a scăpat. Ai stat prea mult pe gânduri.' })
     if (m.car !== pol) m.notify('Ai luat altă mașină. Merge și așa!', 2.4)
     m.marker(null)
@@ -212,6 +219,8 @@ export const cortegiul = {
       [16, 'eban', 'Voi nu înțelegeți! Eu… eu lucram la asta!', 2.8],
     ])
     await m.until(() => gw.health <= 12 || gw.broken)
+    m.data.chaseT = m.playT - chase0
+    m.data.carHp = m.car ? m.car.health : 0
     m.untrack(chase)
     radio.stop()
     drv.done = true
@@ -310,7 +319,7 @@ export const alegeri = {
       if (need) pr.addXp(need, 'Ales primar')
       await m.wait(2.4)
       g.cameraRig.shot({ from: [X + 1.8, 1.8, Z + 3.4], look: [X, 1.5, Z], dur: 30, ease: 'out' })
-      const d = await m.choose('player', 'Primul tău decret, domnule primar:', ['Astupăm toate gropile. Toate. De mâine.', 'Lumină pe fiecare stradă. Gata cu bezna.', 'Troleibuze noi. Pe bune, nu din 1978.'])
+      const d = await m.choose('player', 'Primul tău decret, [[domnule primar|doamnă primar]]:', ['Astupăm toate gropile. Toate. De mâine.', 'Lumină pe fiecare stradă. Gata cu bezna.', 'Troleibuze noi. Pe bune, nu din 1978.'])
       pr.flags.decret = d
       if (d === 0) await m.say('borea', ['Și io unde mă mut?!', { who: 'zina', text: 'Lasă, maică, îți facem loc la noi pe bancă.' }])
       else if (d === 1) await m.say('profet', ['Lumina! Acum văd tot. Și nu-mi place ce văd. Glumesc. Glumesc.'])
