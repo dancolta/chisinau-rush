@@ -153,18 +153,23 @@ export class CameraRig {
       // look a little ahead along the motion (never more than 5 m, eased so spins and crashes
       // don't whip the view around)
       _look.set(Math.sin(car.heading), 0, Math.cos(car.heading)).multiplyScalar(Math.min(5, speed * 0.2) * Math.sign(car.speed || 1))
-      this.lookAhead.lerp(_look, 1 - Math.exp(-(ride ? 1.2 : 2.2) * rawDt))
+      this.lookAhead.lerp(_look, 1 - Math.exp(-(ride ? 1.2 : 10) * rawDt))
       // the camera turns with the car (same rate, so nothing keeps swinging after you straighten
       // up), and a spring settles it in behind: briskly right after you get in, gently while you
       // drive. A passenger gets a lazy three-quarter view from the kerb side, so the city goes by
       const rh = car.mesh.rotation.y
       if (this.userYawT <= 0 || this.enterT > 0) {
         const dh = this.carHeading == null ? 0 : wrap(rh - this.carHeading)
-        if (Math.abs(dh) < 0.5) this.yaw += dh * (ride ? 0.8 : 0.92)
-        const want = rh + (ride ? 0.32 : 0)
-        // the driver's camera settles back behind the car even when you're stopped
-        const rate = this.enterT > 0 ? 9 : ride ? (speed > 0.5 ? 0.9 : 0) : speed > 1 ? 3.2 : 2
-        if (rate) this.yaw += wrap(want - this.yaw) * (1 - Math.exp(-rate * rawDt))
+        if (ride) {
+          if (Math.abs(dh) < 0.5) this.yaw += dh * 0.8
+          if (speed > 0.5) this.yaw += wrap(rh + 0.32 - this.yaw) * (1 - Math.exp(-0.9 * rawDt))
+        } else {
+          // driving, the camera is fixed straight behind the car: it turns with the car one to one
+          // (a softer follow left the view pointing 30-50 degrees off the nose in a hard turn), and
+          // anything left over (getting in, after you looked round) closes in a few frames
+          if (Math.abs(dh) < 0.5) this.yaw += dh
+          this.yaw += wrap(rh - this.yaw) * (1 - Math.exp(-(this.enterT > 0 ? 9 : 12) * rawDt))
+        }
       }
       this.carHeading = rh
       const cc = CAR_CAM[game.settings.camCar ?? 1]
@@ -205,7 +210,7 @@ export class CameraRig {
     this.dist += (wantDist - this.dist) * (1 - Math.exp(-2 * rawDt))
     this.pitch += (this.wantPitch(basePitch) + this.pitchOff + this.pitchLift - this.pitch) * (1 - Math.exp(-4 * rawDt))
     // the camera orbits the hero's head (no look-ahead in the orbit, so it can't swing wide)
-    this.pivot.lerp(_t, 1 - Math.exp(-(car ? 10 : 14) * rawDt))
+    this.pivot.lerp(_t, 1 - Math.exp(-(driving ? 40 : car ? 10 : 14) * rawDt))
     this.target.copy(_t)
     this.smoothTarget.copy(this.pivot)
     const yawView = lookBack ? car.heading + Math.PI : this.yaw
@@ -215,7 +220,7 @@ export class CameraRig {
     const free = this.collide(_v)
     const dNow = this.pos.distanceTo(this.pivot), dWant = _v.distanceTo(this.pivot)
     if (free !== null && dWant < dNow) this.pos.copy(_v)
-    else this.pos.lerp(_v, 1 - Math.exp(-(lookBack ? 30 : 5) * rawDt))
+    else this.pos.lerp(_v, 1 - Math.exp(-(lookBack ? 30 : driving ? 25 : 5) * rawDt))
     this.pitchLift += ((free !== null && free < 2.2 ? 0.5 : 0) - this.pitchLift) * (1 - Math.exp(-3 * rawDt))
     this.cam.position.copy(this.pos)
     this.applyShake(rawDt)
