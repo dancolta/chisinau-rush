@@ -13,7 +13,10 @@ export class Character {
     this.spec = spec
     this.id = opts.id || null
     this.name = opts.name || ''
-    this.mesh = buildCharacter(spec)
+    // a body someone else wore before (Pedestrians keeps the ones of people who walked off):
+    // building one from scratch is the slowest part of a new face in the street
+    this.mesh = opts.mesh || buildCharacter(spec)
+    if (opts.mesh) { this.mesh.visible = true; this.mesh.castShadow = true }
     this.mesh.userData.character = this
     this.anim = new Animator(this.mesh)
     this.pos = new THREE.Vector3(opts.x ?? 0, opts.y ?? CURB_H, opts.z ?? 0)
@@ -89,5 +92,13 @@ export class Character {
     this.game.scene.remove(this.mesh)
     this.mesh.geometry.dispose()
     this.mesh.skeleton.dispose()
+  }
+
+  // out of the scene but kept whole, to be worn again (see opts.mesh)
+  detach() {
+    this.game.scene.remove(this.mesh)
+    delete this.mesh.userData.character
+    delete this.mesh.userData.npc
+    return this.mesh
   }
 }

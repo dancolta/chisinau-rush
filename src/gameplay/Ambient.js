@@ -1,10 +1,20 @@
 import { CAST, randomCivilian } from '../data/outfits.js'
 import { NPC } from '../entities/NPC.js'
 import { mulberry } from '../world/rng.js'
-import { blockAt } from '../world/CityLayout.js'
+import { BLOCKS, blockAt } from '../world/CityLayout.js'
+import { FILTER } from '../physics/Physics.js'
+import { kidSpec } from './Pedestrians.js'
 
 // Static little scenes that make the city feel lived in, spawned only near the player:
-// people on benches, a wedding photo shoot at the Arc, market vendors, card players.
+// people on benches, a wedding photo shoot at the Arc, market vendors, card players, gopniks
+// in the yards and the parks, kids and their mothers at the playgrounds.
+const segDist = (s, x, z) => {
+  const abx = s.b.x - s.a.x, abz = s.b.z - s.a.z
+  const t = Math.max(0, Math.min(1, ((x - s.a.x) * abx + (z - s.a.z) * abz) / (abx * abx + abz * abz || 1)))
+  return { d: Math.hypot(s.a.x + abx * t - x, s.a.z + abz * t - z), x: s.a.x + abx * t, z: s.a.z + abz * t }
+}
+const MUM = ['Nu te urca acolo, că cazi!', 'Încă cinci minute și mergem acasă!', 'Ia-ți căciula, că răcești!', 'Nu mânca nisip, Ionuț!']
+const KIDS = ['Prinde-mă!', 'Eu sunt primul pe tobogan!', 'Mamă, uite ce pot!', 'Nu se pune, n-ai atins!']
 const BRIDE = { ...CAST.vanzatoare, top: { style: 'shirt', color: 0xfbfaf4 }, bottom: { style: 'dress', color: 0xfbfaf4, long: true }, hair: { style: 'bun', color: 0x5a3a22 }, stockings: 0xf2e6da, shoes: 0xf2f2f2 }
 const GROOM = { ...CAST.agent, top: { style: 'suit', color: 0x15171d, shirt: 0xffffff, tie: 0xe8e8e8 }, bottom: { color: 0x15171d }, sunglasses: false, hold: undefined }
 const PHOTO = { ...CAST.plecat, sunglasses: false, hold: 'phone', top: { style: 'shirt', color: 0x3a3a44 } }
@@ -47,6 +57,74 @@ export class Ambient {
     const al = w.places.aleea_clasicilor
     if (al) this.spots.push({ x: al.x, z: al.z, hours: [9, 20.5], archetype: 'cards', list: [0, 1, 2, 3].map((k) => { const a = k / 4 * Math.PI * 2; return { spec: OLDMAN([0x4a4a3a, 0x3a4a5a, 0x5a4a3a, 0x3a3a3a][k]), x: al.x - 6 + Math.cos(a) * 0.9, z: al.z + 4 + Math.sin(a) * 0.9, ry: Math.atan2(-Math.cos(a), -Math.sin(a)), state: 'squat', say: k === 0 ? ['Iar ai trișat, Vasile!', 'Asul de treflă! Hai, dă banii!', 'Pe vremea lui Brejnev jucam pe mașini.'] : null } }) })
     this.buildHangouts(used)
+    this.parkHangouts(mulberry(7072))
+    this.playgrounds(mulberry(5151))
+  }
+
+  // gopnik groups in the parks and on PMAN: three or four lads in a ring on their heels, one on
+  // his feet with a phone, off the footpaths but in sight of them (a toll wants passers-by), from
+  // late morning till 3 am. They're benches like the yards' ones (Hood), and the park is their yard
+  parkHangouts(rnd) {
+    const g = this.game, w = g.world, P = g.physics
+    // not on top of the story's people and the other scenes
+    const busy = ['borea', 'aleea_clasicilor', 'arc', 'stefan', 'tribuna', 'fantana', 'clopotnita', 'parc_catedrala', 'romasca'].map((k) => w.places[k]).filter(Boolean)
+    // open ground: nothing solid within reach, and a straight walk to the nearest footpath (no lake
+    // rim or fountain in between)
+    const open = (x, z, to) => {
+      if (Math.abs(P.groundHeight(x, z, 4)) > 0.45) return false
+      for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; if (P.raycast(x, 0.5, z, Math.sin(a), 0, Math.cos(a), 2.6, FILTER.Q_SOLID)) return false }
+      const dx = to.x - x, dz = to.z - z, d = Math.hypot(dx, dz)
+      return !P.raycast(x, 0.4, z, dx / d, 0, dz / d, d, FILTER.Q_SOLID)
+    }
+    let k = 0
+    for (const zone of ['gradina', 'romasca', 'catedrala', 'guvern']) {
+      const b = BLOCKS.find((q) => q.zone === zone)
+      const paths = (g.peds?.sides || []).filter((s) => s.park && s.a.block === b)
+      if (!b || !paths.length) continue
+      let at = null
+      for (let i = 0; i < 400 && !at; i++) {
+        const x = b.ix0 + 5 + rnd() * (b.ix1 - b.ix0 - 10), z = b.iz0 + 5 + rnd() * (b.iz1 - b.iz0 - 10)
+        let near = null
+        for (const s of paths) { const q = segDist(s, x, z); if (!near || q.d < near.d) near = q }
+        if (near.d < 4.5 || near.d > 9) continue
+        if (w.treeSpots.some((t) => Math.hypot(t.x - x, t.z - z) < 3)) continue
+        if (w.benches.some((q) => Math.hypot(q.x - x, q.z - z) < 3.5)) continue
+        if (busy.some((q) => Math.hypot(q.x - x, q.z - z) < 14)) continue
+        // (outside the ring of benches round a fountain, not between them and the water)
+        if (w.fountains.some((f) => Math.hypot(f.x - x, f.z - z) < f.r + 12)) continue
+        if (open(x, z, near)) at = { x, z }
+      }
+      if (!at) continue
+      const n = 3 + (rnd() < 0.5 ? 1 : 0), a0 = rnd() * Math.PI * 2
+      const list = []
+      for (let i = 0; i < n; i++) {
+        const a = a0 + (i / n) * Math.PI * 2, x = at.x + Math.sin(a), z = at.z + Math.cos(a)
+        list.push({ x, z, ry: Math.atan2(at.x - x, at.z - z), state: i < n - 1 ? 'squat' : rnd() < 0.5 ? 'phone' : 'idle', spec: GOPNIK(k + i, TRACK[Math.floor(rnd() * TRACK.length)]), archetype: 'gopnik', personality: 'tough', voice: 'gruff', pitch: 0.8 + rnd() * 0.35 })
+      }
+      this.spots.push({ x: at.x, z: at.z, hours: [11, 27], archetype: 'gopnik', group: 'park' + k, park: true, list })
+      k++
+    }
+    this.parkGroups = k
+  }
+
+  // the yards' playgrounds from morning till the evening news: a kid in the sandbox, one running
+  // round, and two mothers (or a mother and a granny) keeping half an eye on them
+  playgrounds(rnd) {
+    const w = this.game.world
+    for (const pg of w.playgrounds || []) {
+      const blk = blockAt(pg.x, pg.z)
+      if (!blk || !['soviet', 'acasa', 'garaje'].includes(blk.zone)) continue
+      const list = [
+        { kid: true, x: pg.x - 3.5 + (rnd() - 0.5), z: pg.z + 1 + (rnd() - 0.5), ry: rnd() * Math.PI * 2, state: 'squat' },
+        { kid: true, x: pg.x + 1, z: pg.z + 1.5, ry: 0, state: 'idle', wander: { x: pg.x, z: pg.z - 1.5, r: 4.5 }, say: KIDS },
+        { adult: true, x: pg.x - 1.4, z: pg.z - 4.6, ry: 0.9, state: 'talk', say: MUM },
+        { adult: true, x: pg.x - 0.3, z: pg.z - 4.0, ry: 0.9 + Math.PI, state: rnd() < 0.5 ? 'talk' : 'phone' },
+      ]
+      // (the two grown-ups face each other)
+      list[2].ry = Math.atan2(list[3].x - list[2].x, list[3].z - list[2].z)
+      list[3].ry = Math.atan2(list[2].x - list[3].x, list[2].z - list[3].z)
+      this.spots.push({ x: pg.x, z: pg.z, hours: [9, 20.5], archetype: 'playground', list })
+    }
   }
 
   // gopnik benches in the courtyards of the bloc districts, well away from Vitea's corner:
@@ -81,14 +159,27 @@ export class Ambient {
   }
 
   spawn(spot) {
-    const g = this.game
+    const g = this.game, peds = g.peds
     spot.npcs = spot.list.map((d) => {
-      const s = d.spec || randomCivilian(Math.random)
-      const n = new NPC(g, s, { x: d.x, y: g.physics.groundHeight(d.x, d.z, 3), z: d.z, ry: d.ry, personality: d.personality || 'normal', voice: { pitch: d.pitch || 0.9 + Math.random() * 0.4, type: d.voice || (s.bottom?.style === 'skirt' || s.bottom?.style === 'dress' ? 'female' : 'male') }, walkSpeed: 1.2 })
+      // strangers (no look of their own) wear a body a passer-by left behind, when one's spare
+      const worn = d.spec ? null : peds?.wardrobe(d.kid ? 'kid' : 'civ')
+      const s = d.spec || worn?.spec || (d.kid ? kidSpec() : randomCivilian(Math.random))
+      // a stranger on a bench in a tracksuit is a gopnik like the ones on the pavement: he talks
+      // like one and doesn't take a punch lying down
+      const gop = !spot.archetype && !d.spec && !d.archetype && s.top?.style === 'tracksuit'
+      const female = s.bottom?.style === 'skirt' || s.bottom?.style === 'dress'
+      const n = new NPC(g, s, {
+        x: d.x, y: g.physics.groundHeight(d.x, d.z, 3), z: d.z, ry: d.ry, mesh: worn?.mesh,
+        personality: d.personality || (d.kid ? 'coward' : gop ? 'tough' : 'normal'),
+        voice: { pitch: d.pitch || (d.kid ? 1.5 + Math.random() * 0.25 : 0.9 + Math.random() * 0.4), type: d.voice || (d.kid || female ? 'female' : gop ? 'gruff' : 'male') },
+        walkSpeed: d.kid ? 1.5 : 1.2, runSpeed: d.kid ? 4.2 : undefined, hp: d.kid ? 25 : undefined,
+      })
+      // what kind of body goes back to the wardrobe when the scene packs up
+      n.kind = d.spec ? null : d.kid ? 'kid' : 'civ'
       n.state = d.state || 'idle'
       n.ambient = d
       n.spot = spot
-      n.archetype = d.archetype || spot.archetype || 'civilian'
+      n.archetype = d.archetype || (d.kid ? 'kid' : d.adult ? 'civilian' : gop ? 'gopnik' : spot.archetype || 'civilian')
       n.noTalk = !!d.noTalk
       n.home.ry = d.ry
       if (d.anim) n.char.anim.play(d.anim)
@@ -98,8 +189,21 @@ export class Ambient {
   }
 
   despawn(spot) {
-    for (const n of spot.npcs) { const i = this.npcs.indexOf(n); if (i >= 0) this.npcs.splice(i, 1); n.dispose() }
+    const peds = this.game.peds
+    for (const n of spot.npcs) { const i = this.npcs.indexOf(n); if (i >= 0) this.npcs.splice(i, 1); if (peds) peds.release(n); else n.dispose() }
     spot.npcs = null
+  }
+
+  // kids running round the playground: somewhere new every few seconds
+  wander() {
+    const street = this.game.street
+    for (const n of this.npcs) {
+      const w = n.ambient?.wander
+      if (!w || n.disposed || n.char.ko || n.hostile || n.state !== 'idle' || street?.talking === n) continue
+      if ((n.wanderT = (n.wanderT ?? 1) - 0.8) > 0) continue
+      const a = Math.random() * Math.PI * 2, r = Math.random() * w.r
+      n.walkTo(w.x + Math.sin(a) * r, w.z + Math.cos(a) * r, { run: Math.random() < 0.6, onArrive: (m) => { m.state = 'idle'; m.vel.set(0, 0, 0); m.wanderT = 1 + Math.random() * 3 } })
+    }
   }
 
   fixedUpdate(h) { for (const n of this.npcs) n.fixedUpdate(h) }
@@ -116,12 +220,20 @@ export class Ambient {
     const hr = g.renderer.tod.hour, wet = (g.weather?.k || 0) > 0.35
     // opening hours may run past midnight ([10, 27] = 10:00 to 03:00)
     const open = (s) => { const h = hr < s.hours[0] ? hr + 24 : hr; return h >= s.hours[0] && h < s.hours[1] && (!wet || s.covered) }
+    const due = []
     for (const s of this.spots) {
       const d = Math.hypot(s.x - P.x, s.z - P.z)
-      if (!s.npcs && d < 75 && open(s)) this.spawn(s)
+      if (!s.npcs && d < 75 && open(s)) due.push([s, d])
       // a granny waiting for her bread, or a bench mid-fight, stays put
       else if (s.npcs && !s.keep && !s.npcs.some((n) => n.fightMemo) && (d > 105 || (d > 40 && !open(s)))) this.despawn(s)
     }
+    // the nearest two scenes a tick: coming into a yard with a bench, a playground and a granny
+    // or two shouldn't cost one long frame
+    due.sort((a, b) => a[1] - b[1])
+    for (const [s] of due.slice(0, 2)) this.spawn(s)
+    this.wander()
+    // nobody far off bothers with a shadow (see Pedestrians.cull)
+    for (const n of this.npcs) n.char.mesh.castShadow = Math.hypot(n.pos.x - P.x, n.pos.z - P.z) < 45
     // a line now and then from someone nearby
     const pp = g.player?.pos
     if (pp && Math.random() < 0.25) {

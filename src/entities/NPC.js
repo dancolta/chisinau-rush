@@ -289,11 +289,12 @@ export class NPC {
     this.home = { x, z, ry: this.char.heading }
   }
 
-  dispose() {
+  // keep = the body goes back to the wardrobe (Pedestrians.remove), not to the bin
+  dispose(keep = false) {
     if (this.disposed) return
     this.disposed = true
     this.game.physics.remove(this.body)
-    this.char.dispose()
+    if (keep) this.char.detach(); else this.char.dispose()
     this.game.ui?.removeBubble(this)
   }
 }
