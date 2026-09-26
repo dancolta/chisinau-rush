@@ -72,6 +72,7 @@ export class Director {
     if (g.wardrobe) out.push(...g.wardrobe.blips())
     if (g.crew) out.push(...g.crew.blips())
     if (g.side) out.push(...g.side.blips())
+    if (g.comisariat) out.push(...g.comisariat.blips())
     if (g.police) {
       for (const o of g.police.officers) if (!o.char.ko) out.push({ kind: 'police', x: o.pos.x, z: o.pos.z })
       for (const c of g.police.cars) out.push({ kind: 'police', x: c.v.pos.x, z: c.v.pos.z })

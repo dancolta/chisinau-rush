@@ -18,6 +18,7 @@ import { Traffic } from '../gameplay/Traffic.js'
 import { Pedestrians } from '../gameplay/Pedestrians.js'
 import { Ambient } from '../gameplay/Ambient.js'
 import { Police } from '../gameplay/Police.js'
+import { Comisariat } from '../gameplay/Comisariat.js'
 import { Combat } from '../gameplay/Combat.js'
 import { Progress } from '../gameplay/Progress.js'
 import { Interaction } from '../gameplay/Interaction.js'
@@ -118,6 +119,8 @@ export class Game {
     this.peds = new Pedestrians(this)
     this.ambient = new Ambient(this)
     this.police = new Police(this)
+    // the police station: officers on the door, patrol cars out front, where you're let out
+    this.comisariat = new Comisariat(this)
     this.combat = new Combat(this)
     this.interaction = new Interaction(this)
     this.interaction.registerWorld()
@@ -332,6 +335,7 @@ export class Game {
       this.safe('vehicles', () => this.vehicles.update(dt))
       this.safe('peds', () => { this.peds.update(dt); this.ambient.update(dt); this.crew.update(dt) })
       if (playing) this.safe('police', () => this.police.update(dt))
+      if (playing) this.safe('comisariat', () => this.comisariat.update(dt))
       this.safe('story', () => this.story.update(dt))
       if (playing) this.safe('street', () => { this.life.update(dt); this.street.update(dt); this.home.update(dt) })
       if (playing) this.safe('interaction', () => this.interaction.update(dt))

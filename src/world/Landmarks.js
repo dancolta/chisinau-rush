@@ -76,12 +76,13 @@ export class Landmarks {
   }
 
   // ---------------------------------------------------------------------------
-  flag(x, y, z, h = 9, s = 1) {
+  // ry turns the cloth round the pole (0: it flies toward +x, seen from the north and south)
+  flag(x, y, z, h = 9, s = 1, ry = 0) {
     const g = this.st(x, z)
     g.cyl(0.07 * s, 0.09 * s, h, 6, { x, y, z, color: 0xc9c9c9 })
     g.sphere(0.16 * s, 6, 4, { x, y: y + h, z, color: GOLD })
-    const fw = 1.1 * s, fh = 1.9 * s
-    FLAG.forEach((c, i) => g.box(fw, fh, 0.04, { x: x + 0.1 + fw * (i + 0.5), y: y + h - fh - 0.2, z, color: c }))
+    const fw = 1.1 * s, fh = 1.9 * s, c = Math.cos(ry), sn = Math.sin(ry)
+    FLAG.forEach((col, i) => { const l = 0.1 + fw * (i + 0.5); g.box(fw, fh, 0.04, { x: x + l * c, y: y + h - fh - 0.2, z: z - l * sn, ry, color: col }) })
     this.w.flags.push({ x, y: y + h - fh / 2 - 0.2, z })
   }
 
@@ -400,8 +401,103 @@ export class Landmarks {
     this.portico(ox, oz + 8, 16, 9, 6, 0, STONE_L, 3)
     this.solid(ox, Y + 7, oz, 17, 7, 10)
     this.w.place('sala_orga', 'Sala cu Orgă', ox, b.iz1 + 3, { kind: 'landmark' })
-    // back: historic rows along the north and west streets
-    this.bld.historic(b, { sides: ['n', 'w'], courtyard: true })
+    // the police station takes the east side of the block, on Str. Bănulescu-Bodoni
+    const station = this.comisariat(b)
+    // back: historic rows along the north and west streets; the yard stays off the station's plot
+    this.bld.historic(b, { sides: ['n', 'w'], courtyard: true, keepOut: [station] })
+  }
+
+  // ===========================================================================
+  // Comisariatul de Poliție Centru: a four-storey Soviet administrative block on Str. Bănulescu-
+  // Bodoni, across the street from the Government House. Patrol cars out front, two officers on
+  // the door (src/gameplay/Comisariat.js); after an arrest it's where you walk out. Returns the
+  // plot (the building and its forecourt), so the Primăria's back yard keeps off it.
+  comisariat(b) {
+    const len = 32, depth = 12.8, H = 12.8        // 10 x 4 window bays, four floors of 3.2 m
+    const fx = b.ix1 - 9.5, cz = b.iz0 + 40       // the front wall, facing east onto the street
+    const cx = fx - depth / 2, ry = Math.PI / 2, x1 = b.ix1
+    const WALL = 0xd8d4c8, BLUE = 0x1f4f9c, WHITE = 0xf3f2ee, STONE = 0x9a978f, CONC = 0xd2cdc2
+    this.fac(cx, cz).box(cx, cz, len, depth, Y, H, ry, WALL, [3.2, 3.2, 23, 1], 0x6a6862)
+    const g = this.g(cx, cz)
+    // the plinth, the blue-and-white band over the ground floor, the attic that carries the name
+    // along the front and a low parapet round the rest of the roof
+    g.box(depth + 0.3, 0.6, len + 0.3, { x: cx, y: Y, z: cz, color: shade(WALL, 0.62) })
+    g.box(depth + 0.16, 0.12, len + 0.16, { x: cx, y: Y + 2.9, z: cz, color: WHITE })
+    g.box(depth + 0.12, 0.72, len + 0.12, { x: cx, y: Y + 3.02, z: cz, color: BLUE })
+    g.box(depth + 0.16, 0.12, len + 0.16, { x: cx, y: Y + 3.74, z: cz, color: WHITE })
+    g.box(0.4, 1.9, len + 0.3, { x: fx - 0.05, y: Y + H, z: cz, color: WALL })
+    g.box(0.5, 0.14, len + 0.4, { x: fx - 0.05, y: Y + H + 1.9, z: cz, color: shade(WALL, 0.86) })
+    g.box(0.3, 0.6, len + 0.3, { x: fx - depth, y: Y + H, z: cz, color: WALL })
+    for (const s of [-1, 1]) g.box(depth, 0.6, 0.3, { x: cx, y: Y + H, z: cz + s * len / 2, color: WALL })
+    // on the roof: the stairwell head, the radio mast, the flag over the door
+    g.box(3.6, 2.6, 4.2, { x: cx - 1.6, y: Y + H, z: cz - 9, color: shade(WALL, 0.9) })
+    g.cyl(0.06, 0.1, 9, 6, { x: cx - 2.4, y: Y + H, z: cz + 10, color: 0x6a6e72 })
+    for (const [hy, w] of [[5.6, 1.6], [7.2, 1.1], [8.5, 0.7]]) g.box(w, 0.05, 0.05, { x: cx - 2.4, y: Y + H + hy, z: cz + 10, color: 0x6a6e72 })
+    this.flag(fx - 0.9, Y + H, cz + 1.7, 6, 1, ry)
+    // (the sign atlas is nearly full: the station's signs are no taller than the Opera's and fit
+    // beside it in the first row, which is otherwise empty, so nothing else in the atlas moves)
+    const sign = this.w.signs.sign('POLIȚIA', { bg: '#1f4f9c', fg: '#ffffff', w: 480, h: 96, border: '#ffffff' })
+    this.w.pendingSigns.push({ x: fx + 0.15, y: Y + H + 0.95, z: cz, ry, w: 7.2, h: 1.44, rect: sign, lit: 1 })
+    // the entrance: a dark stone surround with the glass door, a landing up three steps and a
+    // canopy on two columns, the name on its edge and a light underneath
+    g.box(0.12, 2.9, 5.2, { x: fx + 0.06, y: Y, z: cz, color: 0x3c4450 })
+    g.box(0.1, 2.4, 2.3, { x: fx + 0.17, y: Y + 0.45, z: cz, color: 0x23262b })
+    for (const s of [-1, 1]) {
+      g.box(0.04, 2.2, 0.98, { x: fx + 0.23, y: Y + 0.52, z: cz + s * 0.54, color: 0x2e4256, emit: -1 })
+      g.box(0.06, 0.5, 0.05, { x: fx + 0.27, y: Y + 1.4, z: cz + s * 0.12, color: 0xc9ced4 })
+    }
+    g.box(2.6, 0.45, 5.2, { x: fx + 1.3, y: Y, z: cz, color: STONE })
+    g.box(0.35, 0.3, 5.2, { x: fx + 2.775, y: Y, z: cz, color: shade(STONE, 0.94) })
+    g.box(0.35, 0.15, 5.2, { x: fx + 3.125, y: Y, z: cz, color: shade(STONE, 0.88) })
+    for (const s of [-1, 1]) g.box(0.3, 3.2, 0.3, { x: fx + 2.45, y: Y, z: cz + s * 2.85, color: CONC })
+    g.box(3.0, 0.22, 6.4, { x: fx + 1.5, y: Y + 3.2, z: cz, color: CONC })
+    g.box(0.14, 0.6, 6.4, { x: fx + 3.0, y: Y + 3.0, z: cz, color: BLUE })
+    g.box(0.6, 0.05, 0.6, { x: fx + 1.6, y: Y + 3.15, z: cz, color: 0xfff1cf, emit: 1 })
+    this.w.lamps.push({ x: fx + 1.6, z: cz, y: Y + 3.15 })
+    this.w.pendingSigns.push({ x: fx + 3.07, y: Y + 3.3, z: cz, ry, w: 2.75, h: 0.55, rect: sign, lit: 0.8 })
+    // the plaque by the door, on the wall between the surround and the next window
+    const plaque = this.w.signs.custom(240, 96, (c, w, h) => {
+      c.fillStyle = '#0f2e63'; c.fillRect(0, 0, w, h)
+      FLAG.forEach((col, i) => { c.fillStyle = '#' + col.toString(16).padStart(6, '0'); c.fillRect(8 + i * (w - 16) / 3, 6, (w - 16) / 3, 5) })
+      c.strokeStyle = '#e2c46a'; c.lineWidth = 3; c.strokeRect(3, 14, w - 6, h - 17)
+      c.fillStyle = '#e2c46a'; c.textAlign = 'center'; c.textBaseline = 'middle'
+      for (const [t, y, px] of [['COMISARIATUL', 34, 22], ['DE POLIȚIE', 57, 22], ['CENTRU', 80, 24]]) {
+        c.font = `900 ${this.w.signs.fitText(t, w - 24, px, '900')}px Rubik`
+        c.fillText(t, w / 2, y)
+      }
+    })
+    this.w.pendingSigns.push({ x: fx, y: Y + 1.75, z: cz + 3.3, ry, w: 0.95, h: 0.38, rect: plaque, lit: 0.3 })
+    // the forecourt: asphalt with bays for three patrol cars, parked nose out; granite before the steps
+    this.patch('asphalt', fx - 0.2, cz - len / 2 - 1, x1, cz + len / 2 + 1)
+    this.patch('plaza', fx - 0.2, cz - 4, fx + 5, cz + 4, 0.014)
+    const marks = this.B.vcol(fx + 6, cz, 'markings')
+    for (const z of [cz - 11.45, cz - 8.15, cz - 4.85, cz + 4.85, cz + 8.15]) marks.quad(5, 0.12, { x: fx + 6.3, y: Y + 0.02, z, color: 0xe9e6dc })
+    const bays = [cz - 9.8, cz - 6.5, cz + 6.5].map((z) => ({ x: fx + 6.2, z }))
+    for (const q of bays) this.w.parkingSpots.push({ ...q, ry, kind: 'police' })
+    this.clear(fx - depth - 1, cz - len / 2 - 1, x1, cz + len / 2 + 1)
+    // colliders as drawn: the walls and the plinth round them, the surround and the door in it,
+    // the landing and its steps, the columns and the canopy
+    this.solid(cx, Y + H / 2, cz, depth / 2, H / 2, len / 2)
+    this.P.box(cx, Y + 0.3, cz, depth / 2 + 0.15, 0.3, len / 2 + 0.15)
+    this.P.box(fx + 0.06, Y + 1.45, cz, 0.06, 1.45, 2.6)
+    this.P.box(fx + 0.125, Y + 1.65, cz, 0.125, 1.2, 1.15)
+    this.P.box(fx + 1.3, Y + 0.225, cz, 1.3, 0.225, 2.6)
+    this.P.box(fx + 2.775, Y + 0.15, cz, 0.175, 0.15, 2.6)
+    this.P.box(fx + 3.125, Y + 0.075, cz, 0.175, 0.075, 2.6)
+    for (const s of [-1, 1]) this.P.box(fx + 2.45, Y + 1.6, cz + s * 2.85, 0.15, 1.6, 0.15)
+    this.P.box(fx + 1.5, Y + 3.31, cz, 1.5, 0.11, 3.2)
+    this.P.box(fx + 3.0, Y + 3.3, cz, 0.07, 0.3, 3.2)
+    this.w.place('comisariat', 'Comisariatul de Poliție Centru', fx + 4.5, cz, { kind: 'landmark' })
+    // for the gameplay side: the top of the steps where you come out and their foot, where the
+    // officers stand, the patrol cars' bays
+    this.w.comisariat = {
+      door: { x: fx, z: cz }, ry,
+      out: { x: fx + 2.2, z: cz },
+      foot: { x: fx + 3.9, z: cz },
+      posts: [{ x: fx + 1.1, z: cz - 1.9 }, { x: fx + 1.1, z: cz + 1.9 }],
+      bays,
+    }
+    return { x0: fx - depth - 0.3, x1, z0: cz - len / 2 - 1, z1: cz + len / 2 + 1 }
   }
 
   // ===========================================================================
