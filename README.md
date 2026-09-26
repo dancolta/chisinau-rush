@@ -85,9 +85,10 @@ node tools/views.mjs --out views --only night,play_day  # fixed review shots (da
 node tools/api-dev.mjs                          # the /api functions locally (PGlite), what `npm run api` runs
 node tools/api-test.mjs [--neon]                # API handler checks (auth, saves, limits, CORS)
 node tools/account.mjs [--shots dir]            # accounts end to end: sign-up, sync, conflicts, logout
+node tools/trailer.mjs --format both               # the 18 s teaser (16:9 + 9:16), rendered offline frame by frame
 ```
 
-`?turbo=4` speeds up the simulation in dev builds; `?touch` forces touch controls on desktop.
+`?turbo=4` speeds up the simulation in dev builds; `?touch` forces touch controls on desktop; `?capture` stops the frame loop and advances the game (clock, timers, CSS animations) only through `window.__cap.step(dt)`, for offline video capture.
 
 ## Credits
 

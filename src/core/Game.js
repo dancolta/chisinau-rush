@@ -65,6 +65,9 @@ export class Game {
     this.turbo = import.meta.env.DEV ? Math.max(1, +(new URLSearchParams(location.search).get('turbo') || 1)) : 1
     // optional account with cloud saves (does nothing for guests)
     this.cloud = new Cloud(this)
+    // dev: ?capture renders frame by frame on a virtual clock (offline video capture, tools/trailer.mjs)
+    this.capture = import.meta.env.DEV && new URLSearchParams(location.search).has('capture')
+    this.draw = true
   }
 
   async boot(progress) {
@@ -88,7 +91,8 @@ export class Game {
     this.materials = new Materials()
     progress(0.04, 'Sunet…')
     this.audio = new AudioEngine(this)
-    try { await this.audio.init() } catch (e) { console.warn('[audio] init failed', e) }
+    // a capture renders its sound offline, so the live engine stays silent
+    if (!this.capture) try { await this.audio.init() } catch (e) { console.warn('[audio] init failed', e) }
     this.audio.setVolumes?.(this.settings)
     progress(0.05, 'Fizică…')
     this.physics = await Physics.create()
@@ -174,11 +178,55 @@ export class Game {
   start() {
     this.last = performance.now()
     this.menus.showMain()
+    if (this.capture) { this.startCapture(); return }
     const loop = (now) => {
       requestAnimationFrame(loop)
       try { this.tick(now) } catch (e) { console.error(e) }
     }
     requestAnimationFrame(loop)
+  }
+
+  // dev: offline capture. There is no frame loop: time only moves when window.__cap.step(dt) is
+  // called, and then the game, performance.now(), timers and CSS animations all advance by exactly
+  // dt. However long a frame takes to render, the video plays back smooth and the same every run.
+  startCapture() {
+    let now = this.last, nextId = 1
+    const timers = new Map()
+    performance.now = () => now
+    window.setTimeout = (fn, ms = 0, ...args) => { timers.set(nextId, { at: now + Math.max(0, +ms || 0), fn, args }); return nextId++ }
+    window.setInterval = (fn, ms = 0, ...args) => { const every = Math.max(1, +ms || 0); timers.set(nextId, { at: now + every, every, fn, args }); return nextId++ }
+    window.clearTimeout = window.clearInterval = (id) => { timers.delete(id) }
+    const runTimers = () => {
+      for (let guard = 0; guard < 2000; guard++) {
+        let id = null, due = null
+        for (const [k, t] of timers) if (t.at <= now && (!due || t.at < due.at)) { id = k; due = t }
+        if (!due) return
+        if (due.every) due.at += due.every
+        else timers.delete(id)
+        try { if (typeof due.fn === 'function') due.fn(...due.args) } catch (e) { console.error(e) }
+      }
+    }
+    // CSS animations and transitions are paused when first seen, then moved on by hand
+    const seen = new WeakSet()
+    const animate = (ms) => {
+      for (const a of document.getAnimations()) {
+        if (!seen.has(a)) { seen.add(a); a.pause() } else a.currentTime = (a.currentTime || 0) + ms
+      }
+    }
+    this.settings.autoRes = false
+    window.__cap = {
+      now: () => now,
+      // one update (+ render unless draw is false) exactly dt seconds after the previous one
+      step: (dt = 1 / 30, draw = true) => {
+        now += dt * 1000
+        runTimers()
+        this.draw = draw
+        try { this.tick(now) } catch (e) { console.error(e) }
+        this.draw = true
+        animate(dt * 1000)
+        return this.frame
+      },
+    }
   }
 
   // photo mode: no HUD, no prompts, just the city (O to toggle)
@@ -234,7 +282,7 @@ export class Game {
     this.renderer.applyTimeOfDay()
     this.renderer.updateEnvironment()
     if (this.world.poolMesh) this.world.poolMesh.material.opacity = SHARED.uNight.value * 0.22
-    this.renderer.render(dt)
+    this.renderer.render(dt, this.draw)
     this.input.endFrame()
   }
 
