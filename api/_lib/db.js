@@ -27,6 +27,10 @@ export function neonDb(url) {
   }
 }
 
+// whether this server has a database at all (a dev adapter, or the connection string), whatever
+// state it's in: without one the game hides accounts instead of offering a sign-up that can't work
+export function dbConfigured() { return !!current || !!(process.env.DATABASE_URL || process.env.POSTGRES_URL) }
+
 export function setDb(adapter) {
   current = adapter
   ready = null

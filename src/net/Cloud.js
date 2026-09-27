@@ -70,6 +70,9 @@ export class Cloud {
     if (!this.enabled) return
     const a = load(AUTH_KEY)
     if (a && typeof a.token === 'string' && a.id) { this.auth = a; this.state = 'idle' }
+    // a server with no database connected yet can't make accounts: guests don't see Cont until it
+    // can (asked on the real sites only: a local dev server may have no API running at all)
+    else if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) this.probe()
     // a story mission just passed: that save goes up right away
     game.events?.on('mission:pass', (def) => { if (def && !def.activity) this.urgentUntil = Date.now() + 90000 })
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') this.flushOnHide(); else this.recheck() })
@@ -82,6 +85,14 @@ export class Cloud {
   get lastSync() { return this.meta()?.at || 0 }
 
   on(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn) }
+
+  async probe() {
+    try {
+      const r = await fetch(`${API_BASE}/health`, { cache: 'no-store' })
+      const d = await r.json().catch(() => null)
+      if (d?.configured === false && !this.auth) { this.enabled = false; this.state = 'off'; this.emit() }
+    } catch (e) { /* offline or blocked: leave it as it is, the panel says so if it's opened */ }
+  }
   emit() { for (const fn of [...this.listeners]) { try { fn(this) } catch (e) { console.error('[cloud]', e) } } }
   setState(s) { this.state = s; this.emit() }
 
