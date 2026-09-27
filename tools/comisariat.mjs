@@ -31,6 +31,10 @@ await ev(async () => {
   await g.debug.startAt('profetul', { type: 'stroitor' })
   g.debug.noStory = true
   g.autoTalk = true
+  // the progression layer's prizes (achievements, rank prizes, the daily bonus) would land in the
+  // middle of checks that count lei (a first arrest pays): here they don't
+  const addLei = g.progress.addLei.bind(g.progress)
+  g.progress.addLei = (n, reason = '') => (/^(🏆|⭐|🔥)/u.test(reason) ? undefined : addLei(n, reason))
   g.renderer.tod.set(13)
   g.story.events.t = 1e9
   const { FILTER } = await import('/src/physics/Physics.js')
