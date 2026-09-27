@@ -124,7 +124,7 @@ r = await ev(async () => {
   g.police.clear()
   const cops = g.comisariat.posts.map((q) => q.cop)
   // a punch thrown right under their noses
-  T.place(s.foot + 3, s.door.z + 3, -Math.PI / 2)
+  T.place(s.foot.x + 3, s.door.z + 3, -Math.PI / 2)
   await T.frames(2)
   const n0 = T.said.length
   g.events.emit('crime', { type: 'assault', x: p.pos.x, z: p.pos.z, severity: 1 })
