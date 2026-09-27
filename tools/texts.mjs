@@ -34,6 +34,8 @@ const ALLOW = [
   ['gender', 'src/story/missions/cap4.js', 'Domnule primar! Am niște întrebări'], // the hero, to Eban
   ['english', 'src/data/wardrobe.js', 'The North Fake'],                          // a parody brand
   ['typo', 'src/data/shops.js', 'Ospătar la La Plăcinte'],                        // the restaurant is called „La Plăcinte"
+  ['spelling', 'src/ui/Minimap.js', 'Bîc'],                                       // the river's name, spelled so in Moldova
+  ['spelling', 'src/world/Edge.js', 'Bîcul'],                                     // same
 ]
 
 // ---- the JS lexer: string literals with their line and the calls they sit in ----------------------------
