@@ -45,9 +45,10 @@ export class RewardStack {
     this.queue.push({ kind, n, key, t0: now, why: o.why || '', o, life: LIFE + (o.tier ? 1.2 : 0) })
   }
 
-  // where the dialogue box starts (chips must stay above it); null when there's none
+  // where the dialogue box starts (chips must stay above it); null when there's none. The card,
+  // not .dialog: that's a full-screen layer (the shade behind the box)
   dialogTop() {
-    const d = this.ui.top.querySelector('.dialog')
+    const d = this.ui.top.querySelector('.dialog .card') || this.ui.top.querySelector('.dialog')
     return d ? d.getBoundingClientRect().top : null
   }
 

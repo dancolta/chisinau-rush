@@ -54,6 +54,10 @@ const startGame = (page) => ev(page, async () => {
   const g = window.__game
   await g.debug.startAt('profetul')
   g.autoTalk = true
+  // the progression layer's prizes (achievements, rank prizes, the daily bonus) would land in the
+  // middle of checks that count lei: here they don't
+  const add = g.progress.addLei.bind(g.progress)
+  g.progress.addLei = (n, reason = '') => (/^(🏆|⭐|🔥)/u.test(reason) ? undefined : add(n, reason))
   g.story.events.t = 1e9
 })
 // Continue from the main menu; no random street events afterwards (the save picker waits them out)

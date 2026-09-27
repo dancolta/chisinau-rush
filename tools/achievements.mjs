@@ -253,7 +253,7 @@ r = await ev(async () => {
   for (let i = 0; i < 40; i++) {
     const dlg = document.querySelector('.dialog')
     if (!dlg) break
-    const top = dlg.getBoundingClientRect().top
+    const top = (dlg.querySelector('.card') || dlg).getBoundingClientRect().top
     for (const c of document.querySelectorAll('.rw-chip:not(.out):not(.tuck)')) { seen++; if (c.getBoundingClientRect().bottom > top) bad++ }
     await T.frames(1)
   }
