@@ -45,10 +45,11 @@ export class RewardStack {
     this.queue.push({ kind, n, key, t0: now, why: o.why || '', o, life: LIFE + (o.tier ? 1.2 : 0) })
   }
 
-  // where the dialogue box starts (chips must stay above it); null when there's none
+  // where the dialogue box starts (chips must stay above it); null when there's none. The box is
+  // the card: .dialog itself covers the whole screen (it frames the other face), so its top is 0
   dialogTop() {
     const d = this.ui.top.querySelector('.dialog')
-    return d ? d.getBoundingClientRect().top : null
+    return d ? (d.querySelector('.card') || d).getBoundingClientRect().top : null
   }
 
   // dev/screenshots: chips stay up, numbers at their final value (a slow capture would miss them)
@@ -95,6 +96,8 @@ export class RewardStack {
     this.root.appendChild(c.el)
     this.live.push(c)
     this.paint(c)
+    // (the new chip pushes the notifications down: on a short screen the oldest give way)
+    this.ui.fitToasts?.()
     // a soft blip for what has no sound of its own (lei rings the till already)
     const au = this.game.audio
     if (c.kind === 'xp') au?.sfx('coin', { bus: 'ui', vol: 0.28, pitch: 1.5 })

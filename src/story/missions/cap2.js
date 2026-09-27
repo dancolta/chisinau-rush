@@ -82,7 +82,7 @@ export const borea = {
   checkpoints: ['drum'],
   cpAt: { drum: () => ({ x: 150, z: 150 }) },
   stars: [
-    GOALS.check('Lada fără nicio crăpătură', (m) => (m.data.hits ?? 0) === 0, (m) => (m.data.hits ? `${m.data.hits} crăpături` : '')),
+    GOALS.check('Lada fără nicio crăpătură', (m) => (m.data.hits ?? 0) === 0, (m) => (m.data.hits ? `${m.data.hits} ${m.data.hits === 1 ? 'crăpătură' : 'crăpături'}` : '')),
     GOALS.check('Scapi de gabori în sub 45 de secunde', (m) => (m.data.escT ?? 999) <= 45, (m) => mmss(m.data.escT)),
   ],
   async script(m) {

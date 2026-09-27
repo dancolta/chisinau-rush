@@ -324,7 +324,7 @@ export const alegeri = {
       if (d === 0) await m.say('borea', ['Și io unde mă mut?!', { who: 'zina', text: 'Lasă, maică, îți facem loc la noi pe bancă.' }])
       else if (d === 1) await m.say('profet', ['Lumina! Acum văd tot. Și nu-mi place ce văd. Glumesc. Glumesc.'])
       else await m.say('vova', ['Și dacă se strică, le repar io. Preț de prieten: tot ăla.'])
-      await m.say('caldare', ['Și dom\' primar… dacă vorbiți la telefon, vorbiți în română, da?', { who: 'player', text: 'Normalno.' }])
+      await m.say('caldare', ['Și [[dom\' primar|doamnă primar]]… dacă vorbiți la telefon, vorbiți în română, da?', { who: 'player', text: 'Normalno.' }])
       cheerAll(people)
       // credits over the city
       const shots = [

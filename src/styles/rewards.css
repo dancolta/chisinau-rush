@@ -6,7 +6,7 @@
   animation: rwin 0.42s cubic-bezier(.2,1.6,.45,1); transition: opacity 0.35s, transform 0.35s, max-height 0.35s, padding 0.35s, margin 0.35s; }
 .rw-chip .v { font-family: var(--num); font-weight: 400; font-size: 19px; line-height: 1.1; white-space: nowrap; color: #9cf07c; -webkit-text-stroke: 0.8px #08130a; text-shadow: 0 2px 0 #08130a; }
 .rw-chip .v i { font-style: normal; font-size: 13px; margin-left: 1px; }
-.rw-chip .w { font-size: 11.5px; line-height: 1.25; color: #d8d0c4; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rw-chip .w { font-size: 11.5px; line-height: 1.25; color: #d8d0c4; max-width: 280px; overflow: hidden; text-align: right; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .rw-chip.neg { border-color: #ff4d4d; }
 .rw-chip.neg .v { color: #ff7a6b; -webkit-text-stroke-color: #2a0806; text-shadow: 0 2px 0 #2a0806; }
 .rw-chip.xp { border-color: var(--gold); }

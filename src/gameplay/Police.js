@@ -3,7 +3,7 @@ import { CAST } from '../data/outfits.js'
 import { angleDiff } from '../entities/Character.js'
 import { COP, COPS } from '../data/streettalk.js'
 import { clearSight } from './Sight.js'
-import { fill } from '../story/hero.js'
+import { fill, gen } from '../story/hero.js'
 
 const THRESH = [0, 1, 18, 40, 70, 100] // heat needed for each star
 const FOOT = [0, 2, 3, 4, 5, 6]         // officers on foot per star
@@ -653,7 +653,7 @@ export class Police {
         pr.stats.busted++
         pr.addRespect('pol', 2)
         g.events.emit('police:deal', { how: 'jail' })
-        g.story.failActive('Ai fost reținut de poliție.')
+        g.story.failActive(gen(g, 'Ai fost reținut de poliție.', 'Ai fost reținută de poliție.'))
         custody = { fine: fine2 }
       } else {
         o.say(COP.runAway, 2.4)

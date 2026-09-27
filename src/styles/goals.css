@@ -34,7 +34,7 @@
 .medal.single { background: var(--medal-single); } .medal.none { background: var(--medal-none); }
 .medal span { filter: drop-shadow(0 2px 1px rgba(0,0,0,0.45)); }
 .gcard .bd { position: relative; min-width: 0; flex: 1; }
-.gcard .k { font-family: var(--display); font-size: 10.5px; letter-spacing: 1.4px; color: #ffd95a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gcard .k { font-family: var(--display); font-size: 10.5px; letter-spacing: 1.4px; color: #ffd95a; }
 .gcard .k b { color: #fff; font-weight: 400; }
 .gcard .t { font-family: var(--title); font-size: 27px; letter-spacing: 1px; line-height: 1.05; color: #fff; -webkit-text-stroke: 0.6px #000; text-shadow: 0 2px 0 #000; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .gcard .r { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: baseline; margin-top: 2px; font-size: 13px; color: #e5dccb; }

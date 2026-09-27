@@ -9,7 +9,7 @@ import { dist, pick, rand, hourIn, sceneSpot, leash, payout, speaker, lockPlayer
 const JORA_SPEC = { ...CAST.gopnik1, top: { style: 'tracksuit', color: 0x6a1a1a, stripes: 0xf2f2f2 }, hat: { style: 'kepka', color: 0x1a1a1a } }
 const JORA = speaker('Jora', 'Campionul curții la semințe', JORA_SPEC, { pitch: 0.9, type: 'gruff' })
 const LADS = [CAST.gopnik2, CAST.gopnik3]
-const OOH = ['Uuuu!', 'Ooo, bratan!', 'Aproape, aproape!', 'Asta-i pe bune?', 'Ha! Pe adidași!']
+const OOH = ['Uuuu!', 'Ooo, [[bratan|tanti]]!', 'Aproape, aproape!', 'Asta-i pe bune?', 'Ha! Pe adidași!']
 
 export const SEMINTE = {
   id: 'ev_seminte', title: 'Campionatul de semințe', icon: '🌻', who: 'Jora de la scara 2',

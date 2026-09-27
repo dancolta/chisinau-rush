@@ -244,7 +244,7 @@ export class StreetLife {
     } else if (a === 'cop') n.say(pick(COP.bump), 2.2)
     // a second shove soon after: remembered, and maybe one shove too many
     else if (this.game.crowd?.shoved(n)) return
-    else if (a === 'babushka') n.say(pick(['Obraznicule!', 'Uită-te pe unde mergi, maică!', 'Vai de capul tău!']), 2.2)
+    else if (a === 'babushka') n.say(pick(['[[Obraznicule|Obraznico]]!', 'Uită-te pe unde mergi, maică!', 'Vai de capul tău!']), 2.2)
     else if (Math.random() < 0.6) n.say(pick(CIV.bump), 2.2)
   }
 

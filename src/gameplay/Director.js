@@ -2,6 +2,7 @@ import { Progress, RANKS } from './Progress.js'
 import { CAST } from '../data/outfits.js'
 import { CURB_H } from '../world/CityLayout.js'
 import { composeSpec } from '../data/wardrobe.js'
+import { gen } from '../story/hero.js'
 
 // Top-level game flow: new game / continue, fainting, getting busted, waypoints, autosave.
 export class Director {
@@ -92,7 +93,7 @@ export class Director {
     g.audio?.sting('mission_fail')
     const wasModal = g.ui.modalOpen
     g.ui.modalOpen = true // nobody arrests or robs you while you're on the floor
-    await g.ui.overlay('LEȘINAT', 2.6, { gray: true, slow: 0.3 })
+    await g.ui.overlay(gen(g, 'LEȘINAT', 'LEȘINATĂ'), 2.6, { gray: true, slow: 0.3 })
     g.ui.modalOpen = wasModal
     await g.ui.fade(1, 700)
     g.story.failActive('Ai leșinat.')
@@ -124,18 +125,18 @@ export class Director {
     // the card is part of the arrest: the cops hold still and nothing else can start (the
     // sergeant's dialogue then takes over the modal and closes it)
     g.ui.modalOpen = true
-    await g.ui.overlay('REȚINUT', 1.9, { tone: 'blue', gray: true, slow: 0.4 })
+    await g.ui.overlay(gen(g, 'REȚINUT', 'REȚINUTĂ'), 1.9, { tone: 'blue', gray: true, slow: 0.4 })
     const sgt = { name: 'Sergentul', role: 'Poliția Chișinău', spec: CAST.cop, id: 'cop_generic', voice: { pitch: 0.85, type: 'gruff' } }
     const bribe = Math.round((30 + lvl * 45) * (pr.tier('pol') >= 3 ? 0.5 : 1))
     const actsFalse = pr.flags.acteFalse
     const choices = [
-      { text: `Mită: „Pentru cafea, șefu"`, cost: `${bribe} lei`, disabled: pr.lei < bribe },
+      { text: `Mită: „Pentru cafea, șefu'"`, cost: `${bribe} lei`, disabled: pr.lei < bribe },
       { text: 'Vorbă frumoasă: „N-am văzut semnul, sincer…"' },
       { text: 'Calci pedala și fugi', cost: '+1 ★' },
     ]
     if (actsFalse) choices.unshift({ text: 'Arăți „actele" de la Borea', cost: 'acte false' })
     let i = await g.ui.dialogue(sgt, [lvl >= 3 ? 'Stai pe loc! Mâinile pe capotă! Tu știi cât m-ai alergat?!' : 'Documentele. Știți de ce v-am oprit?'], { choices })
-    if (actsFalse) { if (i === 0) { pr.flags.acteFalse = false; await g.ui.dialogue(sgt, ['…Totul e în regulă, domnule deputat. Scuzați deranjul. Drum bun!']); g.police.clear(); g.events.emit('police:deal', { how: 'papers' }); this.release(); return } i-- }
+    if (actsFalse) { if (i === 0) { pr.flags.acteFalse = false; await g.ui.dialogue(sgt, [`…Totul e în regulă, ${gen(g, 'domnule deputat', 'doamnă deputat')}. Scuzați deranjul. Drum bun!`]); g.police.clear(); g.events.emit('police:deal', { how: 'papers' }); this.release(); return } i-- }
     if (i === 0) {
       pr.spend(bribe); pr.stats.bribes++
       await g.ui.dialogue(sgt, ['Hm. Cafeaua e bună azi. Circulați, circulați.'])
@@ -150,7 +151,7 @@ export class Director {
         pr.addLei(-fine, 'Amendă la poliție')
         pr.stats.busted++
         g.events.emit('police:deal', { how: 'jail' })
-        g.story.failActive('Ai fost reținut de poliție.')
+        g.story.failActive(gen(g, 'Ai fost reținut de poliție.', 'Ai fost reținută de poliție.'))
         await this.jail(fine)
         return
       }
