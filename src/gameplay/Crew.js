@@ -171,7 +171,8 @@ export class Crew {
       }
     }
     scan(g.peds.list); scan(g.ambient.npcs)
-    if (g.story?.npcs) scan(g.story.npcs.filter((n) => n.enemy && n.hittable))
+    // (story people out of their mission fight like the street: Hood.street)
+    if (g.story?.npcs) scan(g.story.npcs.filter((n) => (n.enemy || n.street) && n.hittable))
     return out
   }
 

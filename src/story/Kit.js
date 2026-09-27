@@ -461,6 +461,7 @@ export class Train {
   constructor(game, { cars = 3, track = RAIL_Z - 4 } = {}) {
     this.game = game
     this.group = new THREE.Group()
+    this.group.name = 'train' // the railway's gates at the edge of the map open for it (Edge.js)
     const g = new GeoBuilder()
     const GREEN = 0x2e6a4a, CREAM = 0xe8dfc6, DARK = 0x1b1d20, RED = 0xb0302a
     // locomotive (front at -x, the direction of travel)
@@ -579,7 +580,8 @@ export class Potholes {
           if ((h.cool || 0) > now) continue
           h.cool = now + 700
           car.bump = 0.12; car.speed *= 0.82
-          if (car === v) { car.damage(3); g.cameraRig.shake(0.35); g.audio?.sfx('bump', { vol: 0.9 }); g.ui.notify('Bum! Groapă. Suspensia plânge.', 1.8) }
+          // (missions with fragile cargo listen for this)
+          if (car === v) { car.damage(3); g.cameraRig.shake(0.35); g.audio?.sfx('bump', { vol: 0.9 }); g.ui.notify('Bum! Groapă. Suspensia plânge.', 1.8); g.events.emit('pothole:hit', { car, hole: h }) }
         }
       }
     }

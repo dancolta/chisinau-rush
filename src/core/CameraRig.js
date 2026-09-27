@@ -4,8 +4,15 @@ import { FILTER } from '../physics/Physics.js'
 import { saveSettings } from './Settings.js'
 
 const _v = new THREE.Vector3(), _t = new THREE.Vector3(), _look = new THREE.Vector3()
+const _fa = new THREE.Vector3(), _fb = new THREE.Vector3()
 const TAU = Math.PI * 2
 const wrap = (a) => { a %= TAU; if (a > Math.PI) a -= TAU; if (a < -Math.PI) a += TAU; return a }
+// a character's face in world space, from the head bone (a gopnik on a bench has his a metre lower)
+function faceOf(ch, out) {
+  const m = ch.mesh, hb = m.userData?.bones?.head
+  if (hb) { hb.getWorldPosition(out); out.y += 0.16 * m.scale.y } else out.set(m.position.x, m.position.y + 1.6, m.position.z)
+  return out
+}
 
 // [V] / d-pad up: how far back the camera sits. On foot and in a car each remember their own.
 // Car distances grow a little with speed (k per m/s).
@@ -109,6 +116,7 @@ export class CameraRig {
     const p = game.player
     if (!p) return
     if (this.room) { this.updateRoom(rawDt); return }
+    if (this.talk && !p.vehicle && this.updateTalk(rawDt)) return
     const car = p.vehicle
     // getting in: the camera goes straight behind the car, whatever you'd done with it on foot
     if (car !== this.lastCar) {
@@ -153,18 +161,23 @@ export class CameraRig {
       // look a little ahead along the motion (never more than 5 m, eased so spins and crashes
       // don't whip the view around)
       _look.set(Math.sin(car.heading), 0, Math.cos(car.heading)).multiplyScalar(Math.min(5, speed * 0.2) * Math.sign(car.speed || 1))
-      this.lookAhead.lerp(_look, 1 - Math.exp(-(ride ? 1.2 : 2.2) * rawDt))
+      this.lookAhead.lerp(_look, 1 - Math.exp(-(ride ? 1.2 : 10) * rawDt))
       // the camera turns with the car (same rate, so nothing keeps swinging after you straighten
       // up), and a spring settles it in behind: briskly right after you get in, gently while you
       // drive. A passenger gets a lazy three-quarter view from the kerb side, so the city goes by
       const rh = car.mesh.rotation.y
       if (this.userYawT <= 0 || this.enterT > 0) {
         const dh = this.carHeading == null ? 0 : wrap(rh - this.carHeading)
-        if (Math.abs(dh) < 0.5) this.yaw += dh * (ride ? 0.8 : 0.92)
-        const want = rh + (ride ? 0.32 : 0)
-        // the driver's camera settles back behind the car even when you're stopped
-        const rate = this.enterT > 0 ? 9 : ride ? (speed > 0.5 ? 0.9 : 0) : speed > 1 ? 3.2 : 2
-        if (rate) this.yaw += wrap(want - this.yaw) * (1 - Math.exp(-rate * rawDt))
+        if (ride) {
+          if (Math.abs(dh) < 0.5) this.yaw += dh * 0.8
+          if (speed > 0.5) this.yaw += wrap(rh + 0.32 - this.yaw) * (1 - Math.exp(-0.9 * rawDt))
+        } else {
+          // driving, the camera is fixed straight behind the car: it turns with the car one to one
+          // (a softer follow left the view pointing 30-50 degrees off the nose in a hard turn), and
+          // anything left over (getting in, after you looked round) closes in a few frames
+          if (Math.abs(dh) < 0.5) this.yaw += dh
+          this.yaw += wrap(rh - this.yaw) * (1 - Math.exp(-(this.enterT > 0 ? 9 : 12) * rawDt))
+        }
       }
       this.carHeading = rh
       const cc = CAR_CAM[game.settings.camCar ?? 1]
@@ -205,7 +218,7 @@ export class CameraRig {
     this.dist += (wantDist - this.dist) * (1 - Math.exp(-2 * rawDt))
     this.pitch += (this.wantPitch(basePitch) + this.pitchOff + this.pitchLift - this.pitch) * (1 - Math.exp(-4 * rawDt))
     // the camera orbits the hero's head (no look-ahead in the orbit, so it can't swing wide)
-    this.pivot.lerp(_t, 1 - Math.exp(-(car ? 10 : 14) * rawDt))
+    this.pivot.lerp(_t, 1 - Math.exp(-(driving ? 40 : car ? 10 : 14) * rawDt))
     this.target.copy(_t)
     this.smoothTarget.copy(this.pivot)
     const yawView = lookBack ? car.heading + Math.PI : this.yaw
@@ -215,7 +228,7 @@ export class CameraRig {
     const free = this.collide(_v)
     const dNow = this.pos.distanceTo(this.pivot), dWant = _v.distanceTo(this.pivot)
     if (free !== null && dWant < dNow) this.pos.copy(_v)
-    else this.pos.lerp(_v, 1 - Math.exp(-(lookBack ? 30 : 5) * rawDt))
+    else this.pos.lerp(_v, 1 - Math.exp(-(lookBack ? 30 : driving ? 25 : 5) * rawDt))
     this.pitchLift += ((free !== null && free < 2.2 ? 0.5 : 0) - this.pitchLift) * (1 - Math.exp(-3 * rawDt))
     this.cam.position.copy(this.pos)
     this.applyShake(rawDt)
@@ -228,6 +241,74 @@ export class CameraRig {
     const fov = this.baseFov + this.fovKick
     if (Math.abs(this.cam.fov - fov) > 0.01) { this.cam.fov = fov; this.cam.updateProjectionMatrix() }
     this.updateCutout(car ? car.mesh.position : p.char.mesh.position, !!car)
+  }
+
+  // a conversation on foot: the camera goes over the hero's shoulder and frames the other face in
+  // the upper part of the screen, clear of the dialogue box. talkTo(null) hands back to the follow
+  // camera, which eases in from here already looking the way the hero faces.
+  talkTo(who) {
+    if (who && who === this.talk?.who) return
+    if (this.talk) { this.yaw = this.talk.yaw; this.userYawT = 0; this.pitchOff = 0; this.footHeading = null }
+    this.talk = who ? { who, side: 0, yaw: this.yaw, look: null } : null
+  }
+
+  updateTalk(rawDt) {
+    const T = this.talk, ch = T.who.char || T.who, p = this.game.player
+    if (!ch?.mesh || T.who.disposed || ch.ko) { this.talkTo(null); return false }
+    const A = faceOf(ch, _fa), B = faceOf(p.char, _fb)
+    const L = Math.hypot(A.x - B.x, A.z - B.z)
+    if (L > 9) { this.talkTo(null); return false }
+    T.yaw = L > 0.05 ? Math.atan2(A.x - B.x, A.z - B.z) : p.char.heading
+    // the camera stands where the other face looks, so you always see it: for someone facing you
+    // that's over your shoulder, for a gopnik who can't turn round on his bench it's in front of
+    // him. Off to one side, wide enough that the hero never covers the face; the side with room
+    // for it (picked once, no flips)
+    const h = ch.mesh.rotation.y, fx = Math.sin(h), fz = Math.cos(h)
+    const facing = L > 0.05 && ((B.x - A.x) * fx + (B.z - A.z) * fz) / L > 0.3
+    // (head-on to someone sitting: his neighbours on the bench stay at the edges of the frame)
+    const d = Math.max(1.2, L) + 1.5, off = facing ? 1.25 : 0.55, y = (A.y + B.y) / 2 + 0.2
+    const spot = (s, out) => out.set(A.x + fx * d + fz * off * s, y, A.z + fz * d - fx * off * s)
+    const room = (s) => { this.pivot.copy(A); const f = this.collide(spot(s, _v)); return f === null ? 99 : f }
+    // how close anybody else stands to the line from that spot to the face
+    const clear = (s) => {
+      spot(s, _v)
+      const sx = A.x - _v.x, sz = A.z - _v.z, l2 = sx * sx + sz * sz || 1
+      let c = 9
+      for (const q of this.game.peds?.list || []) {
+        if (q === T.who || q.disposed || !q.pos) continue
+        const qx = q.pos.x - _v.x, qz = q.pos.z - _v.z, t = Math.max(0, Math.min(1, (qx * sx + qz * sz) / l2))
+        c = Math.min(c, Math.hypot(qx - sx * t, qz - sz * t))
+      }
+      return c
+    }
+    if (!T.side) {
+      const r1 = room(1), r2 = room(-1)
+      T.side = r1 < 1.6 && r2 > r1 ? -1 : r2 < 1.6 ? 1 : clear(-1) > clear(1) + 0.25 ? -1 : 1
+    }
+    this.pivot.copy(A)
+    spot(T.side, _v)
+    this.collide(_v)
+    // frame the pair when they face each other (the face a little off centre, the hero's shoulder
+    // at the side), aimed low enough that the face sits a quarter of the way down the screen,
+    // above the dialogue box
+    const w = facing ? 0.75 : 1
+    const lx = B.x + (A.x - B.x) * w, lz = B.z + (A.z - B.z) * w
+    // where the layout leaves room for the face (screen coords, -1..1): above the box, or left of
+    // it when a short landscape screen puts the box on the right
+    const fr = this.game.ui?.talkFrame?.() || { x: 0, y: 0.42 }
+    const tv = Math.tan(THREE.MathUtils.degToRad(this.cam.fov / 2)), th = tv * this.cam.aspect
+    const D = Math.hypot(lx - _v.x, lz - _v.z) || 1, side = -fr.x * th * D
+    const pitch = Math.atan2(A.y - _v.y, Math.hypot(A.x - _v.x, A.z - _v.z)) - Math.atan(fr.y * tv)
+    _look.set(lx - (lz - _v.z) / D * side, _v.y + Math.hypot(D, side) * Math.tan(pitch), lz + (lx - _v.x) / D * side)
+    const k = 1 - Math.exp(-6 * rawDt)
+    if (!T.look) T.look = this.cam.getWorldDirection(_t).multiplyScalar(4).add(this.cam.position).clone()
+    this.pos.lerp(_v, k)
+    T.look.lerp(_look, k)
+    this.cam.position.copy(this.pos)
+    this.applyShake(rawDt)
+    this.cam.lookAt(T.look)
+    this.updateCutout(null)
+    return true
   }
 
   // indoors: the camera slides along outside the open wall, looking in at the hero

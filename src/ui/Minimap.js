@@ -1,4 +1,5 @@
-import { H_ROADS, V_ROADS, BLOCKS, WORLD, RAIL_Z } from '../world/CityLayout.js'
+import { H_ROADS, V_ROADS, BLOCKS, WORLD, BOUNDS, EXITS, RAIL_Z } from '../world/CityLayout.js'
+import { RIVER, HIGHWAY, PORTAL } from '../world/Terrain.js'
 
 const ZONE_FILL = {
   soviet: '#3a3d38', acasa: '#3d3a33', garaje: '#3a3834', linella: '#3a3d38',
@@ -13,6 +14,33 @@ export function renderStaticMap(world) {
   const x = c.getContext('2d')
   const X = (wx) => (wx - WORLD.x0) * PX, Z = (wz) => (wz - WORLD.z0) * PX
   x.fillStyle = '#2a3a27'; x.fillRect(0, 0, W, H)
+  const L = BOUNDS
+  const rect = (x0, z0, x1, z1, col) => { x.fillStyle = col; x.fillRect(X(x0), Z(z0), (x1 - x0) * PX, (z1 - z0) * PX) }
+  // beyond the edge: the Bîc and its far bank, Valea Morilor's woods, the highway, the combinat
+  rect(WORLD.x0, WORLD.z0, L.x0, WORLD.z1, '#1e3321')
+  for (let i = 0; i < 900; i++) {
+    const tx = WORLD.x0 + ((i * 97) % 600) / 10, tz = WORLD.z0 + ((i * 7919) % 7860) / 10
+    if (tx < L.x0 - 1) { x.fillStyle = i % 3 ? '#25402a' : '#193019'; x.beginPath(); x.arc(X(tx), Z(tz), 2.2 + (i % 4) * 0.6, 0, Math.PI * 2); x.fill() }
+  }
+  rect(L.x0, WORLD.z0, L.x1 + 60, RIVER.far, '#2c3a2b')
+  rect(L.x0, RIVER.far - 12.4, WORLD.x1, RIVER.far - 2.4, '#26282d')
+  rect(L.x0, RIVER.far - 2.4, WORLD.x1, RIVER.far, '#55534e')
+  rect(L.x0, RIVER.top1, WORLD.x1, RIVER.top0, '#8d8a80')
+  rect(L.x0, RIVER.top1 + 3.4, WORLD.x1, RIVER.top0 - 3.4, '#355e70')
+  rect(L.x1, WORLD.z0, WORLD.x1, WORLD.z1, '#34462c')
+  rect(L.x1, WORLD.z0, L.x1 + HIGHWAY.deck, WORLD.z1, '#2b2d32')
+  rect(L.x1, RIVER.top1, WORLD.x1, RIVER.top0, '#355e70')
+  x.strokeStyle = 'rgba(255,255,255,0.22)'; x.lineWidth = 1
+  for (const o of [7.25, 21.75]) { x.setLineDash([5, 7]); x.beginPath(); x.moveTo(X(L.x1 + o), 0); x.lineTo(X(L.x1 + o), H); x.stroke() }
+  x.setLineDash([])
+  x.fillStyle = '#6d6a64'; x.fillRect(X(L.x1 + 13.7), 0, 0.6 * PX + 0.5, H)
+  rect(L.x0, L.z1, L.x1, WORLD.z1, '#3a3833')
+  // the roads out, beyond their barriers
+  for (const e of EXITS) {
+    if (e.side === 'w') rect(WORLD.x0, -7.5, L.x0, 7.5, '#26282d')
+    if (e.side === 'e') rect(L.x1, -11, WORLD.x1, 11, '#26282d')
+    if (e.side === 'n') rect(e.c - e.open, RIVER.far, e.c + e.open, L.z0, '#4a4944')
+  }
   // blocks
   for (const b of BLOCKS) {
     x.fillStyle = '#6d6a64'; x.fillRect(X(b.x0), Z(b.z0), (b.x1 - b.x0) * PX, (b.z1 - b.z0) * PX)
@@ -21,6 +49,8 @@ export function renderStaticMap(world) {
   }
   // parks greener
   for (const b of BLOCKS) if (b.zone === 'gradina' || b.zone === 'catedrala' || b.zone === 'romasca') { x.fillStyle = '#35602f'; x.fillRect(X(b.ix0), Z(b.iz0), (b.ix1 - b.ix0) * PX, (b.iz1 - b.iz0) * PX) }
+  // the promenade along the river
+  rect(L.x0, L.z0, L.x1, L.z0 + 7, '#56554f')
   // building footprints
   x.fillStyle = '#8e8a82'
   for (const f of world.footprints) {
@@ -32,12 +62,51 @@ export function renderStaticMap(world) {
   x.fillStyle = '#1c1d21'
   for (const h of H_ROADS) x.fillRect(X(V_ROADS[0].x - 6), Z(h.z - h.w / 2), (V_ROADS[V_ROADS.length - 1].x - V_ROADS[0].x + 12) * PX, h.w * PX)
   for (const v of V_ROADS) x.fillRect(X(v.x - v.w / 2), Z(H_ROADS[0].z - 6), v.w * PX, (H_ROADS[H_ROADS.length - 1].z - H_ROADS[0].z + 12) * PX)
+  for (const e of EXITS) x.fillRect(X(e.rect.x0), Z(e.rect.z0), (e.rect.x1 - e.rect.x0) * PX, (e.rect.z1 - e.rect.z0) * PX)
   // boulevard centre line
   x.strokeStyle = 'rgba(255,255,255,0.25)'; x.lineWidth = 1
   x.beginPath(); x.moveTo(X(V_ROADS[0].x), Z(0)); x.lineTo(X(V_ROADS[V_ROADS.length - 1].x), Z(0)); x.stroke()
-  // rails
+  // rails, from tunnel to underpass
   x.strokeStyle = '#5a5048'; x.lineWidth = 3
   for (const z of [RAIL_Z - 4, RAIL_Z + 4]) { x.beginPath(); x.moveTo(0, Z(z)); x.lineTo(W, Z(z)); x.stroke() }
+  // everything past the limit is dimmed, and the limit itself drawn as a wall
+  x.fillStyle = 'rgba(10,12,16,0.5)'
+  x.fillRect(0, 0, W, Z(L.z0)); x.fillRect(0, Z(L.z1), W, H - Z(L.z1))
+  x.fillRect(0, Z(L.z0), X(L.x0), Z(L.z1) - Z(L.z0)); x.fillRect(X(L.x1), Z(L.z0), W - X(L.x1), Z(L.z1) - Z(L.z0))
+  x.strokeStyle = 'rgba(0,0,0,0.55)'; x.lineWidth = 5
+  x.strokeRect(X(L.x0), Z(L.z0), (L.x1 - L.x0) * PX, (L.z1 - L.z0) * PX)
+  x.strokeStyle = '#e9dcae'; x.lineWidth = 2
+  x.strokeRect(X(L.x0), Z(L.z0), (L.x1 - L.x0) * PX, (L.z1 - L.z0) * PX)
+  // the closures: red and white where a road or the railway is shut
+  const shut = (x0, z0, x1, z1) => {
+    const n = Math.max(2, Math.round(Math.hypot(x1 - x0, z1 - z0) / 3))
+    x.lineWidth = 4
+    for (let i = 0; i < n; i++) {
+      x.strokeStyle = i % 2 ? '#f2f0ea' : '#d8322a'
+      x.beginPath(); x.moveTo(X(x0 + ((x1 - x0) * i) / n), Z(z0 + ((z1 - z0) * i) / n)); x.lineTo(X(x0 + ((x1 - x0) * (i + 1)) / n), Z(z0 + ((z1 - z0) * (i + 1)) / n)); x.stroke()
+    }
+  }
+  for (const e of EXITS) {
+    if (e.horizontal) shut(e.to, e.c - e.open, e.to, e.c + e.open)
+    else shut(e.c - e.open, e.to, e.c + e.open, e.to)
+  }
+  for (const gx of [L.x0, L.x1]) shut(gx, PORTAL.z0, gx, PORTAL.z1)
+  // names of what's out there
+  x.font = `600 ${Math.round(12 * PX)}px Rubik`; x.textAlign = 'center'; x.textBaseline = 'middle'
+  x.fillStyle = 'rgba(214,226,232,0.75)'
+  x.fillText('Râul Bîc', X(-260), Z((RIVER.top0 + RIVER.top1) / 2))
+  x.fillStyle = 'rgba(226,222,208,0.6)'
+  x.save(); x.translate(X((WORLD.x0 + L.x0) / 2), Z(-160)); x.rotate(-Math.PI / 2); x.fillText('Valea Morilor', 0, 0); x.restore()
+  x.save(); x.translate(X(L.x1 + HIGHWAY.deck + 16), Z(170)); x.rotate(Math.PI / 2); x.fillText('Centura', 0, 0); x.restore()
+  x.fillText('Combinatul „Viitorul Luminos"', X(-120), Z((L.z1 + WORLD.z1) / 2))
+  // past the edge of the map the land fades into the dark round the minimap
+  const fade = 26 * PX
+  for (const [x0, y0, x1, y1, w, h] of [[0, 0, 0, fade, W, fade], [0, H, 0, H - fade, W, fade], [0, 0, fade, 0, fade, H], [W, 0, W - fade, 0, fade, H]]) {
+    const gr = x.createLinearGradient(x0, y0, x1, y1)
+    gr.addColorStop(0, 'rgba(26,29,34,1)'); gr.addColorStop(1, 'rgba(26,29,34,0)')
+    x.fillStyle = gr
+    x.fillRect(x1 < x0 ? W - w : 0, y1 < y0 ? H - h : 0, w, h)
+  }
   return { canvas: c, X, Z, W, H }
 }
 

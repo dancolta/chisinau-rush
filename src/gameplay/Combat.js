@@ -2,7 +2,7 @@ import { WEAPONS, WEAPON_ORDER } from '../data/weapons.js'
 import { angleDiff } from '../entities/Character.js'
 
 const POW = ['BUF!', 'PAC!', 'ȚAC!', 'BANG!', 'POC!', 'ZDRANG!']
-const WET = ['M-ai udat!', 'Ce faci, măi?! Am haine de la Milano!', 'Apă?! Pe bune?!', 'Ești normal?!', 'Mamă, m-o udat un nebun!']
+const WET = ['M-ai udat!', 'Ce faci, măi?! Am haine de la Milano!', 'Apă?! Pe bune?!', 'Ești [[normal|normală]]?!', 'Mamă, m-o udat [[un nebun|o nebună]]!']
 
 // Melee combat: aiming, hit resolution, NPC attacks, getting run over.
 export class Combat {

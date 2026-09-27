@@ -62,8 +62,15 @@ r = await ev(async () => {
   // walk at the open side of the room: the invisible wall stops you
   const bx = p.pos.x, bz = p.pos.z
   p.teleport(2600, 0, 2601.5, 0)
+  // hold W until the hero has come to a stop against it (on a loaded machine a fixed number of
+  // frames can end before the walk even gets going)
   g.input.down.add('KeyW')
-  await T.frames(40)
+  let last = p.pos.z, still = 0
+  for (let i = 0; i < 400 && still < 25; i++) {
+    await T.frames(1)
+    if (Math.abs(p.pos.z - last) < 0.002 && p.pos.z > 2602) still++; else still = 0
+    last = p.pos.z
+  }
   g.input.down.delete('KeyW')
   const wall = +(p.pos.z - 2600).toFixed(2)
   p.teleport(bx, 0, bz, -Math.PI / 2)

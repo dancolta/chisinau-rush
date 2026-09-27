@@ -2,6 +2,7 @@ import { Aura } from './Aura.js'
 import { Stunts } from './Stunts.js'
 import { Challenges, challengeDef } from './Challenges.js'
 import { SideUI } from './SideUI.js'
+import { Goals } from './Goals.js'
 import { UP, DOWN, AURA, LEVEL_REWARDS, levelLei, levelOf, levelStart, titleOf, PERKS, FLAGS } from '../data/aura.js'
 import { CLOTHES } from '../data/wardrobe.js'
 import { WEAPONS } from '../data/weapons.js'
@@ -69,6 +70,9 @@ export class SideContent {
     this.stunts = new Stunts(this)
     this.challenges = new Challenges(this)
     this.wire()
+    // achievements, the daily streak, the seed packets, the progression cards (after wire(): its
+    // listeners run after ours, so the counts they read are already up to date)
+    this.goals = new Goals(this)
   }
 
   get events() { return this.game.story?.events }
@@ -266,11 +270,12 @@ export class SideContent {
 
   // ---- one-time hints ------------------------------------------------------------------------------------------
   hint(k) {
+    // AURA gets the card that explains each currency the first time you earn it
+    if (k === 'aura') { this.goals?.explain('aura'); return }
     const st = this.state
     if (st.seen[k]) return
     st.seen[k] = true
     const text = {
-      aura: '✨ {y}AURA{/y}: cât de tare te vede strada. Chestii tari o cresc, cringe-ul o scade. Nivelurile aduc bani, haine și arme.',
       stunt: '🚗 {y}Cascadorii{/y}: drift ([␣] frâna de mână), treceri la mustață, contrasens. Leagă-le în combo; o bușitură îl pierde.',
       daily: '📋 {y}3 provocări pe zi{/y}. Le vezi în pauză ([Esc]), la {y}Aură{/y}. Una o poți schimba gratis.',
     }[k]
@@ -297,6 +302,7 @@ export class SideContent {
     if (this.gapT > 0) this.gapT -= g.rawDt || dt
     // (and not over another big banner: a rank-up, a mission pass, a chapter card)
     if (this.queue.length && this.calmT > AURA.calm && this.gapT <= 0 && !g.ui.top.querySelector('.bigmsg, .chapter, .evidence, .lvlup')) this.flush()
+    this.goals.update(dt)
     this.ui.update(dt)
   }
 
@@ -329,12 +335,15 @@ export class SideContent {
   }
 
   // ---- after an event: its people stay around until you've walked off -----------------------------------------
-  linger(m, npcs, centre) {
+  // lads: they're gopniks (Jora's lot after the seed championship): a bench of the yard while they
+  // stay, so you can talk to them, and a punch brings all of them down on you
+  linger(m, npcs, centre, { lads = false } = {}) {
     for (const n of npcs) {
       if (!n || n.disposed) continue
       m.detach(n)
       this.lingering.push({ n, t: 0, centre })
     }
+    if (lads) this.game.hood?.addTemp(npcs.filter((n) => n && !n.disposed), centre)
   }
 
   updateLingering(dt) {
@@ -360,6 +369,6 @@ export class SideContent {
   }
 
   // ---- map and menus -----------------------------------------------------------------------------------------
-  blips() { return this.events?.blips?.() || [] }
+  blips() { return [...(this.events?.blips?.() || []), ...this.goals.blips()] }
   renderPause(body) { this.ui.renderPause(body) }
 }

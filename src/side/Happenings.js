@@ -1,5 +1,6 @@
 import { HAPPENINGS } from './events/index.js'
 import { dist, here } from './events/common.js'
+import { fill } from '../story/hero.js'
 
 // When something happens in free roam: every few minutes (counted only while you're actually
 // free: no mission or side job, no stars, not at home, no cutscene or dialogue) the neighbours'
@@ -56,7 +57,7 @@ export class Happenings {
     // it starts when you come up to it; if you're already inside the circle, walk out first
     this.offer = { def, spot, t: 0, lastD: d0, armed: d0 > (def.engage || 45), cleanup: safe(() => def.offer?.(g, spot)) || null }
     this.side?.ui.setMark({ x: spot.x, z: spot.z, icon: def.icon })
-    if (def.viber) this.side?.ui.viber(def.who, def.viber)
+    if (def.viber) this.side?.ui.viber(def.who, fill(this.game, def.viber))
     g.events.emit('happening:offer', def.id)
     return true
   }

@@ -16,6 +16,18 @@ const KEYS = [
   { h: 24.0, top: 0x060a1a, hor: 0x1a2140, bot: 0x0b0d16, sun: 0x8fa6ff, sunI: 0.0, moonI: 0.9, hemiSky: 0x4f60a0, hemiGnd: 0x2a2a3a, hemiI: 1.0, fog: 0x141a30, stars: 1.0, cloudLit: 0x39436a, cloudShade: 0x12162a, cloud: 0.45, exposure: 1.3, lamps: 1 },
 ]
 
+// a daily curve given as [hour, value] keys (0 to 24), read at any hour with a smooth step between
+// keys: how busy the pavements and the roads are
+export function hourly(keys, hour) {
+  const h = ((hour % 24) + 24) % 24
+  let i = 0
+  while (i < keys.length - 2 && keys[i + 1][0] <= h) i++
+  const [h0, a] = keys[i], [h1, b] = keys[i + 1]
+  let t = Math.min(1, Math.max(0, (h - h0) / Math.max(0.0001, h1 - h0)))
+  t = t * t * (3 - 2 * t)
+  return a + (b - a) * t
+}
+
 const COLOR_KEYS = ['top', 'hor', 'bot', 'sun', 'hemiSky', 'hemiGnd', 'fog', 'cloudLit', 'cloudShade']
 const NUM_KEYS = ['sunI', 'moonI', 'hemiI', 'stars', 'cloud', 'exposure', 'lamps']
 

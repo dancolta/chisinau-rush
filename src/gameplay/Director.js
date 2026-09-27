@@ -2,6 +2,7 @@ import { Progress, RANKS } from './Progress.js'
 import { CAST } from '../data/outfits.js'
 import { CURB_H } from '../world/CityLayout.js'
 import { composeSpec } from '../data/wardrobe.js'
+import { gen } from '../story/hero.js'
 
 // Top-level game flow: new game / continue, fainting, getting busted, waypoints, autosave.
 export class Director {
@@ -72,6 +73,7 @@ export class Director {
     if (g.wardrobe) out.push(...g.wardrobe.blips())
     if (g.crew) out.push(...g.crew.blips())
     if (g.side) out.push(...g.side.blips())
+    if (g.comisariat) out.push(...g.comisariat.blips())
     if (g.police) {
       for (const o of g.police.officers) if (!o.char.ko) out.push({ kind: 'police', x: o.pos.x, z: o.pos.z })
       for (const c of g.police.cars) out.push({ kind: 'police', x: c.v.pos.x, z: c.v.pos.z })
@@ -91,7 +93,7 @@ export class Director {
     g.audio?.sting('mission_fail')
     const wasModal = g.ui.modalOpen
     g.ui.modalOpen = true // nobody arrests or robs you while you're on the floor
-    await g.ui.overlay('LEȘINAT', 2.6, { gray: true, slow: 0.3 })
+    await g.ui.overlay(gen(g, 'LEȘINAT', 'LEȘINATĂ'), 2.6, { gray: true, slow: 0.3 })
     g.ui.modalOpen = wasModal
     await g.ui.fade(1, 700)
     g.story.failActive('Ai leșinat.')
@@ -123,18 +125,18 @@ export class Director {
     // the card is part of the arrest: the cops hold still and nothing else can start (the
     // sergeant's dialogue then takes over the modal and closes it)
     g.ui.modalOpen = true
-    await g.ui.overlay('REȚINUT', 1.9, { tone: 'blue', gray: true, slow: 0.4 })
+    await g.ui.overlay(gen(g, 'REȚINUT', 'REȚINUTĂ'), 1.9, { tone: 'blue', gray: true, slow: 0.4 })
     const sgt = { name: 'Sergentul', role: 'Poliția Chișinău', spec: CAST.cop, id: 'cop_generic', voice: { pitch: 0.85, type: 'gruff' } }
     const bribe = Math.round((30 + lvl * 45) * (pr.tier('pol') >= 3 ? 0.5 : 1))
     const actsFalse = pr.flags.acteFalse
     const choices = [
-      { text: `Mită: „Pentru cafea, șefu"`, cost: `${bribe} lei`, disabled: pr.lei < bribe },
+      { text: `Mită: „Pentru cafea, șefu'"`, cost: `${bribe} lei`, disabled: pr.lei < bribe },
       { text: 'Vorbă frumoasă: „N-am văzut semnul, sincer…"' },
       { text: 'Calci pedala și fugi', cost: '+1 ★' },
     ]
     if (actsFalse) choices.unshift({ text: 'Arăți „actele" de la Borea', cost: 'acte false' })
     let i = await g.ui.dialogue(sgt, [lvl >= 3 ? 'Stai pe loc! Mâinile pe capotă! Tu știi cât m-ai alergat?!' : 'Documentele. Știți de ce v-am oprit?'], { choices })
-    if (actsFalse) { if (i === 0) { pr.flags.acteFalse = false; await g.ui.dialogue(sgt, ['…Totul e în regulă, domnule deputat. Scuzați deranjul. Drum bun!']); g.police.clear(); g.events.emit('police:deal', { how: 'papers' }); this.release(); return } i-- }
+    if (actsFalse) { if (i === 0) { pr.flags.acteFalse = false; await g.ui.dialogue(sgt, [`…Totul e în regulă, ${gen(g, 'domnule deputat', 'doamnă deputat')}. Scuzați deranjul. Drum bun!`]); g.police.clear(); g.events.emit('police:deal', { how: 'papers' }); this.release(); return } i-- }
     if (i === 0) {
       pr.spend(bribe); pr.stats.bribes++
       await g.ui.dialogue(sgt, ['Hm. Cafeaua e bună azi. Circulați, circulați.'])
@@ -149,8 +151,8 @@ export class Director {
         pr.addLei(-fine, 'Amendă la poliție')
         pr.stats.busted++
         g.events.emit('police:deal', { how: 'jail' })
-        g.story.failActive('Ai fost reținut de poliție.')
-        await this.jail()
+        g.story.failActive(gen(g, 'Ai fost reținut de poliție.', 'Ai fost reținută de poliție.'))
+        await this.jail(fine)
         return
       }
     } else {
@@ -170,16 +172,61 @@ export class Director {
     this.game.input.clear()
   }
 
-  async jail() {
-    const g = this.game
-    await g.ui.fade(1, 600)
+  // how long they keep you: brought in after dark, you're let out in the morning; by day it's
+  // three hours of „discuții"
+  custody() {
+    const h = this.game.renderer.tod.hour, night = h >= 20 || h < 5
+    return { night, until: night ? 7 + Math.random() * 0.5 : h + 3 }
+  }
+
+  // every arrest ends here: the lights go out, the hours pass, and you walk out of the
+  // Comisariatul Centru onto its steps, on foot and with a clean slate. Whatever you were driving
+  // stays at the pound. beat: seconds to let the officer's last line land before the fade
+  async jail(fine = 0, beat = 0) {
+    const g = this.game, p = g.player
+    const out = g.comisariat?.out || { x: g.world.places.arc.x + 6, z: g.world.places.arc.z - 4, ry: Math.PI }
+    const stay = this.custody()
+    // taken in: nobody else starts anything on you, and you're not going anywhere
+    const wasModal = g.ui.modalOpen
+    g.ui.modalOpen = true
+    p.control = false
+    if (beat) await new Promise((r) => setTimeout(r, beat * 1000))
+    await g.ui.fade(1, 700)
     g.police.clear()
-    const arc = g.world.places.arc
-    g.player.teleport(arc.x + 6, CURB_H, arc.z - 4, Math.PI)
-    g.cameraRig.target.copy(g.player.pos); g.cameraRig.snap()
-    g.renderer.tod.set((g.renderer.tod.hour + 3) % 24)
-    await g.ui.fade(0, 800)
-    g.ui.notify('Ți-au dat drumul după trei ore de „discuții". Stai lângă Arc și reflectezi.', 5)
+    const v = p.vehicle
+    if (v && p.passenger) g.vehicles.exit(true)
+    else if (v) g.vehicles.remove(v)
+    p.char.ko = false; p.hitStun = 0; p.bailT = 0
+    p.char.anim.stop()
+    p.teleport(out.x, out.y ?? g.physics.groundHeight(out.x, out.z, 3), out.z, out.ry)
+    // the officers on the door and the patrol cars out front are there when the lights come up
+    g.comisariat?.fill()
+    g.vehicles.updateParked(out.x, out.z)
+    g.renderer.tod.set(stay.until)
+    g.cameraRig.yaw = out.ry
+    g.cameraRig.target.copy(p.pos); g.cameraRig.snap()
+    // out the door: the camera comes down from the sign to you on the steps while you walk down
+    // them, then it's behind you and the street is yours (from the top step the wall would leave
+    // it no room behind you)
+    const foot = out.foot || out
+    const fx = Math.sin(out.ry), fz = Math.cos(out.ry), sx = -Math.cos(out.ry), sz = Math.sin(out.ry)
+    const y0 = g.physics.groundHeight(foot.x, foot.z, 2.4)
+    const at = (f, s, y) => [foot.x + fx * f + sx * s, y0 + y, foot.z + fz * f + sz * s]
+    const shot = new Promise((r) => g.cameraRig.shot({ from: at(16, 9, 13.5), to: at(6, 6, 2.6), lookFrom: at(-4, 0, 11.5), lookTo: at(0, 0, 1.3), dur: 3.6, onEnd: r }))
+    await new Promise((r) => setTimeout(r, 250))
+    g.audio?.sfx('door', { vol: 0.6, pitch: 0.7 })
+    await g.ui.fade(0, 900)
+    const amenda = fine > 0 ? ` Amendă: {r}${fine} lei{/r}.` : ' N-ai avut din ce plăti amenda.'
+    g.ui.notify((stay.night ? 'Ai petrecut noaptea la Comisariatul Centru.' : 'Trei ore de „discuții" la Comisariatul Centru.') + amenda, 6)
+    if (foot !== out) p.scripted = { x: foot.x, z: foot.z, speed: 1.4 }
+    await shot
+    // (a mission failed by the arrest stops any walk when it cleans up: then it's the camera cut
+    // that takes you the rest of the way)
+    p.scripted = null
+    if (Math.hypot(p.pos.x - foot.x, p.pos.z - foot.z) > 0.6) p.teleport(foot.x, y0, foot.z, out.ry)
+    g.cameraRig.yaw = out.ry
+    g.cameraRig.endShot()
+    g.ui.modalOpen = wasModal
     this.release()
   }
 

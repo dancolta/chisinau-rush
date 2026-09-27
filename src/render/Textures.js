@@ -226,6 +226,60 @@ export function makeConcrete() {
   return toTex(c)
 }
 
+// Soviet PO-2 concrete fence panels (4 x 2.4 m), two to a texture: a grid of diamonds in relief
+// inside a plain border, rain streaks and splash at the foot. The right one has been tagged.
+export function makeFence() {
+  const PW = 512, H = 320, S = PW * 2
+  const [c, x] = canvas(S, H)
+  const [hc, hx] = canvas(S, H)
+  const r = rng(41)
+  x.fillStyle = '#a19e96'; x.fillRect(0, 0, S, H)
+  hx.fillStyle = '#808080'; hx.fillRect(0, 0, S, H)
+  for (let p = 0; p < 2; p++) {
+    const ox = p * PW, b = 26
+    // the plain border stands proud of the relief field
+    hx.fillStyle = '#9a9a9a'; hx.fillRect(ox, 0, PW, H)
+    hx.fillStyle = '#6a6a6a'; hx.fillRect(ox + b, b, PW - 2 * b, H - 2 * b)
+    x.fillStyle = 'rgba(0,0,0,0.10)'; x.fillRect(ox + b, b, PW - 2 * b, 3); x.fillRect(ox + b, b, 3, H - 2 * b)
+    x.fillStyle = 'rgba(255,255,255,0.10)'; x.fillRect(ox + b, H - b - 3, PW - 2 * b, 3); x.fillRect(ox + PW - b - 3, b, 3, H - 2 * b)
+    // diamonds: each a low pyramid, lit from the upper left
+    const cols = 8, rows = 4, cw = (PW - 2 * b) / cols, ch = (H - 2 * b) / rows
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const cx = ox + b + (i + 0.5) * cw, cy = b + (j + 0.5) * ch, hw = cw * 0.46, hh = ch * 0.46
+      const faces = [[[0, -hh], [hw, 0], 'rgba(255,255,255,0.13)', '#b4b4b4'], [[hw, 0], [0, hh], 'rgba(0,0,0,0.16)', '#5c5c5c'], [[0, hh], [-hw, 0], 'rgba(0,0,0,0.08)', '#6e6e6e'], [[-hw, 0], [0, -hh], 'rgba(255,255,255,0.08)', '#a6a6a6']]
+      for (const [a, bb, col, hcol] of faces) {
+        for (const [ctx, fill] of [[x, col], [hx, hcol]]) {
+          ctx.fillStyle = fill; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + a[0], cy + a[1]); ctx.lineTo(cx + bb[0], cy + bb[1]); ctx.closePath(); ctx.fill()
+        }
+      }
+    }
+    // weather: streaks down from the top, splash and moss at the foot
+    for (let i = 0; i < 26; i++) {
+      const sx = ox + r() * PW, len = 40 + r() * 160
+      const g = x.createLinearGradient(0, 0, 0, len)
+      g.addColorStop(0, 'rgba(60,58,52,0.22)'); g.addColorStop(1, 'rgba(60,58,52,0)')
+      x.fillStyle = g; x.fillRect(sx, 0, 2 + r() * 5, len)
+    }
+    const foot = x.createLinearGradient(0, H - 70, 0, H)
+    foot.addColorStop(0, 'rgba(70,66,52,0)'); foot.addColorStop(1, 'rgba(64,70,44,0.5)')
+    x.fillStyle = foot; x.fillRect(ox, H - 70, PW, 70)
+    x.strokeStyle = 'rgba(40,40,38,0.5)'; x.lineWidth = 3; x.strokeRect(ox + 1.5, 1.5, PW - 3, H - 3)
+  }
+  grainPair(x, hx, r, S, 16000, 50)
+  // the tag: a fat two-tone throw-up and a stencilled word, sprayed across the relief
+  x.save()
+  x.translate(PW + PW / 2, H / 2 + 10); x.rotate(-0.06)
+  x.font = '900 118px Rubik'; x.textAlign = 'center'; x.textBaseline = 'middle'
+  x.lineJoin = 'round'; x.lineWidth = 14; x.strokeStyle = 'rgba(28,26,34,0.85)'; x.strokeText('BOREA', 0, 0)
+  const tg = x.createLinearGradient(0, -50, 0, 50); tg.addColorStop(0, 'rgba(236,84,62,0.9)'); tg.addColorStop(1, 'rgba(250,190,60,0.9)')
+  x.fillStyle = tg; x.fillText('BOREA', 0, 0)
+  x.font = '700 30px Rubik'; x.fillStyle = 'rgba(30,30,34,0.75)'; x.fillText('LEGALIZAȚI SEMINȚELE', 0, 84)
+  x.restore()
+  const t = toTex(c)
+  t.userData = { normal: heightToNormal(hc, 2.2) }
+  return t
+}
+
 // soft round blob for light pools / shadows / glows (not tiling)
 export function makeGlow(inner = 'rgba(255,220,160,1)', outer = 'rgba(255,200,120,0)') {
   const S = 128

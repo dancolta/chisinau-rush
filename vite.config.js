@@ -7,7 +7,9 @@ const api = { '/api': { target: process.env.API_DEV_URL || 'http://127.0.0.1:878
 // Engine libraries go in their own chunks so they download in parallel and stay cached between game updates.
 export default defineConfig({
   base: './',
-  server: { proxy: api },
+  // agent worktrees (.claude/worktrees/*) build their own dist/index.html inside this folder, and
+  // any HTML change makes the dev server reload every open page: tests died halfway through
+  server: { proxy: api, watch: { ignored: ['**/.claude/**', '**/dist/**', '**/downloads/**'] } },
   preview: { proxy: api },
   build: {
     target: 'es2020',

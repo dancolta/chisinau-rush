@@ -3,6 +3,7 @@ import { angleDiff } from '../entities/Character.js'
 import { streetName } from '../world/CityLayout.js'
 import { GOP, BAB, CIV, COP, VEND, CARDS, WED, CREW, NAMES, ROLES, HOOD, KID, CROWD } from '../data/streettalk.js'
 import { fill } from '../story/hero.js'
+import { HOMES } from '../story/cast.js'
 
 // Walk up to almost anyone on the street and press E: gopniks (make friends, buy them seeds,
 // recruit them, or pick a fight with the whole bench), grannies (gossip, errands, tips),
@@ -69,6 +70,7 @@ export class StreetTalk {
     this.lastHour = h
   }
   cap(key, n) { const d = this.daily; d[key] = (d[key] || 0) + 1; return d[key] <= n }
+  capLeft(key, n) { return (this.daily[key] || 0) < n }
   // what someone (or their whole bench) remembers about you
   mem(n, own = false) { return !own && n.spot ? (n.spot.mem ||= {}) : (n.mem ||= {}) }
 
@@ -81,7 +83,7 @@ export class StreetTalk {
   underAttack() {
     const g = this.game, p = g.player
     const hot = (n) => !n.char.ko && n.state === 'fight' && n.target === p && Math.hypot(n.pos.x - p.pos.x, n.pos.z - p.pos.z) < 15
-    return g.peds.list.some(hot) || g.ambient.npcs.some(hot) || g.police.officers.some(hot) || (g.story?.npcs || []).some((n) => n.enemy && hot(n))
+    return g.peds.list.some(hot) || g.ambient.npcs.some(hot) || g.police.officers.some(hot) || (g.story?.npcs || []).some((n) => (n.enemy || n.street) && hot(n))
   }
 
   update(dt) {
@@ -107,6 +109,9 @@ export class StreetTalk {
     for (const n of g.peds.list) test(n)
     for (const n of g.ambient.npcs) test(n)
     for (const n of g.crew.list) test(n)
+    // story people out of their mission who are lads of the yard (Hood.street); the ones the story
+    // gave something to say (Vitea: his lines, his races) keep their own E
+    for (const n of g.story.npcs) if (n.street && !HOMES[n.castId]?.talk) test(n)
     // officers walking back to their car after a chase can be talked to too
     for (const n of g.police.officers) if (n.cop?.mode === 'return') test(n)
     if (!best || this.underAttack()) return
@@ -182,7 +187,7 @@ export class StreetTalk {
       const opts = (this[a]?.(n) || []).filter(Boolean)
       opts.push({ text: BYE[a] || 'Pa.', run: () => ({ end: true }) })
       const shown = opts.map((o) => ({ ...o, text: this.fill(o.text) }))
-      const i = await g.ui.dialogue(sp, [text], { choices: shown })
+      const i = await g.ui.dialogue(sp, [text], { choices: shown, focus: n })
       const o = opts[i]
       if (!o || n.disposed) return
       const r = (await o.run()) || { end: true }
@@ -197,7 +202,7 @@ export class StreetTalk {
     if (a === 'gopnik') return this.fill(pick(GOP.greet[pr.tier('gop')]))
     if (a === 'babushka') {
       const e = this.errand
-      if (e && e.npc === n) return this.fill(e.bought ? 'A, ai adus pâinea, maică? Ce bun ești!' : BAB.errandWait)
+      if (e && e.npc === n) return this.fill(e.bought ? 'A, ai adus pâinea, maică? [[Ce bun ești|Ce bună ești]]!' : BAB.errandWait)
       return this.fill(pick(BAB.greet))
     }
     if (a === 'cop') {
@@ -215,15 +220,15 @@ export class StreetTalk {
 
   // ---- gopniks ---------------------------------------------------------------------------------------------
   gopnik(n) {
-    const g = this.game, pr = g.progress, tier = pr.tier('gop')
+    const g = this.game, pr = g.progress, tier = pr.tier('gop'), st = this.mem(n)
     const seeds = pr.price(5)
     const hire = tier >= 3 ? 0 : 30
     return [
-      { text: 'Salut, pacani. Ce se aude?', run: () => this.gopChat(n) },
-      { text: 'Serviți semințe, [[bratan|băieți]].', cost: `${seeds} lei`, disabled: pr.lei < seeds, run: () => this.gopSeeds(n, seeds) },
+      { text: 'Salut, pacani. Ce se aude?', out: st.chatDay !== this.day && this.capLeft('gopChat', 4) ? { gop: 2 } : null, run: () => this.gopChat(n) },
+      { text: 'Serviți semințe, [[bratan|băieți]].', out: { lei: -seeds, gop: st.seedsDay === this.day ? 0 : 4 }, disabled: pr.lei < seeds, run: () => this.gopSeeds(n, seeds) },
       { text: 'Hai cu mine, am o treabă.', cost: tier < 2 ? '🔒 respect 40' : hire ? `${hire} lei` : 'gratis', disabled: tier < 2 || pr.lei < hire, run: () => this.gopRecruit(n, hire) },
       pr.perk.pickpocket ? { text: '(Buzunărește-l)', cost: 'hoț', run: () => this.pickpocket(n, 'gopnik') } : null,
-      { text: 'Ce te uiți, fraere?', cost: '👊', run: () => this.gopProvoke(n) },
+      { text: 'Ce te uiți, fraere?', out: { risk: 'fight' }, run: () => this.gopProvoke(n) },
     ]
   }
 
@@ -252,6 +257,8 @@ export class StreetTalk {
 
   gopRecruit(n, cost) {
     const g = this.game, pr = g.progress
+    // the story's lads (Blocul 7, Jora's lot) have a corner to mind: the story finds them there
+    if (n.castId || n.spot?.temp) return { line: pick(GOP.stay) }
     if (g.crew.full) return { line: pick(GOP.crewFull) }
     if (cost && !pr.spend(cost)) return { line: '…' }
     this.name(n)
@@ -276,13 +283,13 @@ export class StreetTalk {
     const pr = this.game.progress, st = this.mem(n)
     const e = this.errand
     const out = []
-    if (e && e.npc === n) out.push(e.bought ? { text: 'Poftiți pâinea, bunică.', run: () => this.errandDone(n) } : { text: 'Încă n-am luat pâinea…', run: () => ({ line: BAB.errandWait }) })
-    out.push({ text: 'Sărut-mâna! Ce se mai aude?', run: () => this.babGossip(n) })
+    if (e && e.npc === n) out.push(e.bought ? { text: 'Poftiți pâinea, bunică.', out: { xp: 25, bab: 6, hp: 10 }, run: () => this.errandDone(n) } : { text: 'Încă n-am luat pâinea…', run: () => ({ line: BAB.errandWait }) })
+    out.push({ text: 'Sărut-mâna! Ce se mai aude?', out: this.mem(n, true).gossipDay !== this.day && this.capLeft('babGossip', 4) ? { bab: 2 } : null, run: () => this.babGossip(n) })
     out.push({ text: 'Pensia v-o venit?', run: () => ({ line: this.fresh(BAB.pension) }) })
-    if (!e && n.ambient && n.spot) out.push({ text: 'Vă ajut cu ceva?', run: () => this.errandStart(n) })
-    if (pr.type === 'badanta' && !st.badanta) out.push({ text: 'Și eu am fost badantă, doamnă. Doișpe ani.', run: () => this.babBadanta(n) })
+    if (!e && n.ambient && n.spot) out.push({ text: 'Vă ajut cu ceva?', out: { info: '🍞 misiune · +25 XP' }, run: () => this.errandStart(n) })
+    if (pr.type === 'badanta' && !st.badanta) out.push({ text: 'Și eu am fost badantă, doamnă. Doișpe ani.', out: { bab: 6, hp: 8 }, run: () => this.babBadanta(n) })
     if (pr.perk.pickpocket) out.push({ text: '(Buzunărește sacoșa)', cost: 'hoț', run: () => this.pickpocket(n, 'babushka') })
-    out.push({ text: 'Hai, bunico, fă-mi loc.', cost: '😠', run: () => this.babRude(n) })
+    out.push({ text: 'Hai, bunico, fă-mi loc.', out: { bab: -5, risk: 'rude' }, run: () => this.babRude(n) })
     return out
   }
 
@@ -364,10 +371,10 @@ export class StreetTalk {
     return [
       n.calling ? { text: CROWD.callStop, cost: '20 lei', disabled: pr.lei < 20, run: () => ({ end: true, line: this.game.crowd.hushCaller(n) || '…', secs: 3.2 }) } : null,
       n.debtor ? { text: HOOD.favor.datornic.ask, cost: '💸', run: () => ({ end: true, line: this.game.hood.debtorPaid(n) || '…', secs: 3.6 }) } : null,
-      { text: 'Ce mai faceți?', run: () => this.civChat() },
-      { text: 'Unde-i ceva de văzut prin oraș?', run: () => this.civWhere() },
-      { text: 'Împrumutați-mi zece lei de rutieră?', run: () => this.civLend(n) },
-      !st.given ? { text: 'Uitați douăzeci de lei. Sănătate.', cost: '20 lei', disabled: pr.lei < 20, run: () => this.civGive(n) } : null,
+      { text: 'Ce mai faceți?', out: this.capLeft('civXp', 8) ? { xp: 5 } : null, run: () => this.civChat() },
+      { text: 'Unde-i ceva de văzut prin oraș?', out: { info: '📍 pe hartă' }, run: () => this.civWhere() },
+      { text: 'Împrumutați-mi zece lei de rutieră?', out: { lei: 5, chance: true }, run: () => this.civLend(n) },
+      !st.given ? { text: 'Uitați douăzeci de lei. Sănătate.', out: { lei: -20, xp: this.capLeft('give', 5) ? 10 : 0 }, disabled: pr.lei < 20, run: () => this.civGive(n) } : null,
       pr.perk.pickpocket ? { text: '(Buzunărește-l)', cost: 'hoț', run: () => this.pickpocket(n, 'civilian') } : null,
       { text: 'Ce te holbezi?', cost: '😠', run: () => this.civProvoke(n) },
     ]
@@ -443,8 +450,8 @@ export class StreetTalk {
     const pr = this.game.progress, st = this.mem(n, true)
     const ice = pr.price(5)
     return [
-      { text: 'Ce faci, măi copile?', run: () => this.kidJoke() },
-      !st.icecream ? { text: 'Uite cinci lei de înghețată.', cost: `${ice} lei`, disabled: pr.lei < ice, run: () => this.kidIce(n, ice) } : null,
+      { text: 'Ce faci, măi copile?', out: this.capLeft('kidJoke', 5) ? { xp: 3 } : null, run: () => this.kidJoke() },
+      !st.icecream ? { text: 'Uite cinci lei de înghețată.', out: { lei: -ice, bab: 2 }, disabled: pr.lei < ice, run: () => this.kidIce(n, ice) } : null,
       { text: 'Știi vreun secret de-al cartierului?', cost: '📍', run: () => this.kidSecret(n) },
     ]
   }
@@ -479,12 +486,12 @@ export class StreetTalk {
     const coffee = pr.price(20)
     const inc = g.life.openIncident()
     return [
-      { text: 'Totul liniștit, șefu\'?', run: () => this.copChat() },
-      { text: 'O cafea, șefu\'? Din partea mea.', cost: `${coffee} lei`, disabled: pr.lei < coffee, run: () => this.copCoffee(n, coffee) },
-      { text: 'Știu unde stau gopnicii…', cost: '−respect gopnici', run: () => this.copSnitch() },
-      { text: 'Ce te uiți, gabor?', cost: '★', run: () => this.copInsult(n) },
+      { text: 'Totul liniștit, șefu\'?', out: this.capLeft('polChat', 3) ? { pol: 1 } : this.capLeft('polJoke', 6) ? { xp: 3 } : null, run: () => this.copChat() },
+      { text: 'O cafea, șefu\'? Din partea mea.', out: { lei: -coffee, pol: 4 }, disabled: pr.lei < coffee, run: () => this.copCoffee(n, coffee) },
+      { text: 'Știu unde stau gopnicii…', out: { pol: 3, gop: -15 }, run: () => this.copSnitch() },
+      { text: 'Ce te uiți, gabor?', out: { pol: -5, risk: 'police' }, run: () => this.copInsult(n) },
       { text: 'Mă puteți îndruma, șefu\'?', cost: '📍', run: () => this.copWhere() },
-      inc ? { text: COP.reportAsk, cost: '+respect poliție', run: () => this.copReport(inc) } : null,
+      inc ? { text: COP.reportAsk, out: { xp: 10, pol: this.capLeft('polReport', 3) ? 4 : 1 }, run: () => this.copReport(inc) } : null,
     ]
   }
 
@@ -558,8 +565,8 @@ export class StreetTalk {
     const fav = pr.tier('bab') >= 2
     const price = st.cheap || fav ? 5 : pr.price(10)
     return [
-      { text: 'Un kil de roșii, vă rog.', cost: `${price} lei`, disabled: pr.lei < price, run: () => this.vendBuy(price, fav && !st.cheap) },
-      !st.haggled ? { text: 'Dă mai ieftin!', run: () => this.vendHaggle(n) } : null,
+      { text: 'Un kil de roșii, vă rog.', out: { lei: -price, hp: 5 }, disabled: pr.lei < price, run: () => this.vendBuy(price, fav && !st.cheap) },
+      !st.haggled ? { text: 'Dă mai ieftin!', out: { chance: true }, run: () => this.vendHaggle(n) } : null,
       { text: 'Ce se aude prin piață?', run: () => ({ line: this.fresh(VEND.gossip) }) },
       { text: 'Iau un măr și fug.', cost: '🍎', run: () => this.vendSteal(n) },
     ]
@@ -595,7 +602,7 @@ export class StreetTalk {
   cards() {
     const pr = this.game.progress, stake = 20
     return [
-      { text: 'Intru și eu la o tură.', cost: `${stake} lei`, disabled: pr.lei < stake, run: () => this.cardsPlay(stake) },
+      { text: 'Intru și eu la o tură.', out: { lei: -stake, chance: pr.perk.pickpocket ? 0.62 : 0.45, info: `câștigi ${stake * 2} lei` }, disabled: pr.lei < stake, run: () => this.cardsPlay(stake) },
       { text: 'Cine câștigă azi?', run: () => ({ line: this.fresh(CARDS.chat) }) },
     ]
   }
@@ -611,8 +618,8 @@ export class StreetTalk {
   // ---- the wedding at the Arc --------------------------------------------------------------------------------------------
   wedding(n) {
     return [
-      { text: 'Casă de piatră!', run: () => this.wedToast(n) },
-      { text: 'Pot să fac o poză cu mirii?', run: () => this.wedPhoto(n) },
+      { text: 'Casă de piatră!', out: this.mem(n).toasted ? null : { lei: 20, xp: 15, hp: 10 }, run: () => this.wedToast(n) },
+      { text: 'Pot să fac o poză cu mirii?', out: this.mem(n).photo ? null : { xp: 10 }, run: () => this.wedPhoto(n) },
     ]
   }
 

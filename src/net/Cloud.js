@@ -10,10 +10,14 @@
 // never came back (sent as the page closed).
 import { Progress } from '../gameplay/Progress.js'
 
-const ENV_API = String(import.meta.env.VITE_API_URL || '').trim()
+// GitHub Pages has no /api of its own: there the game uses the Vercel deployment's (which also
+// serves the whole game, with its /api next to it). VITE_API_URL at build time overrides both;
+// 'off' turns accounts off.
+const PAGES_API = 'https://chisinau-rush.vercel.app/api'
+const ON_PAGES = /\.github\.io$/i.test(location.hostname)
+const ENV_API = String(import.meta.env.VITE_API_URL || '').trim() || (ON_PAGES ? PAGES_API : '')
 export const API_BASE = ENV_API && ENV_API !== 'off' ? ENV_API.replace(/\/+$/, '') : '/api'
-// GitHub Pages has no /api of its own: accounts there need VITE_API_URL at build time
-export const CLOUD_ON = ENV_API !== 'off' && (!!ENV_API || !/\.github\.io$/i.test(location.hostname))
+export const CLOUD_ON = ENV_API !== 'off' && (!!ENV_API || !ON_PAGES)
 
 const AUTH_KEY = 'cr3d-auth'
 const SYNC_KEY = 'cr3d-sync'
@@ -66,6 +70,9 @@ export class Cloud {
     if (!this.enabled) return
     const a = load(AUTH_KEY)
     if (a && typeof a.token === 'string' && a.id) { this.auth = a; this.state = 'idle' }
+    // a server with no database connected yet can't make accounts: guests don't see Cont until it
+    // can (asked on the real sites only: a local dev server may have no API running at all)
+    else if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) this.probe()
     // a story mission just passed: that save goes up right away
     game.events?.on('mission:pass', (def) => { if (def && !def.activity) this.urgentUntil = Date.now() + 90000 })
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') this.flushOnHide(); else this.recheck() })
@@ -78,6 +85,14 @@ export class Cloud {
   get lastSync() { return this.meta()?.at || 0 }
 
   on(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn) }
+
+  async probe() {
+    try {
+      const r = await fetch(`${API_BASE}/health`, { cache: 'no-store' })
+      const d = await r.json().catch(() => null)
+      if (d?.configured === false && !this.auth) { this.enabled = false; this.state = 'off'; this.emit() }
+    } catch (e) { /* offline or blocked: leave it as it is, the panel says so if it's opened */ }
+  }
   emit() { for (const fn of [...this.listeners]) { try { fn(this) } catch (e) { console.error('[cloud]', e) } } }
   setState(s) { this.state = s; this.emit() }
 

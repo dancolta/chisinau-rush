@@ -10,6 +10,7 @@ const STORY_TOTAL = MISSIONS.filter((m) => !m.activity).length
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e }
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+const PLAY = '<i class="ico play"></i>'
 const money = (n) => String(Math.round(n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 
 // "acum 2 min", "acum 3 ore", "ieri" (Romanian wants "de" from twenty up: "20 de ore")
@@ -96,7 +97,7 @@ export function renderAccount(game, root, { back = null, navRoot = null, autofoc
         <label class="acct-l"><span>Email</span><input name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="254" placeholder="tu@exemplu.md"></label>
         <label class="acct-l"><span>Parolă</span><span class="acct-pw"><input name="password" type="password" autocomplete="${signup ? 'new-password' : 'current-password'}" maxlength="200" placeholder="${signup ? 'minim 8 caractere' : 'parola ta'}"><button type="button" class="acct-eye" aria-label="Arată parola" title="Arată parola">👁</button></span></label>
         <div class="acct-err" role="alert" aria-live="polite"></div>
-        <button type="submit" class="btn primary acct-go">${signup ? '▶ Creează contul' : '▶ Intră în cont'}</button>
+        <button type="submit" class="btn primary acct-go">${PLAY}${signup ? 'Creează contul' : 'Intră în cont'}</button>
       </form>
       <div class="acct-note">${signup ? 'Parola: minim 8 caractere. Nu pune aceeași parolă ca la bancă: aici e Chișinău.' : 'Ai jucat deja fără cont? Progresul de aici nu se pierde: după ce intri, alegi ce păstrezi.'}</div>`
     const emailIn = wrap.querySelector('input[name=email]'), pwIn = wrap.querySelector('input[name=password]')
@@ -139,7 +140,7 @@ export function renderAccount(game, root, { back = null, navRoot = null, autofoc
       if (r.ok) { game.audio?.sfx('confirm', { bus: 'ui' }); render(); return }
       if (!go.isConnected) return
       go.disabled = false
-      go.textContent = mode === 'signup' ? '▶ Creează contul' : '▶ Intră în cont'
+      go.innerHTML = PLAY + (mode === 'signup' ? 'Creează contul' : 'Intră în cont')
       showErr(r.error)
       game.audio?.sfx('error', { bus: 'ui' })
       pwIn.focus()
@@ -156,7 +157,7 @@ export function renderAccount(game, root, { back = null, navRoot = null, autofoc
       <div class="acct-status"><i></i><span></span></div>
       <div class="acct-save">${local ? `💾 ${saveLine(local)}` : '💾 Încă nicio salvare. Începe un joc și se salvează singur.'}</div>
       <div class="acct-err" role="alert" aria-live="polite"></div>
-      <div class="acct-row"><button type="button" class="btn acct-sync">⟳ Sincronizează</button><button type="button" class="btn danger acct-out">Deconectare</button></div>
+      <div class="acct-row"><button type="button" class="btn acct-sync"><i class="ico rotate"></i>Sincronizează</button><button type="button" class="btn danger acct-out"><i class="ico exit"></i>Deconectare</button></div>
       <div class="acct-note">Cât joci, progresul pleacă singur în cloud. Pe alt dispozitiv intri cu același email și aceeași parolă.</div>`
     paintStatus()
     const errEl = wrap.querySelector('.acct-err')
@@ -174,7 +175,7 @@ export function renderAccount(game, root, { back = null, navRoot = null, autofoc
       out.textContent = 'Se deconectează…'
       await cloud.logout()
       busy = false
-      if (cloud.loggedIn) { out.disabled = false; out.textContent = 'Deconectare'; errEl.textContent = 'Nu te-am putut deconecta acum. Mai încearcă.'; errEl.classList.add('on'); return }
+      if (cloud.loggedIn) { out.disabled = false; out.innerHTML = '<i class="ico exit"></i>Deconectare'; errEl.textContent = 'Nu te-am putut deconecta acum. Mai încearcă.'; errEl.classList.add('on'); return }
       game.audio?.sfx('back', { bus: 'ui' })
       mode = 'login'
       render()
@@ -205,7 +206,7 @@ export function renderAccount(game, root, { back = null, navRoot = null, autofoc
 
 // main menu: the account panel as a full screen over the title
 export function openAccountScreen(game, { onClose } = {}) {
-  const m = el('div', 'pause over acct-screen', '<div class="top"><h1>CONT</h1></div><div class="body"></div><div class="foot"><button type="button" class="btn primary acct-back">‹ Înapoi</button></div>')
+  const m = el('div', 'pause over acct-screen', '<div class="top"><h1>CONT</h1></div><div class="body"></div><div class="foot"><button type="button" class="btn primary acct-back"><i class="ico back"></i>Înapoi</button></div>')
   game.ui.top.appendChild(m)
   let dispose = null
   const close = () => {

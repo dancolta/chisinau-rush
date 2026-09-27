@@ -74,11 +74,11 @@ export async function taxiFare(m, { taxi = null, spec = null, name = 'Clientul',
     if (taxi && inside !== was) {
       was = inside
       if (!inside) { m.marker(taxi.pos, 'Taxiul'); m.sub('Întoarce-te în taxi ({y}[E]{/y}), clientul așteaptă!') }
-      else if (phase === 'pickup') { m.marker({ x: from.x, z: from.z }, name); m.sub('Oprește lângă el cu taxiul.') }
+      else if (phase === 'pickup') { m.marker({ x: from.x, z: from.z }, name); m.sub('Oprește taxiul lângă client.') }
       else { m.marker(to, toLabel); m.sub('Bacșiș dacă ajungi repede și fără bușituri.') }
     }
   })
-  m.objective(`Ia clientul: {y}${name}{/y}.`, { sub: 'Oprește lângă el cu taxiul.' })
+  m.objective(`Ia clientul: {y}${name}{/y}.`, { sub: 'Oprește taxiul lângă client.' })
   m.marker({ x: from.x, z: from.z }, name)
   let waved = false
   await m.until(() => {
@@ -135,7 +135,7 @@ export async function taxiFare(m, { taxi = null, spec = null, name = 'Clientul',
   m.untrack(hook)
   m.untrack(watch)
   if (shown) g.ui.setTimer(null)
-  return { total, secs, crashes, npc }
+  return { total, secs, crashes, tip, npc }
 }
 
 // ---------------------------------------------------------------------------
@@ -240,7 +240,7 @@ export async function runRace(m, { nodes, laps = 1, rivals = [], car, ringEvery 
   if (nxt) nxt.setDim(true)
   m.marker({ x: cur.x, z: cur.z }, 'Inel')
   const pT = new PathTracker(path, true)
-  let finishedRivals = 0, place = 0
+  let finishedRivals = 0, place = 0, lead = 0
   let t = 0
   const loop = m.every((dt) => {
     t += dt
@@ -263,7 +263,8 @@ export async function runRace(m, { nodes, laps = 1, rivals = [], car, ringEvery 
       g.audio?.sfx('checkpoint', { bus: 'ui' })
       m.untrack(cur)
       ri++
-      if (ri >= rings.length) { place = ahead + 1; return true }
+      // how far back the nearest rival is when you cross the line (the rating likes a big one)
+      if (ri >= rings.length) { place = ahead + 1; lead = Math.max(0, total - Math.max(0, ...cars.map((c) => c.s || 0))); return true }
       cur = nxt || ringAt(ri); cur.setDim(false)
       nxt = ri + 1 < rings.length ? ringAt(ri + 1) : null
       if (nxt) nxt.setDim(true)
@@ -278,5 +279,5 @@ export async function runRace(m, { nodes, laps = 1, rivals = [], car, ringEvery 
   if (cur) m.untrack(cur)
   if (nxt) m.untrack(nxt)
   for (const d of drivers) { d.speedMul = 0.6 }
-  return { won: place === 1, place, time: t }
+  return { won: place === 1, place, time: t, lead: place === 1 ? lead : 0 }
 }

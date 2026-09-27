@@ -9,6 +9,8 @@ import { fmt } from './UI.js'
 import { WORLD } from '../world/CityLayout.js'
 import { padNav } from './Nav.js'
 import { renderAccount, openAccountScreen, chooseSave, cloudStatus, saveLine } from './Account.js'
+import { GoalsUI } from '../side/GoalsUI.js'
+import { STREET_STATS } from '../data/goals.js'
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e }
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
@@ -19,11 +21,12 @@ const MAP_NAME = {
   gradina: 'Grădina Publică', primaria: 'Primăria', opera: 'Opera', parlament: 'Parlamentul', usm: 'USM',
   kotovski: 'Kotovski', hotel: 'Hotel Național', teatru: 'Teatrul Eminescu', muzeu: 'Muzeul de Istorie',
   autogara: 'Autogara', circ: 'Circul', gara: 'Gara', biserica: 'Biserica', piata: 'Piața Centrală',
+  comisariat: 'Poliția',
 }
 const MAP_RANK = {
   pman: 10, gara: 9, piata: 9, guvern: 8, catedrala: 8, arc: 7, primaria: 7, parlament: 7, opera: 6, circ: 6,
   gradina: 6, autogara: 6, presedintia: 5, usm: 5, stefan: 4, teatru: 4, muzeu: 4, hotel: 4, ambasada: 4,
-  kotovski: 3, parc_catedrala: 3, clopotnita: 2, sala_orga: 2, biserica: 2,
+  kotovski: 3, parc_catedrala: 3, clopotnita: 2, sala_orga: 2, biserica: 2, comisariat: 5,
 }
 
 // cinematic loop for the title screen: [from, to, lookFrom, lookTo, secs]
@@ -54,14 +57,15 @@ export class Menus {
     this.ui.showHud(false)
     const m = el('div', 'mainmenu', `
       <div class="side">
-        <div class="mm-logo">CHIȘINĂU<span>RUSH</span></div>
+        <div class="mm-logo logo">CHIȘINĂU<span>RUSH</span></div>
         <div class="mm-tag">De la <b class="y">plecat peste hotare</b> la <b class="y">primar</b>. Un oraș, o sută de gropi, un primar care vorbește prea des la telefon.</div>
         <div class="mm-btns"></div>
         <div class="mm-save"></div>
         <div class="mm-cloud"></div>
-        <div class="mm-foot">W/S mers · A/D rotire · Shift sprint · E acțiune · Click/J lovește · Space sari / frână · Q armă · V cameră · M hartă · Esc pauză<br>Asset-uri CC0: KayKit (Kay Lousberg), Kenney. Satiră. Orice asemănare cu primari reali e… lucrăm la asta.</div>
-      </div><div></div>`)
+      </div>
+      <div class="mm-stage"><div class="mm-daily"></div><div class="mm-foot"><div class="k">W/S mers · A/D rotire · Shift sprint · E acțiune · Click/J lovește · Space sari / frână · Q armă · V cameră · M hartă · Esc pauză</div><div class="cr">Asset-uri CC0: KayKit (Kay Lousberg), Kenney. Satiră. Orice asemănare cu primari reali e… lucrăm la asta.</div></div></div>`)
     const btns = m.querySelector('.mm-btns')
+    const ico = (name) => `<i class="ico ${name}"></i>`
     const add = (label, cls, fn) => { const b = el('button', 'btn ' + cls, label); b.onclick = () => { g.audio?.resume(); g.audio?.sfx('confirm', { bus: 'ui' }); fn(b) }; b.onmouseenter = () => g.audio?.sfx('hover', { bus: 'ui', vol: 0.4 }); btns.appendChild(b); return b }
     // buttons and save line follow the save on disk, which the cloud can swap while we're here
     let shown = null
@@ -71,18 +75,21 @@ export class Menus {
       if (key !== shown) {
         shown = key
         btns.innerHTML = ''
-        if (save) add('▶  Continuă', 'primary', (b) => this.continueSaved(b))
-        add(save ? '＋  Joc nou' : '▶  Joc nou', save ? '' : 'primary', async () => {
+        if (save) add(`${ico('play')}Continuă`, 'primary', (b) => this.continueSaved(b))
+        add(`${ico(save ? 'plus' : 'play')}Joc nou`, save ? '' : 'primary', async () => {
           // the boot sync may still be bringing a save from the cloud: know before starting over
           await cloud?.ready()
           const lost = cloud?.loggedIn ? 'Salvarea curentă se pierde, și cea din cloud.' : 'Salvarea curentă se pierde.'
           if (Progress.hasSave() && !(await this.confirm('Începi un joc nou?', `${lost} Tanti Zina o să uite tot. Și ea uită greu.`))) return
           this.showCreate()
         })
-        if (cloud?.enabled) add(cloud.loggedIn ? '☁  Cont' : '👤  Cont', 'acct-btn', () => this.showAccount())
-        add('🎬  Trailer', '', () => this.showTrailer())
-        add('⚙  Setări', '', () => this.showSettingsOnly())
-        m.querySelector('.mm-save').innerHTML = save ? `Salvare: ${saveLine(save)} · ${new Date(save.t).toLocaleString('ro-RO')}` : ''
+        if (cloud?.enabled) add(`${ico(cloud.loggedIn ? 'cloud' : 'user')}Cont`, 'acct-btn', () => this.showAccount())
+        add(`${ico('film')}Trailer`, '', () => this.showTrailer())
+        add(`${ico('gear')}Setări`, '', () => this.showSettingsOnly())
+        // the save on a cardboard tag: who, how far, when
+        m.querySelector('.mm-save').innerHTML = save ? `<b>SALVAREA TA</b>${saveLine(save)}<small> · ${new Date(save.t).toLocaleString('ro-RO')}</small>` : ''
+        // the daily bonus: where the streak stands and what today brings (paid once you're in)
+        m.querySelector('.mm-daily').innerHTML = GoalsUI.titleStrip(save)
       }
       const st = cloud?.loggedIn ? cloudStatus(cloud) : null
       const line = m.querySelector('.mm-cloud')
@@ -109,7 +116,7 @@ export class Menus {
     const g = this.game
     if (this.starting) return
     this.starting = true
-    if (g.cloud?.busy && btn) btn.textContent = '☁  Se sincronizează…'
+    if (g.cloud?.busy && btn) btn.innerHTML = '<i class="ico cloud"></i>Se sincronizează…'
     await g.cloud?.ready()
     this.starting = false
     const save = Progress.hasSave()
@@ -124,7 +131,7 @@ export class Menus {
 
   confirm(title, text) {
     return new Promise((res) => {
-      const d = el('div', 'confirm', `<div class="box"><h3>${title}</h3><p>${text}</p><div class="row"><button class="btn danger yes">Da</button><button class="btn primary no">Nu</button></div></div>`)
+      const d = el('div', 'confirm', `<div class="box hartie"><h3>${title}</h3><p>${text}</p><div class="row"><button class="btn danger yes">Da</button><button class="btn primary no">Nu</button></div></div>`)
       this.layer.appendChild(d)
       const stop = padNav(this.game, d, { back: () => { done(false); return true } })
       const done = (v) => { stop(); d.remove(); this.game.audio?.sfx(v ? 'confirm' : 'back', { bus: 'ui' }); res(v) }
@@ -153,17 +160,19 @@ export class Menus {
     let sel = 0, name = ''
     const m = el('div', 'create', `
       <div class="side">
+        <div class="cr-kick"><b>SOSIRI</b>Chișinău · după ani de „afară”</div>
         <h2>CINE S-O ÎNTORS?</h2>
-        <div class="q">Ani de muncă „afară". Acum te întorci la Chișinău. Cine ești și ce-ai adus cu tine?</div>
-        <input maxlength="16" placeholder="Numele tău (ex: Ion)" />
+        <div class="q">Ani de muncă „afară”. Acum te întorci la Chișinău. Cine ești și ce-ai adus cu tine?</div>
+        <label class="cr-name"><span>NUMELE TĂU</span><input maxlength="16" placeholder="Numele tău (ex: Ion)" /></label>
         <div class="types"></div>
-        <div class="actions"><button class="btn primary go">▶ Începe povestea</button><button class="btn back">‹ Înapoi</button></div>
+        <div class="actions"><button class="btn primary go"><i class="ico play"></i>Începe povestea</button><button class="btn back"><i class="ico back"></i>Înapoi</button></div>
       </div><div></div>`)
     const input = m.querySelector('input')
     input.oninput = () => { name = input.value }
     const types = m.querySelector('.types')
     const cards = PLAYER_TYPES.map((t, i) => {
-      const c = el('div', 'type', `<div class="n">${t.name}</div><div class="bl">${t.blurb}</div><div class="pk">⚡ ${t.perk}</div>`)
+      const c = el('div', 'type', `<div class="n">${t.name}</div><div class="bl">${t.blurb}</div><div class="pk"><i class="ico aura"></i>${t.perk}</div>`)
+      c.dataset.k = t.key
       c.onclick = () => { sel = i; paint(); g.audio?.sfx('click', { bus: 'ui' }) }
       types.appendChild(c)
       return c
@@ -179,7 +188,7 @@ export class Menus {
     // turn the character round: drag on the right half, or the arrow keys when not typing
     const stage = m.children[1]
     stage.classList.add('turntable')
-    stage.innerHTML = '<div class="turn-hint">⟲ Trage ca să rotești personajul · ← →</div>'
+    stage.innerHTML = '<div class="turn-hint hartie"><i class="ico rotate"></i>Trage ca să rotești personajul <span class="key">←</span><span class="key">→</span></div>'
     let dragX = null
     stage.addEventListener('pointerdown', (e) => { dragX = e.clientX; stage.setPointerCapture?.(e.pointerId) })
     stage.addEventListener('pointermove', (e) => { if (dragX === null) return; this.turnPreview((e.clientX - dragX) * 0.012); dragX = e.clientX })
@@ -192,6 +201,12 @@ export class Menus {
       if (e.code === 'ArrowRight') { this.turnPreview(0.25); e.preventDefault() }
     }
     window.addEventListener('keydown', onKey)
+    // the window turned from wide to tall or back: frame the character for the new layout
+    const onResize = () => {
+      if (!document.body.contains(m)) { window.removeEventListener('resize', onResize); return }
+      if (this.previewChar && (innerHeight > innerWidth) !== this.previewTall) this.framePreview()
+    }
+    window.addEventListener('resize', onResize)
     this.layer.appendChild(m)
     this.open = m
     this.previewYaw = null
@@ -210,7 +225,20 @@ export class Menus {
     this.previewChar = new Character(g, CAST[type], { x, z, ry })
     g.npcs.push(this.previewChar)
     this.previewChar.anim.play('wave')
-    g.cameraRig.shot({ from: [x - 2.6, 1.9, z + 4.2], to: [x - 1.9, 1.7, z + 3.6], look: [x - 0.6, 1.15, z], dur: 30, ease: 'out' })
+    this.previewAt = { x, z }
+    this.framePreview()
+  }
+
+  // the camera on the character: beside the form on a wide window; on a tall one the form is
+  // below and the character stands in the band above it, so the camera steps back along the
+  // same line and aims low
+  framePreview() {
+    const g = this.game, a = this.previewAt
+    if (!a) return
+    const { x, z } = a
+    this.previewTall = innerHeight > innerWidth
+    if (this.previewTall) g.cameraRig.shot({ from: [x - 5.4, 1.9, z + 10.2], to: [x - 4.9, 1.7, z + 9.2], look: [x, -1.45, z], dur: 30, ease: 'out' })
+    else g.cameraRig.shot({ from: [x - 2.6, 1.9, z + 4.2], to: [x - 1.9, 1.7, z + 3.6], look: [x - 0.6, 1.15, z], dur: 30, ease: 'out' })
   }
 
   turnPreview(d) {
@@ -239,9 +267,9 @@ export class Menus {
     g.audio?.duck(0.35, 0.3)
     const m = el('div', 'pause', `
       <div class="top"><h1>PAUZĂ</h1><div class="tabs">
-        <button data-t="map">Hartă</button><button data-t="missions">Misiuni</button><button data-t="char">Personaj</button><button data-t="aura">Aură</button><button data-t="controls">Controale</button><button data-t="settings">Setări</button>${g.cloud?.enabled ? '<button data-t="account">Cont</button>' : ''}</div></div>
+        <button data-t="map">Hartă</button><button data-t="missions">Misiuni</button><button data-t="progress">Progres</button><button data-t="ach">Realizări</button><button data-t="char">Personaj</button><button data-t="aura">Aură</button><button data-t="controls">Controale</button><button data-t="settings">Setări</button>${g.cloud?.enabled ? '<button data-t="account">Cont</button>' : ''}</div></div>
       <div class="body"></div>
-      <div class="foot"><button class="btn primary resume">▶ Continuă</button><button class="btn save">💾 Salvează</button><button class="btn danger quit">Meniu principal</button></div>`)
+      <div class="foot"><button class="btn primary resume"><i class="ico play"></i>Continuă</button><button class="btn save"><i class="ico save"></i>Salvează</button><button class="btn danger quit"><i class="ico exit"></i>Meniu principal</button></div>`)
     this.layer.appendChild(m)
     this.open = m
     const body = m.querySelector('.body')
@@ -254,6 +282,8 @@ export class Menus {
       body.innerHTML = ''
       if (t === 'map') this.renderMap(body)
       else if (t === 'missions') this.renderMissions(body)
+      else if (t === 'progress') g.side?.goals && new GoalsUI(g.side.goals).renderProgress(body)
+      else if (t === 'ach') g.side?.goals && new GoalsUI(g.side.goals).renderAchievements(body)
       else if (t === 'char') this.renderChar(body)
       else if (t === 'aura') g.side?.renderPause(body)
       else if (t === 'controls') this.renderControls(body)
@@ -319,14 +349,13 @@ export class Menus {
   renderMap(body) {
     const g = this.game
     const wrap = el('div', 'bigmap'); body.appendChild(wrap)
-    const side = el('div', 'col legend', `
-      <div style="font-family:var(--display);color:var(--gold);margin-bottom:8px">LEGENDĂ</div>
+    const side = el('div', 'col legend hartie', `
+      <div class="col-h">LEGENDĂ</div>
       <div><i style="background:#ffcf4a"></i>Obiectiv / waypoint</div>
       <div><i style="background:#7fd4ff"></i>Personaje cu treabă</div>
       <div><i style="background:#ff3a3a"></i>Poliția</div>
       <div><i style="background:#fff"></i>Tu</div>
-      <div style="margin-top:12px;color:var(--muted)">Click pe hartă pentru a pune un punct GPS. Click dreapta îl șterge.</div>`)
-    side.style.width = '240px'; side.style.flex = 'none'
+      <div class="hint">Click pe hartă pentru a pune un punct GPS. Click dreapta îl șterge.</div>`)
     body.appendChild(side)
     const cv = document.createElement('canvas'); wrap.appendChild(cv)
     const tip = el('div', 'map-tip'); wrap.appendChild(tip)
@@ -405,17 +434,17 @@ export class Menus {
   renderMissions(body) {
     const g = this.game
     const col = el('div', 'col'); col.style.flex = '1'; body.appendChild(col)
-    col.appendChild(el('div', '', '<div style="font-family:var(--display);color:var(--gold);margin-bottom:10px">POVESTEA</div>'))
+    col.appendChild(el('div', 'col-h', 'POVESTEA'))
     for (const m of g.story.catalog()) {
       const cls = m.done ? 'done' : m.current ? 'cur' : ''
-      col.appendChild(el('div', 'mission-item ' + cls, `<div class="mt">${m.done ? '✔ ' : m.current ? '► ' : m.locked ? '🔒 ' : '• '}${m.title}</div><div class="md">${fmt(m.locked ? 'Se deblochează mai târziu.' : m.desc)}</div>`))
+      g.story.missionRow?.(col.appendChild(el('div', 'mission-item ' + cls, `<div class="mt">${m.done ? '✔ ' : m.current ? '► ' : m.locked ? '🔒 ' : '• '}${m.title}</div><div class="md">${fmt(m.locked ? 'Se deblochează mai târziu.' : m.desc)}</div>`)), m)
     }
     const col2 = el('div', 'col'); col2.style.flex = '1'; body.appendChild(col2)
     const ev = g.story.evidence()
-    col2.appendChild(el('div', '', `<div style="font-family:var(--display);color:var(--gold);margin-bottom:10px">DOVEZI · ${ev.length}/6</div>`))
+    col2.appendChild(el('div', 'col-h', `DOVEZI · ${ev.length}/6`))
     if (!ev.length) col2.appendChild(el('div', 'mission-item', '<div class="md">Încă nimic. Orașul vorbește, trebuie doar să asculți.</div>'))
-    for (const e of ev) col2.appendChild(el('div', 'mission-item evidence-item', `<div class="mt">📁 ${fmt(e.title)}</div><div class="md">${fmt(e.text)}</div>`))
-    col2.appendChild(el('div', '', '<div style="font-family:var(--display);color:var(--gold);margin:16px 0 10px">ACTIVITĂȚI</div>'))
+    for (const e of ev) col2.appendChild(el('div', 'mission-item evidence-item', `<div class="mt">${fmt(e.title)}</div><div class="md">${fmt(e.text)}</div>`))
+    col2.appendChild(el('div', 'col-h', 'ACTIVITĂȚI'))
     const acts = g.story.activities()
     if (!acts.length) col2.appendChild(el('div', 'mission-item', '<div class="md">Se deblochează pe parcursul poveștii: taxi, curse, livrări, gropi, dosare.</div>'))
     for (const a of acts) col2.appendChild(el('div', 'mission-item', `<div class="mt">${a.title}</div><div class="md">${fmt(a.desc)}</div>`))
@@ -426,27 +455,27 @@ export class Menus {
     const t = PLAYER_TYPES.find((x) => x.key === pr.type) || PLAYER_TYPES[0]
     const next = pr.nextRank
     const col = el('div', 'col'); col.style.flex = '1'; body.appendChild(col)
-    col.innerHTML = `<div style="display:flex;gap:18px;align-items:center;margin-bottom:14px"><div style="width:110px;height:110px;border-radius:14px;border:3px solid var(--gold);background:url(${g.portraits.get({ id: 'player', spec: g.player?.char?.spec || CAST[pr.type] })}) center/cover"></div>
-      <div><div style="font-family:var(--title);font-size:34px;color:#fff;letter-spacing:1px">${pr.name}</div><div style="color:var(--muted)">${t.name}</div>
-      <div style="margin-top:6px;font-family:var(--display);color:var(--gold)">${pr.rank.name}</div>
-      <div style="font-size:12.5px;color:#cfc8bb">${next ? `${pr.xp} / ${next.xp} XP până la „${next.name}"` : 'Rang maxim'}</div></div></div>
-      <div style="font-size:13.5px;color:#e5dccb;margin-bottom:10px">⚡ ${t.perk}</div>`
+    col.innerHTML = `<div class="ch-head"><div class="ch-photo"><i style="background-image:url(${g.portraits.get({ id: 'player', spec: g.player?.char?.spec || CAST[pr.type] })})"></i></div>
+      <div><div class="ch-name">${esc(pr.name)}</div><div class="ch-type">${t.name}</div>
+      <div class="ch-rank">${pr.rank.name}</div>
+      <div class="ch-xp">${next ? `${pr.xp} / ${next.xp} XP până la „${next.name}”` : 'Rang maxim'}</div></div></div>
+      <div class="ch-perk"><i class="ico aura"></i> ${t.perk}</div>`
     const rows = [
-      ['Lei', pr.lei], ['Viață', `${Math.round(pr.hp)} / ${pr.maxHp}`], ['Respect pe stradă', pr.cred + ' / 100'], ['Respect civic', pr.civic + ' / 100'],
+      ['Lei', pr.lei], ['Viață', `${Math.round(pr.hp)} / ${pr.maxHp}`], [`${STREET_STATS.cred.icon} ${STREET_STATS.cred.name}`, pr.cred + ' / 100'], [`${STREET_STATS.civic.icon} ${STREET_STATS.civic.name}`, pr.civic + ' / 100'],
       ['👊 Gopnicii te știu', `${pr.tierName('gop')} · ${pr.respect.gop}${pr.look.gop ? ` (haine ${pr.look.gop > 0 ? '+' : ''}${pr.look.gop})` : ''}`], ['🥧 Babele te știu', `${pr.tierName('bab')} · ${pr.respect.bab}${pr.look.bab ? ` (haine ${pr.look.bab > 0 ? '+' : ''}${pr.look.bab})` : ''}`], ['👮 Poliția te știe', `${pr.tierName('pol')} · ${pr.respect.pol}${pr.look.pol ? ` (haine ${pr.look.pol > 0 ? '+' : ''}${pr.look.pol})` : ''}`],
       ['Vorbit cu lumea', pr.stats.talks || 0], ['Gașcă adunată', pr.stats.recruits || 0],
       ['Dosare găsite', pr.dosare.length], ['Gropi astupate', pr.potholes.length], ['Oameni puși la pământ', pr.stats.ko], ['Mașini „împrumutate"', pr.stats.cars],
-      ['Curse de taxi', pr.stats.fares], ['Mită dată', pr.stats.bribes], ['Leșinat', pr.stats.fainted], ['Kilometri condus', (pr.stats.km / 1000).toFixed(1)],
+      ['Curse de taxi', pr.stats.fares], ['Mită dată', pr.stats.bribes], ['Leșinat', pr.stats.fainted], ['Kilometri conduși', (pr.stats.km / 1000).toFixed(1)],
     ]
     for (const [a, b] of rows) col.appendChild(el('div', 'stat-row', `<span>${a}</span><span>${b}</span>`))
     const col2 = el('div', 'col'); col2.style.flex = '1'; body.appendChild(col2)
-    col2.innerHTML = '<div style="font-family:var(--display);color:var(--gold);margin-bottom:10px">ARME</div>'
+    col2.innerHTML = '<div class="col-h">ARME</div>'
     for (const k of Object.keys(WEAPONS)) {
       const w = WEAPONS[k], has = pr.weapons.includes(k)
       const where = pr.weapon === k ? 'în mână' : k === 'fist' || pr.carry.includes(k) ? 'la tine' : 'acasă, în ladă'
       col2.appendChild(el('div', 'stat-row', `<span>${w.icon} ${w.name}</span><span style="color:${has ? '#9cf07c' : '#6a655c'}">${has ? where : w.price ? w.price + ' lei' : '-'}</span>`))
     }
-    col2.appendChild(el('div', '', '<div style="font-family:var(--display);color:var(--gold);margin:16px 0 10px">RANGURI</div>'))
+    col2.appendChild(el('div', 'col-h', 'RANGURI'))
     RANKS.forEach((r, i) => col2.appendChild(el('div', 'stat-row', `<span style="color:${i <= pr.rankIdx ? '#fff' : '#6a655c'}">${i + 1}. ${r.name}</span><span>${r.xp} XP</span>`)))
   }
 
@@ -494,7 +523,9 @@ export class Menus {
     chk('invertCam', 'Inversează axa verticală a camerei')
     const slider = (key, label, min, max, step, apply) => {
       const r = el('input'); r.type = 'range'; r.min = min; r.max = max; r.step = step; r.value = s[key]
-      r.oninput = () => { s[key] = parseFloat(r.value); apply?.(); saveSettings(s) }
+      const fill = () => r.style.setProperty('--v', `${((r.value - min) / (max - min)) * 100}%`)
+      fill()
+      r.oninput = () => { s[key] = parseFloat(r.value); fill(); apply?.(); saveSettings(s) }
       row(label, r)
     }
     const vol = () => g.audio?.setVolumes(s)
@@ -514,7 +545,7 @@ export class Menus {
     const g = this.game
     const base = import.meta.env.BASE_URL || './'
     // H.264 for most browsers, VP9 for the ones built without it
-    const d = el('div', 'trailer', `<div class="box"><video poster="${base}trailer-poster.jpg" controls autoplay playsinline preload="auto"><source src="${base}trailer.mp4" type="video/mp4"><source src="${base}trailer.webm" type="video/webm"></video><button class="btn close">✕  Închide</button></div>`)
+    const d = el('div', 'trailer', `<div class="box"><div class="tr-head"><div class="col-h">TRAILER · CHIȘINĂU RUSH</div><button class="btn close"><i class="ico close"></i>Închide</button></div><video poster="${base}trailer-poster.jpg" controls autoplay playsinline preload="auto"><source src="${base}trailer.mp4" type="video/mp4"><source src="${base}trailer.webm" type="video/webm"></video></div>`)
     this.layer.appendChild(d)
     const v = d.querySelector('video')
     v.querySelector('source:last-child').addEventListener('error', () => {
@@ -530,7 +561,7 @@ export class Menus {
   showSettingsOnly() {
     const g = this.game
     // on top of the title screen (the main menu layer sits above the in-game pause layer)
-    const m = el('div', 'pause over', '<div class="top"><h1>SETĂRI</h1></div><div class="body"></div><div class="foot"><button class="btn primary">‹ Înapoi</button></div>')
+    const m = el('div', 'pause over', '<div class="top"><h1>SETĂRI</h1></div><div class="body"></div><div class="foot"><button class="btn primary"><i class="ico back"></i>Înapoi</button></div>')
     this.layer.appendChild(m)
     this.renderSettings(m.querySelector('.body'))
     const close = () => { if (!m.isConnected) return; stop(); m.remove(); window.removeEventListener('keydown', onKey, true); g.audio?.sfx('back', { bus: 'ui' }) }

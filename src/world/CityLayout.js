@@ -22,8 +22,22 @@ export const V_ROADS = [
 
 export const LANE_W = 3.5
 export const CURB_H = 0.16
-export const WORLD = { x0: -500, x1: 500, z0: -350, z1: 380 }
 export const RAIL_Z = 318
+
+// The playable city ends at a barrier you can see on every side (Edge.js builds them): the Bîc's
+// parapet in the north, the Valea Morilor retaining wall in the west, the ring highway's wall in
+// the east and the railway's concrete fence in the south. These are their inner faces, and the
+// colliders stand exactly there.
+export const BOUNDS = { x0: -478, x1: 478, z0: -330, z1: 336 }
+
+// What's built and drawn on the map: the city plus a strip of what lies beyond the edge (the
+// river, the wooded slope, the highway, the old combinat). Past it there's only the horizon.
+export const WORLD = { x0: BOUNDS.x0 - 60, x1: BOUNDS.x1 + 60, z0: BOUNDS.z0 - 60, z1: BOUNDS.z1 + 60 }
+
+// how far inside the playable limit (x, z) is; negative once past it
+export function edgeDistance(x, z) {
+  return Math.min(x - BOUNDS.x0, BOUNDS.x1 - x, z - BOUNDS.z0, BOUNDS.z1 - z)
+}
 
 // what fills each block: [row][col]
 export const ZONES = [
@@ -57,6 +71,37 @@ export const GRID = {
   z0: H_ROADS[0].z, z1: H_ROADS[H_ROADS.length - 1].z,
 }
 
+// Roads that leave the grid and end at the edge: the boulevard both ways (a police post at each
+// end), Pușkin north onto the Bîc bridge that has been "under repair" for years, and Vlaicu
+// Pârcălab south over the level crossing to the gate of the old combinat.
+// Each stub runs from the ring road to the limit; `c` is its centreline, `half` half its
+// carriageway, `open` half the gap it leaves in the barrier (carriageway plus kerbside).
+export const EXITS = [
+  { id: 'vest', side: 'w', road: 'BD', name: 'Calea Ieșilor', shoulder: 1.5 },
+  { id: 'est', side: 'e', road: 'BD', name: 'Bd. Dacia', shoulder: 1.5 },
+  { id: 'pod', side: 'n', road: 'V4', name: 'Str. Alexandru Pușkin', shoulder: 3 },
+  { id: 'combinat', side: 's', road: 'V2', name: 'Str. Uzinelor', shoulder: 1 },
+].map((e) => {
+  const r = H_ROADS.find((h) => h.id === e.road) || V_ROADS.find((v) => v.id === e.road)
+  const ring = { w: V_ROADS[0], e: V_ROADS[V_ROADS.length - 1], n: H_ROADS[0], s: H_ROADS[H_ROADS.length - 1] }[e.side]
+  const horizontal = e.side === 'w' || e.side === 'e'
+  const c = horizontal ? r.z : r.x, half = r.w / 2
+  // from the ring road's outer edge to the limit
+  const from = horizontal ? ring.x + (e.side === 'w' ? -1 : 1) * ring.w / 2 : ring.z + (e.side === 'n' ? -1 : 1) * ring.w / 2
+  const to = { w: BOUNDS.x0, e: BOUNDS.x1, n: BOUNDS.z0, s: BOUNDS.z1 }[e.side]
+  const a = Math.min(from, to), b = Math.max(from, to)
+  const rect = horizontal ? { x0: a, x1: b, z0: c - half, z1: c + half } : { x0: c - half, x1: c + half, z0: a, z1: b }
+  return { ...e, r, horizontal, c, half, open: half + e.shoulder, from, to, rect }
+})
+
+export function exitAt(x, z, pad = 0) {
+  for (const e of EXITS) {
+    const R = e.rect, o = e.open - e.half + pad
+    if (e.horizontal ? x >= R.x0 - pad && x <= R.x1 + pad && z >= R.z0 - o && z <= R.z1 + o : x >= R.x0 - o && x <= R.x1 + o && z >= R.z0 - pad && z <= R.z1 + pad) return e
+  }
+  return null
+}
+
 // Is (x,z) on a road carriageway?
 export function onRoad(x, z, pad = 0) {
   for (const h of H_ROADS) if (Math.abs(z - h.z) <= h.w / 2 + pad && x >= GRID.x0 - 6 && x <= GRID.x1 + 6) return h
@@ -71,6 +116,10 @@ export function blockAt(x, z) {
 
 // Named street for the HUD location readout
 export function streetName(x, z) {
+  const ex = exitAt(x, z, 2)
+  if (ex) return ex.name
+  // the promenade along the river
+  if (z < BOUNDS.z0 + 12) return 'Str. Albișoara'
   let best = null, bd = 1e9
   for (const h of H_ROADS) { const d = Math.abs(z - h.z) - h.w / 2 - h.sw; if (d < bd && x >= GRID.x0 - 20 && x <= GRID.x1 + 20) { bd = d; best = h.name } }
   for (const v of V_ROADS) { const d = Math.abs(x - v.x) - v.w / 2 - v.sw; if (d < bd && z >= GRID.z0 - 20 && z <= GRID.z1 + 20) { bd = d; best = v.name } }

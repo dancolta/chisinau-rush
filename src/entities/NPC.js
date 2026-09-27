@@ -289,17 +289,19 @@ export class NPC {
     this.home = { x, z, ry: this.char.heading }
   }
 
-  dispose() {
+  // keep = the body goes back to the wardrobe (Pedestrians.remove), not to the bin
+  dispose(keep = false) {
     if (this.disposed) return
     this.disposed = true
     this.game.physics.remove(this.body)
-    this.char.dispose()
+    if (keep) this.char.detach(); else this.char.dispose()
     this.game.ui?.removeBubble(this)
   }
 }
 
 export const SCARED = ['Ajutooor!', 'Mămăăă!', 'Poliția! Sunați la poliție!', 'Fugiți, oameni buni!', 'Nebunul, nebunul!', 'Doamne ferește!', 'Ce faci, măi?!']
-export const TOUGH_ANGRY = ['Șo, bratan, vrei probleme?', 'Hai, vino-ncoace!', 'Îți fărâm fasonu\'!', 'Tu pe cine ai lovit, fraer?', 'Ai rămas fără dinți, bratan.']
-export const BABUSHKA_ANGRY = ['Obraznicule! Ți-ar fi rușine!', 'Te lovesc cu geanta, maică!', 'Pe vremea mea nu era așa!', 'Unde-i mama ta să te vadă?!']
-export const BUMPED = ['Ai grijă pe unde calci!', 'Șo te împingi?', 'Uită-te pe unde mergi, bre!', 'Măi, măi, măi…', 'Scuzați-mă, da nu.']
+// (said straight to the hero: [[his|hers]] is resolved by UI.bubble)
+export const TOUGH_ANGRY = ['Șo, [[bratan|tanti]], vrei probleme?', 'Hai, vino-ncoace!', 'Îți fărâm fasonu\'!', 'Tu pe cine ai lovit, [[fraer|fraieră]]?', 'Ai rămas fără dinți, [[bratan|tanti]].']
+export const BABUSHKA_ANGRY = ['[[Obraznicule|Obraznico]]! Ți-ar fi rușine!', 'Te lovesc cu geanta, maică!', 'Pe vremea mea nu era așa!', 'Unde-i mama ta să te vadă?!']
+export const BUMPED = ['Ai grijă pe unde calci!', 'Șo te împingi?', 'Uită-te pe unde mergi, bre!', 'Măi, măi, măi…', 'Scuzați-mă, da\' nu.']
 export function pickLine(arr) { return arr[Math.floor(Math.random() * arr.length)] }

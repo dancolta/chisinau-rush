@@ -3,7 +3,7 @@ import { CAST } from '../data/outfits.js'
 import { angleDiff } from '../entities/Character.js'
 import { COP, COPS } from '../data/streettalk.js'
 import { clearSight } from './Sight.js'
-import { fill } from '../story/hero.js'
+import { fill, gen } from '../story/hero.js'
 
 const THRESH = [0, 1, 18, 40, 70, 100] // heat needed for each star
 const FOOT = [0, 2, 3, 4, 5, 6]         // officers on foot per star
@@ -610,18 +610,18 @@ export class Police {
     for (const q of this.officers) if (!q.disposed && !q.char.ko && q.cop?.mode !== 'return') this.hold(q, p.pos)
     o.char.lookAtNow(p.pos.x, p.pos.z)
     p.char.lookAtNow(o.pos.x, o.pos.z)
-    let jailed = false
+    let custody = null
     try {
       const sp = { id: 'cop' + o.char.mesh.id, name: g.street?.name(o) || 'Sergentul', role: `Poliția Chișinău · te știe: ${pr.tierName('pol')}`, spec: o.char.spec, voice: o.voice }
       const fine = this.fineFor(lvl), bribe = this.bribeFor(lvl), odds = this.bribeOdds(lvl)
       const choices = [
         { text: 'Plătesc amenda pe loc.', cost: `${fine} lei · −1 ★`, disabled: pr.lei < fine, k: 'fine' },
         { text: '„Poate ne înțelegem, șefu\'…"', cost: `${bribe} lei · ${Math.round(odds * 100)}%`, disabled: pr.lei < bribe, k: 'bribe' },
-        { text: 'Mă predau. Duceți-mă la secție.', cost: 'amendă + 3 ore', k: 'give' },
+        { text: 'Mă predau. Duceți-mă la secție.', cost: g.director.custody().night ? 'amendă + o noapte' : 'amendă + 3 ore', k: 'give' },
         { text: '(O iei la fugă)', cost: '+★', k: 'run' },
       ]
       if (pr.flags.acteFalse) choices.unshift({ text: 'Arăți „actele" de la Borea', cost: 'acte false', k: 'papers' })
-      const i = await g.ui.dialogue(sp, [fill(g, lvl >= 3 ? COP.surrenderHot : pickLine(COP.surrender))], { choices })
+      const i = await g.ui.dialogue(sp, [fill(g, lvl >= 3 ? COP.surrenderHot : pickLine(COP.surrender))], { choices, focus: o })
       const k = choices[i]?.k || 'run'
       if (k === 'papers') {
         pr.flags.acteFalse = false
@@ -653,8 +653,8 @@ export class Police {
         pr.stats.busted++
         pr.addRespect('pol', 2)
         g.events.emit('police:deal', { how: 'jail' })
-        g.story.failActive('Ai fost reținut de poliție.')
-        jailed = true
+        g.story.failActive(gen(g, 'Ai fost reținut de poliție.', 'Ai fost reținută de poliție.'))
+        custody = { fine: fine2 }
       } else {
         o.say(COP.runAway, 2.4)
         this.addHeat(10)
@@ -662,10 +662,10 @@ export class Police {
         for (const q of this.officers) if (!q.disposed && dist(q.pos, p.pos) < 4) q.stun = 1.2
       }
     } finally {
-      p.char.anim.stop('surrender')
       this.talking = false
-      if (jailed) await g.director.jail()
-      else { p.control = true; g.input.clear() }
+      // given up: hands stay up while he has his say, then it's the Comisariat
+      if (custody) await g.director.jail(custody.fine, 1.6)
+      else { p.char.anim.stop('surrender'); p.control = true; g.input.clear() }
     }
   }
 

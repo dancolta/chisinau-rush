@@ -6,8 +6,8 @@ import { dist, pick, here, driving, leash, payout, speaker, lockPlayer, lose } f
 // always do), the whole city knows the route, and whoever loses pays for the diesel.
 
 const DRIVER = { ...CAST.taxist, top: { style: 'shirt', color: 0x3a4a6a, short: true }, hat: { style: 'kepka', color: 0x1a1a1a }, sunglasses: true }
-const SOFER = speaker('Șoferul rutierei 117', 'Botanica - Gară, fără oprire la cerere', DRIVER, { pitch: 0.85, type: 'gruff' })
-const TAUNT = ['Hai, hai, șmechere!', 'Rutiera nu frânează pentru nimeni!', 'Am 24 de pasageri și tot te bat!', 'Loc în picioare mai am, dacă vrei!']
+const SOFER = speaker('Șoferul rutierei 117', 'Botanica – Gară, fără oprire la cerere', DRIVER, { pitch: 0.85, type: 'gruff' })
+const TAUNT = ['Hai, hai, [[șmechere|șmechero]]!', 'Rutiera nu frânează pentru nimeni!', 'Am 24 de pasageri și tot te bat!', 'Loc în picioare mai am, dacă vrei!']
 
 // the route between two intersections, as lane points (the rutiera drives it, you drive how you like)
 function plan(g, from, minD, maxD) {

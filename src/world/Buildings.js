@@ -29,15 +29,16 @@ export class Buildings {
   }
 
   // ---------------------------------------------------------------------------
-  // Soviet panel block. Front (street side) = local +z.
+  // Soviet panel block. Front (street side) = local +z. chunk: batch size (coarser for blocks out
+  // past the edge of the map)
   panel(o) {
-    const { cx, cz, len, depth = 12, floors = 9, ry = 0, seed = 1, shop = false, balconySides = [1, -1], entrances = true, y0 = CURB_H } = o
+    const { cx, cz, len, depth = 12, floors = 9, ry = 0, seed = 1, shop = false, balconySides = [1, -1], entrances = true, y0 = CURB_H, chunk } = o
     const rnd = mulberry(seed)
     const color = o.color ?? rnd.pick(PANEL_COLORS)
     const fh = 2.8, h = floors * fh + 0.7
-    const fb = this.B.facade(cx, cz)
+    const fb = this.B.facade(cx, cz, chunk)
     fb.box(cx, cz, len, depth, y0, h, ry, color, [fh, 3.2, rnd() * 100, shop ? 5 : 1], 0x57534e, [1, 0, 1, 0], 10)
-    const g = this.B.vcol(cx, cz, 'bld')
+    const g = this.B.vcol(cx, cz, 'bld', chunk)
     const W = this.frame(cx, cz, ry)
     g.box(len + 0.3, 0.75, depth + 0.3, { x: cx, y: y0, z: cz, ry, color: shade(color, 0.6) })
     const top = y0 + h
@@ -185,8 +186,9 @@ export class Buildings {
     return H + rh
   }
 
-  // KayKit rows around a block's perimeter; returns the courtyard rect
-  historic(b, { sides = ['n', 's', 'e', 'w'], inset = 0.3, courtyard = true, tall = 1, exclude = [] } = {}) {
+  // KayKit rows around a block's perimeter; returns the courtyard rect. keepOut: rects inside
+  // the block that something else is built on (the courtyard leaves them alone)
+  historic(b, { sides = ['n', 's', 'e', 'w'], inset = 0.3, courtyard = true, tall = 1, exclude = [], keepOut = [] } = {}) {
     const seed = hashStr(b.id)
     const L = b.ix0 + inset, R = b.ix1 - inset, T = b.iz0 + inset, Bo = b.iz1 - inset
     const segs = (a0, a1) => {
@@ -206,7 +208,7 @@ export class Buildings {
       x0: L + (sides.includes('w') ? 10.5 : 1), x1: R - (sides.includes('e') ? 10.5 : 1),
       z0: T + (sides.includes('n') ? 10.5 : 1), z1: Bo - (sides.includes('s') ? 10.5 : 1),
     }
-    if (courtyard) this.courtyard(rect, mulberry(seed ^ 0x51ed))
+    if (courtyard) this.courtyard(rect, mulberry(seed ^ 0x51ed), { keepOut })
     return rect
   }
 
@@ -246,41 +248,59 @@ export class Buildings {
   }
 
   // ---------------------------------------------------------------------------
-  // Courtyard life: trees, garages, playground, benches, parking
+  // Courtyard life: trees, garages, playground, benches, parking. opts.keepOut: rects of the
+  // yard that something else stands on; nothing of the yard's goes there.
   courtyard(r, rnd, opts = {}) {
     const w = r.x1 - r.x0, d = r.z1 - r.z0
     if (w < 8 || d < 8) return
+    const keep = opts.keepOut || []
+    const inKeep = (x0, z0, x1, z1) => keep.some((k) => x0 < k.x1 && x1 > k.x0 && z0 < k.z1 && z1 > k.z0)
     // garages along one long edge
     if (opts.garages !== false && w > 30 && rnd.chance(0.6)) {
       const gz = rnd.chance(0.5) ? r.z0 + 3.2 : r.z1 - 3.2
       const n = Math.min(10, Math.floor((w - 6) / 3.3))
-      this.garageRow(r.x0 + 3, gz, n, gz === r.z0 + 3.2 ? 0 : Math.PI, rnd)
+      if (!inKeep(r.x0 + 3, gz - 3, r.x0 + 3 + n * 3.25, gz + 3)) this.garageRow(r.x0 + 3, gz, n, gz === r.z0 + 3.2 ? 0 : Math.PI, rnd)
       if (gz === r.z0 + 3.2) r = { ...r, z0: r.z0 + 7 }; else r = { ...r, z1: r.z1 - 7 }
     }
     const cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2
-    if (opts.playground !== false && w > 18 && d > 14) this.playground(cx, cz, rnd)
+    if (opts.playground !== false && w > 18 && d > 14 && !inKeep(cx - 9, cz - 7, cx + 9, cz + 7)) this.playground(cx, cz, rnd)
     // benches around the playground
     const bench = this.kay.bench
     for (const [bx, bz, br] of [[cx - 7, cz, Math.PI / 2], [cx + 7, cz, -Math.PI / 2]]) {
       if (w < 20) break
+      if (inKeep(bx - 1, bz - 1, bx + 1, bz + 1)) continue
       _q.setFromEuler(_e.set(0, br, 0)); _m.compose(_p.set(bx, CURB_H, bz), _q, _s.set(1, 1, 1))
       this.B.atlas(bx, bz, bench.geometry, _m.clone(), 'props')
       this.w.benches.push({ x: bx, z: bz, ry: br, yard: true })
     }
-    // trees scattered away from the centre
+    // trees scattered away from the centre, crowns clear of a kept-out plot. One that lands too
+    // close is replanted elsewhere in the yard, clear of every building, with dice of its own: the
+    // yard's dice run on as before, and every tree in the city takes its shape off one shared
+    // stream, so the count stays the same
     const nTrees = Math.floor((w * d) / 170)
+    const centre = (x, z) => Math.abs(x - cx) < 9 && Math.abs(z - cz) < 7
+    const onPlot = (x, z) => inKeep(x - 4, z - 4, x + 4, z + 4)
+    const built = (x, z) => this.w.footprints.some((f) => (f.ry ? Math.hypot(x - f.x, z - f.z) < Math.hypot(f.hx, f.hz) + 4 : Math.abs(x - f.x) < f.hx + 4 && Math.abs(z - f.z) < f.hz + 4))
+    const free = (x, z) => !onPlot(x, z) && !centre(x, z) && !built(x, z)
     for (let i = 0; i < nTrees; i++) {
-      const x = rnd.range(r.x0 + 2, r.x1 - 2), z = rnd.range(r.z0 + 2, r.z1 - 2)
-      if (Math.abs(x - cx) < 9 && Math.abs(z - cz) < 7) continue
+      let x = rnd.range(r.x0 + 2, r.x1 - 2), z = rnd.range(r.z0 + 2, r.z1 - 2)
+      if (centre(x, z)) continue
+      if (onPlot(x, z)) {
+        const alt = mulberry(0x7ee5 + i * 131)
+        for (let k = 0; k < 24 && !free(x, z); k++) { x = alt.range(r.x0 + 2, r.x1 - 2); z = alt.range(r.z0 + 2, r.z1 - 2) }
+        if (!free(x, z)) continue
+      }
       this.w.addTree(x, z, rnd)
     }
     // parking along the yard edge
     for (let x = r.x0 + 4; x < r.x1 - 4; x += 6.5) {
-      if (rnd.chance(0.35)) this.w.parkingSpots.push({ x, z: r.z1 - 2.5, ry: Math.PI / 2 + (rnd.chance(0.5) ? Math.PI : 0), yard: true })
+      if (!rnd.chance(0.35)) continue
+      const ry = Math.PI / 2 + (rnd.chance(0.5) ? Math.PI : 0)
+      if (!inKeep(x - 2.5, r.z1 - 5, x + 2.5, r.z1)) this.w.parkingSpots.push({ x, z: r.z1 - 2.5, ry, yard: true })
     }
     // dumpster corner
     const dx = r.x1 - 3, dz = r.z0 + 2
-    this.w.dynamicProps.push({ type: 'dumpster', x: dx, z: dz, ry: 0 })
+    if (!inKeep(dx - 1.5, dz - 1.5, dx + 1.5, dz + 1.5)) this.w.dynamicProps.push({ type: 'dumpster', x: dx, z: dz, ry: 0 })
   }
 
   garageRow(x0, z, n, ry, rnd) {

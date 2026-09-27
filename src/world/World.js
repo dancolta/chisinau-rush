@@ -6,10 +6,12 @@ import { Landmarks } from './Landmarks.js'
 import { Props, addTreeGeometry } from './Props.js'
 import { DynamicProps } from './DynamicProps.js'
 import { makeFacadeMaterial } from './Facade.js'
-import { makeAsphalt, makePaving, makePlaza, makeGrass, makeDirt, makeConcrete, SignAtlas } from '../render/Textures.js'
-import { H_ROADS, V_ROADS, CURB_H, WORLD, RAIL_Z, onRoad } from './CityLayout.js'
+import { makeAsphalt, makePaving, makePlaza, makeGrass, makeDirt, makeConcrete, makeFence, SignAtlas } from '../render/Textures.js'
+import { H_ROADS, V_ROADS, CURB_H, BOUNDS, EXITS, RAIL_Z, onRoad } from './CityLayout.js'
 import { mulberry } from './rng.js'
 import { buildHorizon } from './Horizon.js'
+import { buildTerrain, buildCanopy } from './Terrain.js'
+import { Edge } from './Edge.js'
 
 // Builds and owns the static city: ground, buildings, landmarks, props, colliders,
 // plus registries (named places, lamps, parking, benches…) used by every other system.
@@ -84,6 +86,7 @@ export class World {
       plaza: mk(tex.plaza, { roughness: 0.74 }),
       dirt: mk(tex.dirt, { roughness: 1 }),
       concrete: mk(tex.concrete, { roughness: 0.9 }),
+      fence: mk(tex.fence, { roughness: 0.95 }),
     }
     // '<surface>_o': the same surface laid as a thin overlay on top of another one (patches,
     // verges, kerb tops). A depth offset instead of a centimetre lift keeps them from z-fighting.
@@ -109,7 +112,7 @@ export class World {
   async build(progress = () => {}) {
     this.tex = {
       asphalt: makeAsphalt(), paving: makePaving(), plaza: makePlaza(),
-      grass: makeGrass(), dirt: makeDirt(), concrete: makeConcrete(),
+      grass: makeGrass(), dirt: makeDirt(), concrete: makeConcrete(), fence: makeFence(),
     }
     this.signs = new SignAtlas(2048, 2048)
     progress(0.05, 'drumuri și trotuare')
@@ -118,6 +121,9 @@ export class World {
     progress(0.2, 'blocuri și monumente')
     this.buildings = new Buildings(this)
     new Landmarks(this, this.buildings).build()
+    // where the city ends (before the props: it adds lamps, trees and signs of its own)
+    this.edge = new Edge(this)
+    this.edge.build()
     await tick()
     progress(0.55, 'copaci, felinare, troleibuze')
     const props = new Props(this)
@@ -130,7 +136,9 @@ export class World {
     props.build()
     this.buildRails()
     this.buildOutskirts()
-    this.horizon = buildHorizon(this.scene)
+    this.terrain = buildTerrain(this)
+    buildCanopy(this)
+    this.horizon = buildHorizon(this)
     await tick()
     progress(0.8, 'finisaje')
     this.dyn = new DynamicProps(this)
@@ -148,18 +156,19 @@ export class World {
     for (let s = 0; s < 256; s += 32) { x.fillStyle = '#4a3a2c'; x.fillRect(s + 4, 6, 14, 52) }
     const t = new THREE.CanvasTexture(c)
     t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8
-    const len = WORLD.x1 - WORLD.x0 + 40
+    // from deep in the tunnel under Valea Morilor to far out past the highway in the east
+    const x0 = BOUNDS.x0 - 240, x1 = BOUNDS.x1 + 420, len = x1 - x0
     t.repeat.set(len / 5.6, 1)
     const bedMat = new THREE.MeshStandardMaterial({ map: t, roughness: 1 })
     const railMat = new THREE.MeshStandardMaterial({ color: 0x8a8f96, metalness: 0.6, roughness: 0.4 })
     for (const z of [RAIL_Z - 4, RAIL_Z + 4]) {
       const bed = new THREE.Mesh(new THREE.PlaneGeometry(len, 3.2), bedMat)
-      bed.rotation.x = -Math.PI / 2; bed.position.set((WORLD.x0 + WORLD.x1) / 2, 0.03, z)
+      bed.rotation.x = -Math.PI / 2; bed.position.set((x0 + x1) / 2, 0.03, z)
       bed.receiveShadow = true
       this.scene.add(bed)
       for (const dz of [-0.72, 0.72]) {
         const r = new THREE.Mesh(new THREE.BoxGeometry(len, 0.14, 0.09), railMat)
-        r.position.set((WORLD.x0 + WORLD.x1) / 2, 0.1, z + dz)
+        r.position.set((x0 + x1) / 2, 0.1, z + dz)
         r.receiveShadow = true
         this.scene.add(r)
       }
@@ -167,24 +176,26 @@ export class World {
     this.railTracks = [RAIL_Z - 4, RAIL_Z + 4]
   }
 
-  // skyline of tall panel blocks + tree belts outside the ring road
+  // a skyline of tall panel blocks just outside the ring roads, with gaps: through them you see
+  // the promenade and the river in the north, the woods and the highway's wall in the west and
+  // east, and the roads out
   buildOutskirts() {
     const rnd = mulberry(8888)
     const B = this.buildings
+    const pod = EXITS.find((e) => e.id === 'pod')
     const nz = H_ROADS[0].z - H_ROADS[0].w / 2 - 22
-    for (let x = WORLD.x0 + 30; x < WORLD.x1 - 30; x += rnd.range(34, 52)) {
-      B.panel({ cx: x, cz: nz - rnd.range(0, 14), len: rnd.range(28, 60), depth: 12, floors: rnd.pick([9, 9, 12, 16]), ry: Math.PI, seed: 900 + x | 0, y0: 0, entrances: false })
+    for (let x = BOUNDS.x0 + 30; x < BOUNDS.x1 - 30; x += rnd.range(34, 52)) {
+      const len = rnd.range(28, 60), cz = nz - rnd.range(0, 10), floors = rnd.pick([9, 9, 12, 16])
+      if (Math.abs(x - pod.c) < len / 2 + 16 || rnd() < 0.18) continue
+      B.panel({ cx: x, cz, len, depth: 12, floors, ry: Math.PI, seed: 900 + x | 0, y0: 0, entrances: false })
     }
     const wx = V_ROADS[0].x - V_ROADS[0].w / 2 - 22, ex = V_ROADS[V_ROADS.length - 1].x + V_ROADS[V_ROADS.length - 1].w / 2 + 22
     for (let z = H_ROADS[0].z + 30; z < H_ROADS[H_ROADS.length - 1].z; z += rnd.range(38, 56)) {
-      B.panel({ cx: wx - rnd.range(0, 10), cz: z, len: rnd.range(28, 50), depth: 12, floors: rnd.pick([9, 12, 16]), ry: -Math.PI / 2, seed: 1300 + z | 0, y0: 0, entrances: false })
-      B.panel({ cx: ex + rnd.range(0, 10), cz: z, len: rnd.range(28, 50), depth: 12, floors: rnd.pick([9, 12, 16]), ry: Math.PI / 2, seed: 1700 + z | 0, y0: 0, entrances: false })
-    }
-    // tree belt south of the rails and along the ring roads
-    const g = (x, z) => this.batches.vcol(x, z, 'tree')
-    for (let x = WORLD.x0 + 5; x < WORLD.x1 - 5; x += rnd.range(5, 9)) {
-      const z = RAIL_Z + 14 + rnd.range(0, 30)
-      addTreeGeometry(g(x, z), x, z, rnd)
+      const lw = rnd.range(28, 50), le = rnd.range(28, 50)
+      const w = { cx: wx - rnd.range(0, 10), floors: rnd.pick([9, 12, 16]) }, e = { cx: ex + rnd.range(0, 10), floors: rnd.pick([9, 12, 16]) }
+      // the boulevard goes on out between them
+      if (Math.abs(z) < lw / 2 + 16 || rnd() < 0.15) { /* gap */ } else B.panel({ cx: w.cx, cz: z, len: lw, depth: 12, floors: w.floors, ry: -Math.PI / 2, seed: 1300 + z | 0, y0: 0, entrances: false })
+      if (Math.abs(z) < le / 2 + 16 || rnd() < 0.15) { /* gap */ } else B.panel({ cx: e.cx, cz: z, len: le, depth: 12, floors: e.floors, ry: Math.PI / 2, seed: 1700 + z | 0, y0: 0, entrances: false })
     }
   }
 
@@ -209,13 +220,23 @@ export class World {
       flat: surf,
       facade: makeFacadeMaterial(),
     }
+    // the same materials for what stands past the edge of the map, only without shadows (the
+    // shadow map only ever covers the ground round the player, and the player is always inside)
+    mats.vcol.static_far = mats.vcol.static
+    mats.vcol.tree_far = mats.vcol.tree
+    mats.atlas.props_far = mats.atlas.props
     this.meshes.push(...this.batches.finalize(this.scene, mats, {
       markings: { cast: false, recv: true },
+      static_far: { cast: false, recv: true },
+      tree_far: { cast: false, recv: true },
+      props_far: { cast: false, recv: true },
+      'flat:fence': { cast: true, recv: true },
     }))
   }
 
   update(dt) {
     if (this.dyn) this.dyn.update(dt)
+    this.edge?.update(dt)
   }
 }
 

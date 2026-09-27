@@ -51,6 +51,12 @@ A prologue, four chapters and an epilogue (14 missions), fully voiced with proce
 
 Every clue you find becomes an **evidence card** (6 in total) that you bring to the rally.
 
+Every mission with gameplay in it is **rated with 1-3 stars**: one for passing, one for each of two goals (a time to beat, a car or a cake brought back in one piece, nobody seeing you, first try). The best result is kept, a star you didn't have pays lei and AURA, and any passed mission can be **replayed from the pause menu** (Misiuni › ↻ Rejoacă). Long missions have **checkpoints**, so a fail on the third taxi fare doesn't cost the first two. Between missions the **phone** rings: every mission ends on a hook (a threat from a hidden number, a call that goes dead, a teaser for what's next) and people call with **favours**. From the same list, **Nea Grișa's taxi** (15 lei) drops you near the next mission.
+
+### Favours
+
+Short side missions offered on the phone as the story unlocks them: **Borcanele Tantei Maria** (40 kg of jars to the market; every pothole is a broken jar), **Convoiul de nuntă** (lead a honking wedding convoy through town with a five-tier cake on the back seat), **Conferința de presă** (sneak past the mayor's guards and swap his speech for Tanti Zina's shopping list), **Cursa gropilor** (fill five potholes before the city hall crew paints five black for TV) and **Troleibuzul fără vatman** (drive trolleybus 22 down Ștefan cel Mare, stop by stop, without losing the wires).
+
 ### Side activities
 
 Taxi shifts (`T` in any taxi), street races for money with Vitea, Andy's Pizza deliveries, filling potholes (hold `E`), 30 lost dossiers to collect and sell to Borea, Borea's shop (weapons, fake papers, nitro), Vova's garage (repairs, a free taxi). Seven ranks from *Plecat peste hotare* to *Primar de Chișinău*.
@@ -61,7 +67,7 @@ Everything cool you do on the street earns **AURA** (*+54 AURA · bătaie de car
 
 ### Systems
 
-Open city with ~40 landmarks (PMAN, Casa Guvernului, Arcul de Triumf, Catedrala, Primăria, Opera, Circul, Gara, Piața Centrală…), day/night cycle, rain showers with wet asphalt, street life (weddings at the Arc, market vendors, bench grannies, card players in the park), traffic with lights and trolleybuses, pedestrians who flee or fight back, wanted levels with foot and car pursuits, busted (bribe / sweet-talk / run) and fainting flows, melee combat with combos and six improvised weapons, carjacking, car damage, skid marks and smoke, photo mode, save and continue. Plays on phones too (on-screen stick and buttons).
+Open city with ~40 landmarks (PMAN, Casa Guvernului, Arcul de Triumf, Catedrala, Primăria, Opera, Circul, Gara, Piața Centrală…), day/night cycle, rain showers with wet asphalt, street life (weddings at the Arc, market vendors, bench grannies, card players in the park, gopniks in the yards and the parks, kids at the playgrounds), traffic with lights and trolleybuses scaled to the hour and the quality preset, pedestrians on every pavement and park path who flee or fight back, wanted levels with foot and car pursuits, busted (bribe / sweet-talk / run, or you walk out of the Comisariatul Centru hours later without your car) and fainting flows, melee combat with combos and six improvised weapons, carjacking, car damage, skid marks and smoke, photo mode, save and continue. Plays on phones too (on-screen stick and buttons).
 
 ## Tech
 
@@ -78,7 +84,10 @@ Open city with ~40 landmarks (PMAN, Casa Guvernului, Arcul de Triumf, Catedrala,
 ```bash
 node tools/play.mjs --from rapirea --turbo 6     # automated story playthrough (headless Chromium)
 node tools/systems.mjs                          # side systems checks (busted, shop, taxi, save…)
+node tools/story.mjs [--only rating,favors]     # mission ratings, replays, phone hooks, favours, checkpoints
 node tools/aura.mjs                             # AURA, levels, stunts, daily challenges, street events
+node tools/density.mjs [--quality low] [--perf]  # how full the streets are: people, traffic, scenes per district and hour
+node tools/comisariat.mjs [--shot station.png]  # the police station, and every arrest ending on its steps
 node tools/shot.mjs --out shot.png --eval "…"   # screenshots
 node tools/gallery.mjs --missions eban,mitingul    # capture every cutscene of the given missions
 node tools/views.mjs --out views --only night,play_day  # fixed review shots (day, dusk, night, gameplay camera)

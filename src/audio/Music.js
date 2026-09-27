@@ -360,6 +360,31 @@ export const STINGERS = {
     return Math.max(end, t2 + 1.1)
   },
 
+  // achievement unlocked: a quick bright arpeggio into a bell chord over a soft thump (the console "bling")
+  achievement(k, d, t, tr = 0) {
+    DRUMS.kick(k, d, t, 0.5)
+    const arp = [76, 79, 83, 88]
+    arp.forEach((m, i) => pluck(k, d, t + i * 0.05, m + tr, 0.09, 0.7, { wave: 'triangle', decay: 0.07 }))
+    const t2 = t + 0.2
+    let end = t2
+    for (const m of [88, 91, 95]) end = Math.max(end, bell(k, d, t2, m + tr, 0.7, 0.6, { decay: 0.4 }))
+    end = Math.max(end, softlead(k, d, t2, 76 + tr, 0.45, 0.4))
+    DRUMS.crash(k, d, t2, 0.22)
+    return Math.max(end, t2 + 0.9)
+  },
+
+  // the daily bonus: a run of bells climbing into a warm brass chord
+  streak(k, d, t, tr = 0) {
+    const run = [72, 74, 76, 79, 81, 84]
+    run.forEach((m, i) => bell(k, d, t + i * 0.06, m + tr, 0.25, 0.5, { decay: 0.18 }))
+    const t2 = t + 0.4
+    let end = t2
+    for (const m of [60, 64, 67, 72]) end = Math.max(end, brass(k, d, t2, m + tr, 0.6, 0.75))
+    DRUMS.snare(k, d, t + 0.3, 0.4)
+    DRUMS.crash(k, d, t2, 0.4)
+    return Math.max(end, t2 + 0.8)
+  },
+
   // fight won: accordion flourish, then a brassy "ta-da!" (A7 -> D)
   fight_win(k, d, t, tr = 0) {
     const run = [62, 66, 69, 74, 73, 74]
