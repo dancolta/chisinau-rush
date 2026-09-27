@@ -14,7 +14,7 @@ const HOST = speaker('Nașul Grigore', 'Nunta Ionuț & Cristina', NAS, { pitch: 
 const BRIDE_SP = speaker('Mireasa', 'Cristina, azi regină', BRIDE, { pitch: 1.25, type: 'female' })
 const PLACES = ['arc', 'pman', 'gradina', 'parc_catedrala', 'stefan', 'teatru', 'opera', 'muzeu', 'fantana', 'piata', 'circ', 'aleea_clasicilor']
 const GRUMBLE = ['Unde-i DJ-ul?!', 'Fără muzică nu se mănâncă sarmalele!', 'La Ialoveni, zice, la altă nuntă…', 'Mireasa plânge, oameni buni!', 'Pune măcar ceva de pe telefon!', 'Nașul a plătit, și muzică nu-i!']
-const HYPE = ['Hopa-hopa!', 'Așa, măi!', 'Uite-l cum joacă!', 'Hora, oameni buni!', 'Ăsta-i DJ-ul nou!', 'Mai tare!']
+const HYPE = ['Hopa-hopa!', 'Așa, măi!', '[[Uite-l|Uite-o]] cum joacă!', 'Hora, oameni buni!', '[[Ăsta-i|Asta-i]] DJ-ul nou!', 'Mai tare!']
 const MOVES = ['point', 'pickup', 'cheer', 'wave']
 
 export const NUNTA = {
@@ -54,7 +54,7 @@ export const NUNTA = {
     m.every(() => { if (Math.random() < 0.012) { const n = pick(everyone); if (n && !n.char.ko && n.state !== 'dance') n.say(pick(GRUMBLE), 2.6) } })
     await m.reach(c, 7, { text: 'Nunta lui Ionuț a rămas fără DJ. Du-te la {y}nuntă{/y}.', label: 'Nunta', inVehicle: false })
     face(nas.char, p.pos.x, p.pos.z)
-    const choice = await m.say(HOST, ['Tinere! DJ-ul Vasea e la altă nuntă, la Ialoveni. A luat avans de la amândouă.', 'Pune muzica de pe telefon și joacă-ne o horă, că altfel mireasa plânge și nașa pleacă cu plicul!'], { choices: ['Dă-mi boxa. Vă arăt eu hora!', 'Nu joc, am genunchi de pensionar.'] })
+    const choice = await m.say(HOST, ['[[Tinere|Domnișoară]]! DJ-ul Vasea e la altă nuntă, la Ialoveni. A luat avans de la amândouă.', 'Pune muzica de pe telefon și joacă-ne o horă, că altfel mireasa plânge și nașa pleacă cu plicul!'], { choices: ['Dă-mi boxa. Vă arăt eu hora!', 'Nu joc, am genunchi de pensionar.'] })
     if (choice === 1) { await m.talk(HOST, 'Genunchi… Păi și noi ce, avem genunchi de fotbaliști? Na, du-te.', 3); m.cancel() }
     // on the dance floor, facing the party; the camera in front of you
     lockPlayer(m, true)

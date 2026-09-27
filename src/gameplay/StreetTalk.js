@@ -202,7 +202,7 @@ export class StreetTalk {
     if (a === 'gopnik') return this.fill(pick(GOP.greet[pr.tier('gop')]))
     if (a === 'babushka') {
       const e = this.errand
-      if (e && e.npc === n) return this.fill(e.bought ? 'A, ai adus pâinea, maică? Ce bun ești!' : BAB.errandWait)
+      if (e && e.npc === n) return this.fill(e.bought ? 'A, ai adus pâinea, maică? [[Ce bun ești|Ce bună ești]]!' : BAB.errandWait)
       return this.fill(pick(BAB.greet))
     }
     if (a === 'cop') {

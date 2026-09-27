@@ -184,8 +184,8 @@ export const paine = {
     const i = await m.say(GP, ['Șo, bratan, ai o siga? Nu? Da\' pâinea ceea? Hai, dă-o încoace, că ne e foame.'], {
       choices: ['Pâinea-i pentru Tanti Zina. Mergeți acasă.', 'Luați-o, n-am chef de probleme.'],
     })
-    if (i === 1) await m.say(GP, ['Ha! Și fraer, și cuminte. Da\' noi tot te batem. Pentru principiu.'])
-    else await m.say(GP, ['Tanti Zina? Cine-i asta, fraere? Amu te învățăm noi manierele.'])
+    if (i === 1) await m.say(GP, ['Ha! Și [[fraer|fraieră]], și cuminte. Da\' noi tot te batem. Pentru principiu.'])
+    else await m.say(GP, ['Tanti Zina? Cine-i asta, [[fraere|fraiero]]? Amu te învățăm noi manierele.'])
     for (const n of [a, b]) { n.personality = 'tough'; n.hittable = true; n.stayDown = true; n.enemy = true; n.hostile = true; n.hp = n.maxHp = 34; n.state = 'fight'; n.target = p }
     m.brawl([a, b])
     m.objective('Bate-i pe {r}gopnici{/r}!', { sub: 'Lovește: {y}Click{/y} / {y}[J]{/y} · lovituri repetate = combo · {y}[Space]{/y} sari' })
@@ -317,7 +317,7 @@ export const jiguli = {
           ] })
           if (ch === 0) {
             pr.addLei(-50); pr.stats.bribes++; pr.addCred(2)
-            await m.say('caldare', ['Hm. Cafeaua e scumpă azi. Circulați, circulați.', 'Și… bun venit acasă. Se vede că ești de-al nostru.'])
+            await m.say('caldare', ['Hm. Cafeaua e scumpă azi. Circulați, circulați.', 'Și… bun venit acasă. Se vede că ești [[de-al nostru|de-a noastră]].'])
             pr.flags.caldare = 'mita'
           } else if (ch === 1) {
             pr.addCivic(3)
@@ -435,7 +435,7 @@ export const taxi = {
         name: 'Doamna Tamara', voice: { pitch: 1.25, type: 'old' },
         from: { x: 125, z: 149.2, ry: Math.PI }, to: { x: 236, z: 13.5 }, toLabel: 'Piața Centrală',
         lines: ['Bună ziua, dragă! La Piața Centrală. Și nu prin gropi, că am ouă în sacoșă.', 'Pe vremea mea, taxiul costa doi lei. Și taximetristul îți căra sacoșele până la etaj.', 'Ai auzit? Primarul iar a tăiat panglica la o groapă. Zice că-i reparată. Au vopsit-o în negru.'],
-        crashLines: ['Ouăle! Vai de ouăle mele!', 'Ușurel, dragă, că nu-s cartofi!', 'Doamne, iartă-l că nu știe ce face!'],
+        crashLines: ['Ouăle! Vai de ouăle mele!', 'Ușurel, dragă, că nu-s cartofi!', '[[Doamne, iartă-l|Doamne, iart-o]] că nu știe ce face!'],
         arrive: ['Mulțumesc, dragă. Poftim. Și mănâncă, că ești [[slab|slabă]].'],
       }))
       m.checkpoint('fare2', 'cursa a doua')

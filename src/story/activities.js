@@ -4,6 +4,8 @@ import { SPEAKERS } from './cast.js'
 import { Pickup } from './Kit.js'
 import { mulberry } from '../world/rng.js'
 import { dist, taxiFare, runRace, rand, pickOne } from './missions/common.js'
+import { fill } from './hero.js'
+import { countWord } from '../data/goals.js'
 
 // Shown in the pause menu once unlocked
 export const ACTIVITIES = [
@@ -54,7 +56,7 @@ export const TAXI_SHIFT = {
         taxiFare(m, {
           taxi: cab, spec, name: who, wreckEnds: true, voice: { pitch: old ? rand(1.1, 1.3) : rand(0.85, 1.2), type: old ? 'old' : woman ? 'female' : 'male' },
           from: { x: fx, z: fz }, to: { x: tx, z: tz }, toLabel: toName, patience: 4,
-          lines: [pickOne([`La ${toName}, șefu'. Și dacă se poate, fără gropi.`, `${toName}, vă rog. Am întârziat deja.`, `Mă duceți la ${toName}? Cât costă? …Bine, bine.`]), pickOne(['Ați auzit ce-a mai zis primarul? Nici eu. Nu mai ascult.', 'Pe vremea mea, drumul ăsta era mai bun. Pe vremea mea era și eu mai tânăr.', 'Aveți încărcător de telefon? Nu? Nici eu.', 'Muzica asta… e Zdob și Zdub? Dați mai tare!'])],
+          lines: [pickOne([`La ${toName}, șefu'. Și dacă se poate, fără gropi.`, `${toName}, vă rog. Am întârziat deja.`, `Mă duceți la ${toName}? Cât costă? …Bine, bine.`]), pickOne(['Ați auzit ce-a mai zis primarul? Nici eu. Nu mai ascult.', 'Pe vremea mea, drumul ăsta era mai bun. Pe vremea mea aveam și eu genunchi.', 'Aveți încărcător de telefon? Nu? Nici eu.', 'Muzica asta… e Zdob și Zdub? Dați mai tare!'])],
           crashLines: ['Ușor, [[domnule|doamnă]]!', 'Doamne ferește!', 'Io am plătit pentru o cursă, nu pentru montagne russe!'],
           arrive: [pickOne(['Mersi, șefu\'. Drum bun!', 'Mulțumesc. Păstrați restul. Care rest? Glumesc.', 'Merci! Vă dau cinci stele. Dacă găsesc aplicația.'])],
         }).catch(() => null),
@@ -253,9 +255,9 @@ export class Activities {
       const sold = pr.flags.dosareVandute || 0
       const unsold = pr.dosare.length - sold
       const price = Math.round(25 * (pr.perk.sell || 1))
-      if (unsold > 0) offers.push({ text: `📁 Vinde dosarele pierdute (${unsold})`, cost: `+${unsold * price} lei`, buy: () => { pr.flags.dosareVandute = pr.dosare.length; pr.addLei(unsold * price, `Borea a luat ${unsold} dosare`) } })
+      if (unsold > 0) offers.push({ text: `📁 Vinde dosarele pierdute (${unsold})`, cost: `+${unsold * price} lei`, buy: () => { pr.flags.dosareVandute = pr.dosare.length; pr.addLei(unsold * price, `Borea a luat ${countWord(unsold, ['dosar', 'dosare'])}`) } })
       offers.push({ text: 'Nimic, mersi.' })
-      const i = await g.ui.dialogue(SPEAKERS.borea, [pickOne(['Băi, tu pe mine a sculat? Hai, zi, vinzi ori cumperi?', 'Marfă proaspătă, bratan. Căzută de pe camion. Proaspăt.', 'Preț de prieten. Pentru tine, prietene, dublu. Glumesc!'])], { choices: offers })
+      const i = await g.ui.dialogue(SPEAKERS.borea, [fill(g, pickOne(['Băi, tu pe mine a sculat? Hai, zi, vinzi ori cumperi?', 'Marfă proaspătă, bratan. Căzută de pe camion. Proaspăt.', 'Preț de prieten. Pentru tine, [[prietene|prietenă]], dublu. Glumesc!']))], { choices: offers })
       const o = offers[i]
       if (!o || !o.buy) return
       o.buy()

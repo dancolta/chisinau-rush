@@ -74,11 +74,11 @@ export async function taxiFare(m, { taxi = null, spec = null, name = 'Clientul',
     if (taxi && inside !== was) {
       was = inside
       if (!inside) { m.marker(taxi.pos, 'Taxiul'); m.sub('Întoarce-te în taxi ({y}[E]{/y}), clientul așteaptă!') }
-      else if (phase === 'pickup') { m.marker({ x: from.x, z: from.z }, name); m.sub('Oprește lângă el cu taxiul.') }
+      else if (phase === 'pickup') { m.marker({ x: from.x, z: from.z }, name); m.sub('Oprește taxiul lângă client.') }
       else { m.marker(to, toLabel); m.sub('Bacșiș dacă ajungi repede și fără bușituri.') }
     }
   })
-  m.objective(`Ia clientul: {y}${name}{/y}.`, { sub: 'Oprește lângă el cu taxiul.' })
+  m.objective(`Ia clientul: {y}${name}{/y}.`, { sub: 'Oprește taxiul lângă client.' })
   m.marker({ x: from.x, z: from.z }, name)
   let waved = false
   await m.until(() => {

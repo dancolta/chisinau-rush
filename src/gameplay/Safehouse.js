@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { GeoBuilder } from '../render/GeoBuilder.js'
 import { WEAPONS, CARRY_MAX } from '../data/weapons.js'
 import { openListPanel } from '../ui/ListPanel.js'
+import { gen } from '../story/hero.js'
 
 // Home: flat 43 in Blocul 7. Step through the stairwell door in the courtyard and you're in a
 // cutaway set, the fourth wall open to the camera like a doll's house: the carpet on the wall,
@@ -273,7 +274,7 @@ export class Safehouse {
   // ---- the furniture ------------------------------------------------------------------------------------
   async sleep() {
     const g = this.game, pr = g.progress
-    const i = await g.ui.dialogue({ name: 'Divanul', role: 'Blocul 7, ap. 43' }, ['Divanul scârțâie ca în copilărie. Cât dormi?'], { choices: ['Până dimineață (08:00)', 'Până seara (20:00)', 'Doar o oră', 'Nu, mai stau treaz.'] })
+    const i = await g.ui.dialogue({ name: 'Divanul', role: 'Blocul 7, ap. 43' }, ['Divanul scârțâie ca în copilărie. Cât dormi?'], { choices: ['Până dimineață (08:00)', 'Până seara (20:00)', 'Doar o oră', gen(g, 'Nu, mai stau treaz.', 'Nu, mai stau trează.')] })
     if (i == null || i === 3) return
     const h = g.renderer.tod.hour
     const to = i === 0 ? 8 : i === 1 ? 20 : (h + 1) % 24

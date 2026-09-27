@@ -35,7 +35,7 @@ const JAR_RIDE = [
   'Nu te grăbi. Da\' grăbește-te. Dusea de la Ialoveni nu doarme.',
   '(la telefon) Dusea? Nu, nu-s încă. Ține-mi locul. NU, nu-l ține pentru tine!',
 ]
-const JAR_CRASH = ['Vai, compotul!', 'Maică, murăturile!', 'Ușurel, că nu-s cartofi!', 'Dulceața de gutui! Era pentru nuntă!', 'Doamne, iartă-l, că nu știe ce face!']
+const JAR_CRASH = ['Vai, compotul!', 'Maică, murăturile!', 'Ușurel, că nu-s cartofi!', 'Dulceața de gutui! Era pentru nuntă!', '[[Doamne, iartă-l|Doamne, iart-o]], că nu știe ce face!']
 // last night's potholes on the way to the market (no map has them yet)
 const FRESH = [['S1', 'E', 95, 1], ['V4', 'N', 105, 0], ['V5', 'N', 60, 0], ['BD', 'E', 150, 1]]
 
@@ -60,7 +60,7 @@ export const borcane = {
       for (let k = 0; k < 6; k++) b.cyl(0.075, 0.075, 0.17, 8, { x: 0.05 + (k % 3) * 0.24, y: 0.7, z: -0.1 + Math.floor(k / 3) * 0.2, color: jc[k % 4] })
     }, { x: spot.x + 1.2, z: spot.z + 0.3 })
     const c = await m.say('maria', [
-      `Maică, tu ești ${gen(g, 'băiatul', 'fata')} de-l laudă Zina? Zice că ai mașină și inimă bună. Mașina mă interesează.`,
+      `Maică, tu ești ${gen(g, 'băiatul de-l', 'fata de-o')} laudă Zina? Zice că ai mașină și inimă bună. Mașina mă interesează.`,
       'Am patruzeci de kile de borcane: zacuscă, murături, compot de vișine și dulceață de gutui din 2019. E ca vinul, se învechește.',
       'Trebuie să fiu la Piața Centrală până la prânz, că altfel îmi ia locul Dusea de la Ialoveni. Și Dusea vinde zacuscă din magazin, pusă în borcanul ei!',
     ], { choices: [yes(m, 'Urcați, tanti Maria. Le ducem întregi.', { lei: 40, xp: 120, bab: 3, info: '🫙 +1 leu pe borcan' }), 'Acum nu pot, tanti.'] })
@@ -186,7 +186,7 @@ export const nunta = {
   giver: { pos: () => ({ x: -118, z: -130.6, ry: Math.PI }), speaker: 'nasul', label: 'Nașul Grigore' },
   reward: { lei: 60, xp: 150 },
   stars: [
-    GOALS.check('Tortul fără nicio fisură', (m) => (m.data.cake ?? 9) === 0, (m) => (m.data.cake ? `${m.data.cake} fisuri` : '')),
+    GOALS.check('Tortul fără nicio fisură', (m) => (m.data.cake ?? 9) === 0, (m) => (m.data.cake ? `${m.data.cake} ${m.data.cake === 1 ? 'fisură' : 'fisuri'}` : '')),
     GOALS.check('Claxon la fiecare oprire', (m) => (m.data.honks ?? 0) >= WED_STOPS.length, (m) => `${m.data.honks ?? 0}/${WED_STOPS.length}`),
   ],
   async script(m) {
@@ -277,7 +277,7 @@ export const nunta = {
     for (let i = 0; i < WED_STOPS.length; i++) {
       const s = WED_STOPS[i]
       const ring = m.ring(s.x, s.z, { r: s.r, color: s.last ? 0xffffff : 0xffcf4a })
-      m.objective(`${s.stop ? 'Oprește la' : 'Treci pe la'} {y}${s.label}{/y}${i ? '' : ', convoiul după tine'}. Claxonează ({y}[H]{/y})!`, { sub: `Oprirea ${i + 1}/${WED_STOPS.length} · 🎂 tort: ${m.data.cake ? `{r}${m.data.cake} fisuri{/r}` : '{g}întreg{/g}'}` })
+      m.objective(`${s.stop ? 'Oprește la' : 'Treci pe la'} {y}${s.label}{/y}${i ? '' : ', convoiul după tine'}. Claxonează ({y}[H]{/y})!`, { sub: `Oprirea ${i + 1}/${WED_STOPS.length} · 🎂 tort: ${m.data.cake ? `{r}${m.data.cake} ${m.data.cake === 1 ? 'fisură' : 'fisuri'}{/r}` : '{g}întreg{/g}'}` })
       m.marker({ x: s.x, z: s.z }, s.label)
       let holdT = 0
       await m.until(() => {
@@ -426,7 +426,7 @@ export const conferinta = {
     }
     m.objective('Sabotează conferința: {y}discursul{/y}, {y}boxa{/y} și {y}bannerul{/y}. {r}Nu te lăsa văzut.{/r}', { sub: `Sabotaje: ${done.size}/3 · ține {y}[E]{/y} pe cercurile albastre` })
     m.marker({ x: PX, z: PZ + 3 }, 'Tribuna')
-    m.tip('Paza vede doar în față, în conurile de pe jos. Fuga ({y}⇧{/y}) face zgomot.', 8)
+    m.tip('Paza vede doar în față, în conurile de pe jos. Fuga ({y}[⇧]{/y}) face zgomot.', 8)
     const t0 = m.playT
     m.every(() => m.sub(`Sabotaje: ${done.size}/3 · ține {y}[E]{/y} pe cercurile albastre`))
     await m.until(() => dist(p.pos, { x: PX, z: PZ }) < 14 || done.size > 0)
@@ -480,7 +480,7 @@ export const gropi = {
   giver: { pos: () => ({ x: -188.6, z: 222, ry: Math.PI / 2 }), speaker: 'brigadier', label: 'Brigadierul Asfaltescu' },
   reward: { lei: 100, xp: 150, civic: 5 },
   stars: [
-    GOALS.check('Echipa Primăriei: maximum două gropi', (m) => (m.data.crew ?? 9) <= 2, (m) => `${m.data.crew ?? 0} vopsite`),
+    GOALS.check('Echipa Primăriei: maximum două gropi', (m) => (m.data.crew ?? 9) <= 2, (m) => `${m.data.crew ?? 0} ${m.data.crew === 1 ? 'vopsită' : 'vopsite'}`),
     GOALS.check('Cinci gropi în sub 2:00', (m) => (m.data.raceT ?? 999) <= 120, (m) => mmss(m.data.raceT)),
   ],
   async script(m) {
@@ -651,7 +651,7 @@ export const troleibuz = {
   giver: { pos: () => ({ x: -349, z: 16.4, ry: Math.PI }), speaker: 'ecaterina', label: 'Doamna Ecaterina' },
   reward: { lei: 60, xp: 180, civic: 4 },
   stars: [
-    GOALS.check('Coarnele pe fir tot drumul', (m) => !m.data.dewires, (m) => (m.data.dewires ? `au sărit de ${m.data.dewires} ori` : '')),
+    GOALS.check('Coarnele pe fir tot drumul', (m) => !m.data.dewires, (m) => (m.data.dewires ? (m.data.dewires === 1 ? 'au sărit o dată' : `au sărit de ${m.data.dewires} ori`) : '')),
     GOALS.check('Oprit fix în toate stațiile', (m) => (m.data.precise ?? 0) >= BUS_STOPS.length, (m) => `${m.data.precise ?? 0}/${BUS_STOPS.length}`),
   ],
   async script(m) {

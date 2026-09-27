@@ -384,7 +384,7 @@ export class Crowd {
       if (!m?.helped || n.personality !== 'tough' || !this.plain(n) || dist(n.pos, p.pos) > 20 || this.clock < (m.backupT || 0)) continue
       m.backupT = this.clock + 60
       n.hostile = true; n.state = 'fight'; n.target = threats[0]; n.path = []; n.ally = true
-      n.say(this.fill('Ăsta-i omul meu! Lasă-l în pace!'), 2.4)
+      n.say(this.fill('[[Ăsta-i omul meu! Lasă-l|Asta-i de-a mea! Las-o]] în pace!'), 2.4)
       setTimeout(() => { if (!n.disposed) n.ally = false }, 30000)
       return
     }

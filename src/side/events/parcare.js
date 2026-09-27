@@ -11,7 +11,7 @@ const HW = 1.3, HL = 2.9
 
 export const PARCARE = {
   id: 'ev_parcare', title: 'Parcare la moldovenește', icon: '🅿️', who: 'Nașul',
-  viber: 'Finule, ține-mi locul pe trotuar, în fața magazinului. Parchează fix acolo, ca oamenii serioși. Vin în cinci minute. Sau în douăzeci.',
+  viber: '[[Finule|Fino]], ține-mi locul pe trotuar, în fața magazinului. Parchează fix acolo, ca oamenii serioși. Vin în cinci minute. Sau în douăzeci.',
   engage: 85,
   when: (g) => driving(g),
   where: (g, force) => kerbSpot(g, force ? 18 : 90, force ? 420 : 260),
@@ -63,7 +63,7 @@ export const PARCARE = {
     const baba = m.spawn('baba', GRANNY, bx, bz, { voice: BABA.voice })
     baba.lookAtPlayer = true
     baba.char.anim.play('point')
-    m.task(() => m.talk(BABA, pick(['Unde-ai parcat, măi?! Pe trotuar?! Io pe unde merg cu căruciorul?', 'Obraznicule! Am notat numărul! Îl dau la televizor!', 'Asta-i trotuarul meu de 40 de ani!']), 3.4))
+    m.task(() => m.talk(BABA, pick(['Unde-ai parcat, măi?! Pe trotuar?! Io pe unde merg cu căruciorul?', '[[Obraznicule|Obraznico]]! Am notat numărul! Îl dau la televizor!', 'Asta-i trotuarul meu de 40 de ani!']), 3.4))
     pr.addRespect('bab', -2, 'ai parcat pe trotuar')
     const grade = best >= 0.8 ? ['ca un deputat', 180] : best >= 0.5 ? ['ca un taximetrist', 130] : ['ca tata la piață', 90]
     box.mat.color.setHex(0x7ee07a)

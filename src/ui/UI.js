@@ -3,6 +3,7 @@ import { Minimap } from './Minimap.js'
 import { streetName, districtAt } from '../world/CityLayout.js'
 import { NEWS } from '../data/news.js'
 import { RewardStack } from './Rewards.js'
+import { fill } from '../story/hero.js'
 
 const _v = new THREE.Vector3()
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e }
@@ -185,7 +186,19 @@ export class UI {
     const t = el('div', 'toast ' + color, fmt(text))
     this.toastsEl.appendChild(t)
     while (this.toastsEl.children.length > 4) this.toastsEl.firstChild.remove()
+    this.fitToasts()
     setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 450) }, secs * 1000)
+  }
+
+  // a short screen: the notifications keep to what fits above its bottom edge, or above the
+  // speedometer when it's under them (the newest stay)
+  fitToasts() {
+    const t = this.toastsEl
+    const floor = () => {
+      const r = t.getBoundingClientRect(), v = this.vehEl.classList.contains('hidden') ? null : this.vehEl.getBoundingClientRect()
+      return v && v.width && v.left < r.right && v.right > r.left ? Math.min(innerHeight, v.top) - 6 : innerHeight - 6
+    }
+    while (t.children.length > 1 && t.getBoundingClientRect().bottom > floor()) t.firstChild.remove()
   }
 
   // gains and losses: a chip in the reward stack (the reason goes on the chip, not in a toast)
@@ -200,17 +213,30 @@ export class UI {
     this._prompt = sig
     this.promptEl.innerHTML = `<span class="key">${key}</span><span>${fmt(text)}</span>`
     this.promptEl.classList.remove('hidden')
+    this.placePrompt()
+  }
+
+  // a subtitle long enough to reach the prompt pushes it up, above its first line
+  placePrompt() {
+    const p = this.promptEl, s = this.subEl
+    p.style.bottom = ''
+    if (p.classList.contains('hidden') || s.classList.contains('hidden')) return
+    const a = p.getBoundingClientRect(), b = s.getBoundingClientRect()
+    if (a.bottom > b.top - 6 && a.top < b.bottom) p.style.bottom = Math.round(innerHeight - b.top + 8) + 'px'
   }
 
   help(text) { this.helpEl.innerHTML = text ? fmt(text) : ''; this.helpEl.classList.toggle('hidden', !text) }
 
   subtitle(name, text, secs = 3) {
     clearTimeout(this.subT)
+    // [[his|hers]] by the hero, like every line said to them (Story.talk hands over filled text already)
+    if (text) text = fill(this.game, text)
     this.subText = text || null
-    if (!text) { this.subEl.classList.add('hidden'); return }
+    if (!text) { this.subEl.classList.add('hidden'); this.placePrompt(); return }
     this.subEl.innerHTML = (name ? `<b>${name}:</b>` : '') + fmt(text)
     this.subEl.classList.remove('hidden')
-    if (secs) this.subT = setTimeout(() => { this.subEl.classList.add('hidden'); this.subText = null }, secs * 1000)
+    this.placePrompt()
+    if (secs) this.subT = setTimeout(() => { this.subEl.classList.add('hidden'); this.subText = null; this.placePrompt() }, secs * 1000)
   }
 
   bigMessage(title, sub = '', { color = '', secs = 3.2 } = {}) {
@@ -357,6 +383,8 @@ export class UI {
   }
 
   bubble(npc, text, dur = 2.6) {
+    // a bark pulled from a list goes straight here: [[his|hers]] follows the hero
+    text = text == null ? '' : fill(this.game, text)
     let b = this.bubbles.get(npc)
     if (!b) { b = { el: el('div', 'bubble') }; this.world.appendChild(b.el); this.bubbles.set(npc, b) }
     b.el.textContent = text

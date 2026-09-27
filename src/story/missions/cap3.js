@@ -104,7 +104,7 @@ export const beciul = {
     }
     m.objective('Intră în curtea din spate a Primăriei. {r}Nu te lăsa văzut.{/r}', { sub: `Poze: ${taken}/3 · ține {y}[E]{/y} pe cercurile albastre` })
     m.marker({ x: -72, z: -56 }, 'Intrarea din spate')
-    m.tip('Stai în afara conurilor de lumină. Fuga ({y}⇧{/y}) face zgomot: te observă mai repede.', 9)
+    m.tip('Stai în afara conurilor de lumină. Fuga ({y}[⇧]{/y}) face zgomot: te observă mai repede.', 9)
     await m.until(() => dist(p.pos, { x: -72, z: -56 }) < 9 || taken > 0)
     m.marker(null)
     m.checkpoint('curte', 'curtea din spate')

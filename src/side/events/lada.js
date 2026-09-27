@@ -53,7 +53,7 @@ export const LADA = {
     m.task(async (live) => { while (live()) { await m.wait(4.5); if (live()) nea.say(pick(GRUMBLE), 2.6) } })
     await m.reach(side, 3.2, { text: 'O Lada a căzut în groapă. Ajută-l pe {y}nea Petrică{/y}.', label: 'Nea Petrică', inVehicle: false })
     face(nea.char, p.pos.x, p.pos.z)
-    const c = await m.say(PETRICA, ['Măi băiete, uite! Iar groapa asta. Eu am plătit impozitul pe drum, drumul a plătit pe mine.', 'Împinge din spate, că eu apăs pe gaz. Tare, că Lada-i bătrână, da\' încăpățânată!'], { choices: ['Hai, la trei!', 'Sun la primărie, poate vine cineva.'] })
+    const c = await m.say(PETRICA, ['[[Măi băiete|Măi fato]], uite! Iar groapa asta. Eu am plătit impozitul pe drum, drumul a plătit pe mine.', 'Împinge din spate, că eu apăs pe gaz. Tare, că Lada-i bătrână, da\' încăpățânată!'], { choices: ['Hai, la trei!', 'Sun la primărie, poate vine cineva.'] })
     if (c === 1) { await m.talk(PETRICA, 'La primărie… Hahaha! Bună asta. Na, du-te.', 2.6); m.cancel() }
     nea.ride(car)
     g.audio?.sfx('door', { at: car.pos, vol: 0.6 })

@@ -465,7 +465,7 @@ export class Menus {
       ['👊 Gopnicii te știu', `${pr.tierName('gop')} · ${pr.respect.gop}${pr.look.gop ? ` (haine ${pr.look.gop > 0 ? '+' : ''}${pr.look.gop})` : ''}`], ['🥧 Babele te știu', `${pr.tierName('bab')} · ${pr.respect.bab}${pr.look.bab ? ` (haine ${pr.look.bab > 0 ? '+' : ''}${pr.look.bab})` : ''}`], ['👮 Poliția te știe', `${pr.tierName('pol')} · ${pr.respect.pol}${pr.look.pol ? ` (haine ${pr.look.pol > 0 ? '+' : ''}${pr.look.pol})` : ''}`],
       ['Vorbit cu lumea', pr.stats.talks || 0], ['Gașcă adunată', pr.stats.recruits || 0],
       ['Dosare găsite', pr.dosare.length], ['Gropi astupate', pr.potholes.length], ['Oameni puși la pământ', pr.stats.ko], ['Mașini „împrumutate"', pr.stats.cars],
-      ['Curse de taxi', pr.stats.fares], ['Mită dată', pr.stats.bribes], ['Leșinat', pr.stats.fainted], ['Kilometri condus', (pr.stats.km / 1000).toFixed(1)],
+      ['Curse de taxi', pr.stats.fares], ['Mită dată', pr.stats.bribes], ['Leșinat', pr.stats.fainted], ['Kilometri conduși', (pr.stats.km / 1000).toFixed(1)],
     ]
     for (const [a, b] of rows) col.appendChild(el('div', 'stat-row', `<span>${a}</span><span>${b}</span>`))
     const col2 = el('div', 'col'); col2.style.flex = '1'; body.appendChild(col2)

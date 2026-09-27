@@ -43,7 +43,7 @@ export const RESPECT_PERKS = {
     'Îți cer „taxă de cartier". Împinge-i și sar la bătaie.',
     'Gata cu taxa. La bancă îți dau ponturi: dosare, gropi.',
     'Te salută și-ți dau joburi mai bune: pachete, datornici.',
-    'Gașcă de 3, −10 % la Borea, sar la bătaie pentru tine. Cadou: bâta de oină.',
+    'Gașcă de 3, −10% la Borea, sar la bătaie pentru tine. Cadou: bâta de oină.',
   ],
   bab: [
     'Te ceartă pe stradă. Bârfele tot ți le spun.',
@@ -141,7 +141,7 @@ export const ACHIEVEMENTS = [
   S('acte', 'politie', '🎩', 'Domnule deputat', 'Scapă de poliție cu actele false de la Borea.', 'papers', { lei: 100 }),
 
   // around town
-  T('gropi', 'oras', '🕳️', 'Groapa cu groapă', 'Gropi astupate. Primăria plânge. La aur: toate 20.', 'potholes', ['groapă', 'gropi'],
+  T('gropi', 'oras', '🕳️', 'Groapă cu groapă', 'Gropi astupate. Primăria plânge. La aur: toate 20.', 'potholes', ['groapă', 'gropi'],
     [[1, { lei: 30 }], [8, { lei: 120 }], [20, { lei: 400, clothes: 'rz_vesta' }]]),
   T('dosare', 'oras', '📁', 'Arhivarul Primăriei', 'Dosare pierdute găsite prin oraș.', 'dosare', ['dosar', 'dosare'],
     [[3, { lei: 40 }], [12, { lei: 120 }], [30, { lei: 400 }]]),

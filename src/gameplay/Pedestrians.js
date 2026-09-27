@@ -331,7 +331,7 @@ export class Pedestrians {
     const npc = this.spawn(x, z)
     npc.knockDown(lx * 3, lz * 3, 1.6, 1.5)
     npc.hostile = npc.personality === 'tough'
-    setTimeout(() => { if (npc.personality === 'tough') npc.say(pickLine(['Mașina mea, fraerule!', 'Stai, că te prind!', 'Bratan, ai încurcat mașina!'])); else npc.say(pickLine(['Hoțul! Mi-a furat mașina!', 'Poliția!!', 'Ajutor, mașina!'])) }, 900)
+    setTimeout(() => { if (npc.personality === 'tough') npc.say(pickLine(['Mașina mea, [[fraerule|fraiero]]!', 'Stai, că te prind!', '[[Bratan|Tanti]], ai încurcat mașina!'])); else npc.say(pickLine(['Hoțul! Mi-a furat mașina!', 'Poliția!!', 'Ajutor, mașina!'])) }, 900)
     return npc
   }
 

@@ -877,7 +877,7 @@ export class Hood {
         q.hostile = true; q.ally = true; q.state = 'fight'; q.target = best; q.path = []; q.helpUntil = this.clock + 25
         this.helpers.push(q)
       }
-      ppl[0].say(this.fill('Pe-al nostru nu-l atinge nimeni!'), 2.4)
+      ppl[0].say(this.fill('[[Pe-al nostru nu-l|Pe-a noastră n-o]] atinge nimeni!'), 2.4)
       return
     }
   }

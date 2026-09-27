@@ -160,11 +160,11 @@ export class Wardrobe {
       const owned = this.owns(c.id), isWorn = worn === c.id
       const price = pr.price(c.price)
       const broke = !owned && pr.lei < price
-      const meta = [lookText(c.look || {}), isWorn ? '{g}îmbrăcat{/g}' : owned ? 'al tău' : `{y}${price} lei{/y}`].filter(Boolean).join(' · ')
+      const meta = [lookText(c.look || {}), isWorn ? '{g}îmbrăcat{/g}' : owned ? 'ai deja' : `{y}${price} lei{/y}`].filter(Boolean).join(' · ')
       return {
         id: c.id, slot: c.slot, item: c, brand: BRANDS[c.brand] || BRANDS.anon, name: c.name, meta, note: c.note,
         state: isWorn ? 'worn' : owned ? 'owned' : broke ? 'locked' : '',
-        action: isWorn ? 'Îl porți.' : owned ? 'Enter: îmbracă' : broke ? `N-ajung banii: ${price} lei` : `Enter: cumpără și îmbracă · ${price} lei`,
+        action: isWorn ? 'E pe tine.' : owned ? 'Enter: îmbracă' : broke ? `N-ajung banii: ${price} lei` : `Enter: cumpără și îmbracă · ${price} lei`,
       }
     })
   }
@@ -173,7 +173,7 @@ export class Wardrobe {
     const g = this.game, c = it.item
     if (!this.owns(c.id)) {
       if (!this.buy(c)) { g.audio?.sfx('error', { bus: 'ui' }); g.ui.notify('N-ajung banii.', 1.6, 'red'); return false }
-      g.ui.notify(`🛍️ ${BRANDS[c.brand]?.name || ''} · ${c.name}. Al tău.`, 2.6, 'gold')
+      g.ui.notify(`🛍️ ${BRANDS[c.brand]?.name || ''} · ${c.name}. E pe tine acum.`, 2.6, 'gold')
     }
     this.wear(c)
     g.audio?.sfx('confirm', { bus: 'ui' })
