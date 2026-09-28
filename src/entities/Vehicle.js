@@ -56,6 +56,9 @@ export class Vehicle {
   buildVisual() {
     const d = this.def, game = this.game
     const group = new THREE.Group()
+    // yaw first, like the Euler sync() builds its quaternion from: read back in the default XYZ
+    // order, rotation.y folds into -90..90° and mirrors for a car facing "south"
+    group.rotation.order = 'YXZ'
     const lb = new GeoBuilder()
     let head = [], tail = []
     if (d.kay) {
@@ -264,6 +267,7 @@ export class Vehicle {
     this.pitch += (tp - this.pitch) * (1 - Math.exp(-6 * dt))
     this.roll += (tr - this.roll) * (1 - Math.exp(-6 * dt))
     this.bump *= Math.exp(-8 * dt)
+    this.visHeading = hd   // the heading you see this frame (the camera turns with it)
     _e.set(this.pitch + Math.sin(performance.now() * 0.05) * this.bump, hd, this.roll, 'YXZ')
     // scripted pose override (e.g. nose-down in a crater)
     if (this.pose) { _e.x += this.pose.pitch || 0; _e.z += this.pose.roll || 0; m.position.y += this.pose.dy || 0 }
