@@ -10,6 +10,9 @@ export default defineConfig({
   // agent worktrees (.claude/worktrees/*) build their own dist/index.html inside this folder, and
   // any HTML change makes the dev server reload every open page: tests died halfway through
   server: { proxy: api, watch: { ignored: ['**/.claude/**', '**/dist/**', '**/downloads/**'] } },
+  // test suites running side by side each get their own dependency cache (VITE_CACHE_DIR=...): two dev
+  // servers re-optimising one cache answer each other's pages with "504 Outdated Optimize Dep"
+  ...(process.env.VITE_CACHE_DIR ? { cacheDir: process.env.VITE_CACHE_DIR } : {}),
   preview: { proxy: api },
   build: {
     target: 'es2020',

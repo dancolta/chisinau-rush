@@ -71,23 +71,34 @@ export class Menus {
     let shown = null
     const paint = () => {
       const save = Progress.hasSave(), cloud = g.cloud
-      const key = [save?.t, cloud?.loggedIn, cloud?.email].join('|')
+      const gate = !!cloud?.required, expired = cloud?.state === 'expired'
+      const key = [save?.t, cloud?.loggedIn, cloud?.email, gate, expired].join('|')
       if (key !== shown) {
         shown = key
         btns.innerHTML = ''
-        if (save) add(`${ico('play')}Continuă`, 'primary', (b) => this.continueSaved(b))
-        add(`${ico(save ? 'plus' : 'play')}Joc nou`, save ? '' : 'primary', async () => {
-          // the boot sync may still be bringing a save from the cloud: know before starting over
-          await cloud?.ready()
-          const lost = cloud?.loggedIn ? 'Salvarea curentă se pierde, și cea din cloud.' : 'Salvarea curentă se pierde.'
-          if (Progress.hasSave() && !(await this.confirm('Începi un joc nou?', `${lost} Tanti Zina o să uite tot. Și ea uită greu.`))) return
-          this.showCreate()
-        })
-        if (cloud?.enabled) add(`${ico(cloud.loggedIn ? 'cloud' : 'user')}Cont`, 'acct-btn', () => this.showAccount())
+        if (gate) {
+          // no account, no game: sign up (or log in), then the city; a session that ran out logs back in
+          const signup = () => add(`${ico('user')}Creează cont`, expired ? '' : 'primary', () => this.showAccount({ mode: 'signup', gate: true }))
+          const login = () => add(`${ico('cloud')}Am deja cont`, expired ? 'primary' : '', () => this.showAccount({ mode: 'login', gate: true }))
+          if (expired) { login(); signup() } else { signup(); login() }
+        } else {
+          if (save) add(`${ico('play')}Continuă`, 'primary', (b) => this.continueSaved(b))
+          add(`${ico(save ? 'plus' : 'play')}Joc nou`, save ? '' : 'primary', async () => {
+            // the boot sync may still be bringing a save from the cloud: know before starting over
+            await cloud?.ready()
+            if (await this.gated()) return
+            const lost = cloud?.loggedIn ? 'Salvarea curentă se pierde, și cea din cloud.' : 'Salvarea curentă se pierde.'
+            if (Progress.hasSave() && !(await this.confirm('Începi un joc nou?', `${lost} Tanti Zina o să uite tot. Și ea uită greu.`))) return
+            this.showCreate()
+          })
+          if (cloud?.enabled) add(`${ico(cloud.loggedIn ? 'cloud' : 'user')}Cont`, 'acct-btn', () => this.showAccount())
+        }
         add(`${ico('film')}Trailer`, '', () => this.showTrailer())
         add(`${ico('gear')}Setări`, '', () => this.showSettingsOnly())
-        // the save on a cardboard tag: who, how far, when
-        m.querySelector('.mm-save').innerHTML = save ? `<b>SALVAREA TA</b>${saveLine(save)}<small> · ${new Date(save.t).toLocaleString('ro-RO')}</small>` : ''
+        // the save on a cardboard tag: who, how far, when (behind the gate: that it waits for you)
+        m.querySelector('.mm-save').innerHTML = gate
+          ? `<b>${save ? 'SALVAREA TA TE AȘTEAPTĂ' : 'CONT OBLIGATORIU'}</b>${save ? `${saveLine(save)}<small> · intră în cont și joci mai departe, nu se pierde nimic</small>` : 'Ca să joci, îți faci cont: email și parolă, zece secunde.<small> Progresul te așteaptă apoi pe orice telefon sau calculator.</small>'}`
+          : save ? `<b>SALVAREA TA</b>${saveLine(save)}<small> · ${new Date(save.t).toLocaleString('ro-RO')}</small>` : ''
         // the daily bonus: where the streak stands and what today brings (paid once you're in)
         m.querySelector('.mm-daily').innerHTML = GoalsUI.titleStrip(save)
       }
@@ -118,15 +129,35 @@ export class Menus {
     this.starting = true
     if (g.cloud?.busy && btn) btn.innerHTML = '<i class="ico cloud"></i>Se sincronizează…'
     await g.cloud?.ready()
+    const wall = await this.gated()
     this.starting = false
+    if (wall) return
     const save = Progress.hasSave()
     if (save) g.director.continueGame(save)
     else this.showMain()
   }
 
-  showAccount() {
+  // the account screen; from the sign-up wall (gate) it steps aside once you're in: no save yet,
+  // straight on to making your character, otherwise back to the title with Continuă on it
+  showAccount({ mode = 'login', gate = false } = {}) {
     if (this.closeAccount) return
-    this.closeAccount = openAccountScreen(this.game, { onClose: () => { this.closeAccount = null } })
+    const g = this.game
+    const onLogin = gate ? async () => {
+      await g.cloud?.ready()
+      if (g.state === 'menu' && this.open?.classList.contains('mainmenu') && !Progress.hasSave()) this.showCreate()
+    } : null
+    this.closeAccount = openAccountScreen(g, { mode, gate, onLogin, onClose: () => { this.closeAccount = null } })
+  }
+
+  // a click that came before the server answered whether accounts are required: ask it (briefly),
+  // and if they are, the sign-up wall instead of the game
+  async gated() {
+    const cloud = this.game.cloud
+    if (!cloud?.enabled || cloud.loggedIn) return false
+    if (cloud.probing && cloud.server === 'unknown') await Promise.race([cloud.probing, new Promise((r) => setTimeout(r, 4000))])
+    if (!cloud.required) return false
+    this.showAccount({ mode: 'signup', gate: true })
+    return true
   }
 
   confirm(title, text) {
