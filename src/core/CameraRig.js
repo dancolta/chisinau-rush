@@ -165,7 +165,9 @@ export class CameraRig {
       // the camera turns with the car (same rate, so nothing keeps swinging after you straighten
       // up), and a spring settles it in behind: briskly right after you get in, gently while you
       // drive. A passenger gets a lazy three-quarter view from the kerb side, so the city goes by
-      const rh = car.mesh.rotation.y
+      // the heading the car is drawn at this frame (not mesh.rotation.y: that's an Euler read back
+      // from the car's quaternion, and it mirrors once the car faces more than 90° off +z)
+      const rh = car.visHeading ?? car.heading
       if (this.userYawT <= 0 || this.enterT > 0) {
         const dh = this.carHeading == null ? 0 : wrap(rh - this.carHeading)
         if (ride) {

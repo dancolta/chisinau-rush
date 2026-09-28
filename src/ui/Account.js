@@ -67,10 +67,12 @@ function check(email, password, signup) {
 
 // The account panel inside `root`. opts.back(source, typing) handles Esc / B (return false to
 // let the key through); opts.navRoot widens keyboard/pad navigation to the whole screen;
-// opts.autofocus puts the cursor in the email field. Returns a function that takes it down.
-export function renderAccount(game, root, { back = null, navRoot = null, autofocus = false } = {}) {
+// opts.autofocus puts the cursor in the email field; opts.mode opens on 'login' or 'signup'; opts.gate
+// words it as the way into the game; opts.done runs once a sign-up or login (and its sync) went
+// through. Returns a function that takes it down.
+export function renderAccount(game, root, { back = null, navRoot = null, autofocus = false, mode: startMode = 'login', gate = false, done = null } = {}) {
   const cloud = game.cloud
-  let mode = 'login', busy = false, error = '', shown = null
+  let mode = startMode, busy = false, error = '', shown = null, dead = false
   let stopNav = null
   const look = () => (cloud.loggedIn ? 'in' : cloud.state)
   const wrap = el('div', 'acct')
@@ -91,7 +93,7 @@ export function renderAccount(game, root, { back = null, navRoot = null, autofoc
     const expired = cloud.state === 'expired'
     wrap.innerHTML = `
       <div class="acct-h">SALVARE ÎN CLOUD</div>
-      <p class="acct-p">${expired ? '<b class="r">Sesiunea a expirat.</b> Intră din nou ca să-ți ții progresul în cloud.' : 'Fă-ți cont și progresul te așteaptă pe orice telefon sau calculator. Fără cont, salvarea stă doar în browserul ăsta, ca banii la saltea.'}</p>
+      <p class="acct-p">${expired ? '<b class="r">Sesiunea a expirat.</b> Intră din nou ca să-ți ții progresul în cloud.' : gate ? 'Ca să joci, fă-ți cont (sau intră în cel pe care-l ai). Progresul te așteaptă pe orice telefon sau calculator.' : 'Fă-ți cont și progresul te așteaptă pe orice telefon sau calculator. Fără cont, salvarea stă doar în browserul ăsta, ca banii la saltea.'}</p>
       <div class="acct-seg"><button type="button" class="acct-tab${signup ? '' : ' on'}" data-m="login">Intră în cont</button><button type="button" class="acct-tab${signup ? ' on' : ''}" data-m="signup">Cont nou</button></div>
       <form class="acct-form" novalidate>
         <label class="acct-l"><span>Email</span><input name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="254" placeholder="tu@exemplu.md"></label>
@@ -137,6 +139,8 @@ export function renderAccount(game, root, { back = null, navRoot = null, autofoc
       go.textContent = mode === 'signup' ? 'Se creează contul…' : 'Se verifică…'
       const r = mode === 'signup' ? await cloud.signup(email, password) : await cloud.login(email, password)
       busy = false
+      if (dead) return
+      if (r.ok && done) { game.audio?.sfx('confirm', { bus: 'ui' }); go.innerHTML = '✓ Ești în cont'; setTimeout(() => { if (!dead) done() }, 450); return }
       if (r.ok) { game.audio?.sfx('confirm', { bus: 'ui' }); render(); return }
       if (!go.isConnected) return
       go.disabled = false
@@ -184,13 +188,14 @@ export function renderAccount(game, root, { back = null, navRoot = null, autofoc
   }
 
   const render = () => {
+    if (dead) return
     shown = look()
     if (cloud.loggedIn) member()
     else guest()
   }
 
   const off = cloud.on(() => {
-    if (!wrap.isConnected) return
+    if (dead || !wrap.isConnected) return
     // logged in or out (or the session expired) under our feet: redraw
     if ((shown === 'in') !== cloud.loggedIn || (look() === 'expired' && shown !== 'expired')) { if (!busy) render() }
     else if (cloud.loggedIn) {
@@ -201,23 +206,25 @@ export function renderAccount(game, root, { back = null, navRoot = null, autofoc
   })
   const clock = setInterval(paintStatus, 15000)
   render()
-  return () => { off(); clearInterval(clock); stopNav?.(); wrap.remove() }
+  return () => { dead = true; off(); clearInterval(clock); stopNav?.(); wrap.remove() }
 }
 
 // main menu: the account panel as a full screen over the title
-export function openAccountScreen(game, { onClose } = {}) {
+export function openAccountScreen(game, { onClose, mode = 'login', gate = false, onLogin = null } = {}) {
   const m = el('div', 'pause over acct-screen', '<div class="top"><h1>CONT</h1></div><div class="body"></div><div class="foot"><button type="button" class="btn primary acct-back"><i class="ico back"></i>Înapoi</button></div>')
   game.ui.top.appendChild(m)
   let dispose = null
-  const close = () => {
+  const close = (quiet) => {
     if (!m.isConnected) return
     dispose?.()
     m.remove()
-    game.audio?.sfx('back', { bus: 'ui' })
+    if (quiet !== true) game.audio?.sfx('back', { bus: 'ui' })
     onClose?.()
   }
+  // from the sign-up wall: as soon as you're in (and your save is here), the screen gets out of the way
+  const done = onLogin ? () => { close(true); onLogin() } : null
   // on phones the keyboard would jump up at once: there the player taps the field first
-  dispose = renderAccount(game, m.querySelector('.body'), { navRoot: m, autofocus: !game.touch, back: () => { close(); return true } })
+  dispose = renderAccount(game, m.querySelector('.body'), { navRoot: m, autofocus: !game.touch, mode, gate, done, back: () => { close(); return true } })
   m.querySelector('.acct-back').onclick = close
   return close
 }

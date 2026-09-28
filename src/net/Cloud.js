@@ -49,6 +49,8 @@ export class Cloud {
   constructor(game) {
     this.game = game
     this.enabled = CLOUD_ON
+    this.server = 'unknown'   // what /api/health said: ok | off (no database) | down
+    this.probing = null       // that question, while it's out
     this.state = this.enabled ? 'guest' : 'off'   // guest | idle | pending | syncing | retry | conflict | error | expired
     this.auth = null
     this.listeners = new Set()
@@ -70,9 +72,10 @@ export class Cloud {
     if (!this.enabled) return
     const a = load(AUTH_KEY)
     if (a && typeof a.token === 'string' && a.id) { this.auth = a; this.state = 'idle' }
-    // a server with no database connected yet can't make accounts: guests don't see Cont until it
-    // can (asked on the real sites only: a local dev server may have no API running at all)
-    else if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) this.probe()
+    // can the server make accounts? Then a guest signs up (or logs in) to play, a logged-out player
+    // too; with no database connected yet it can't, and guests don't see Cont until it can. Asked on
+    // the real sites only: a local dev server may have no API running at all
+    if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) this.probing = this.probe()
     // a story mission just passed: that save goes up right away
     game.events?.on('mission:pass', (def) => { if (def && !def.activity) this.urgentUntil = Date.now() + 90000 })
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') this.flushOnHide(); else this.recheck() })
@@ -90,9 +93,15 @@ export class Cloud {
     try {
       const r = await fetch(`${API_BASE}/health`, { cache: 'no-store' })
       const d = await r.json().catch(() => null)
-      if (d?.configured === false && !this.auth) { this.enabled = false; this.state = 'off'; this.emit() }
-    } catch (e) { /* offline or blocked: leave it as it is, the panel says so if it's opened */ }
+      this.server = d?.ok ? 'ok' : d?.configured === false ? 'off' : 'down'
+      if (this.server === 'off' && !this.auth) { this.enabled = false; this.state = 'off' }
+    } catch (e) { this.server = 'down' } // offline or blocked: play without, the panel says so if it's opened
+    this.emit()
   }
+
+  // an account is how you play: where the server can make them, a guest on the title screen signs up
+  // or logs in first (a server that's down or unreachable, or a local dev one, lets you play without)
+  get required() { return this.enabled && !this.loggedIn && this.server === 'ok' }
   emit() { for (const fn of [...this.listeners]) { try { fn(this) } catch (e) { console.error('[cloud]', e) } } }
   setState(s) { this.state = s; this.emit() }
 
