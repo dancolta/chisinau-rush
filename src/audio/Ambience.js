@@ -94,8 +94,21 @@ export class Ambience {
       lfo.start(now)
       srcs.push(lfo)
     }
+    // the Centura past the east wall: a steady low roar, as loud as setHighway() says
+    const highway = gain(this.hw || 0, muffle)
+    const hlp = ctx.createBiquadFilter()
+    hlp.type = 'lowpass'; hlp.frequency.value = 320; hlp.Q.value = 0.3
+    const hn = k.noiseSrc('brown', now, 1e6)
+    hn.connect(hlp); hlp.connect(highway)
+    srcs.push(hn)
     const events = gain(1, muffle)
-    this.n = { muffle, bed, traffic, events, srcs }
+    this.n = { muffle, bed, traffic, events, srcs, highway }
+  }
+
+  // how loud the ring highway is where you stand (it follows you, so it eases)
+  setHighway(v) {
+    this.hw = v
+    if (this.n) this.n.highway.gain.setTargetAtTime(v, this.ctx.currentTime, 0.6)
   }
 
   // the ambience recording finished decoding after a fallback bed was built: swap it in

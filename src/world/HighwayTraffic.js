@@ -16,10 +16,10 @@ const { x0: X0, x1: X1 } = BOUNDS
 
 // vehicles on the whole ring highway, and on each road out, per quality preset
 export const CENTURA_COUNTS = {
-  low: { highway: 36, road: 4 },
-  medium: { highway: 60, road: 6 },
-  high: { highway: 84, road: 8 },
-  ultra: { highway: 108, road: 10 },
+  low: { highway: 44, road: 4 },
+  medium: { highway: 72, road: 6 },
+  high: { highway: 100, road: 8 },
+  ultra: { highway: 128, road: 10 },
 }
 const MAX = Math.max(...Object.values(CENTURA_COUNTS).map((c) => c.highway + 2 * c.road))
 
@@ -189,7 +189,7 @@ export class HighwayTraffic {
           float d = max(-mv.z, 1.0);
           float face = mix(0.22, 1.0, smoothstep(-0.3, 0.75, dot(aDir, normalize(cameraPosition - position))));
           vCol = aCol * face * uNight * (1.0 - smoothstep(uFogNear, uFogFar * 1.3, d));
-          gl_PointSize = clamp(1.1 * uScale / d, 2.5, 48.0);
+          gl_PointSize = clamp(1.1 * uScale / d, 3.0, 48.0);
         }`,
       fragmentShader: `
         varying vec3 vCol;
@@ -313,7 +313,14 @@ export class HighwayTraffic {
     const name = this.presetName()
     if (name !== this.preset) this.populate(name)
     this.step(dt)
-    if (camera) this.pack(camera)
+    if (!camera) return
+    this.pack(camera)
+    // a low roar from the Centura when you're near the east edge, quieter at night
+    const amb = this.game?.audio?.amb
+    if (amb?.setHighway) {
+      const k = 0.2 * (1 - smooth(30, 340, Math.abs(camera.position.x - X1 - 14))) * (1 - 0.45 * this.night)
+      if (Math.abs(k - (this.hum ?? -1)) > 0.004) { this.hum = k; amb.setHighway(k) }
+    }
   }
 
   // the vehicles in view (within the haze and inside the frustum) into their model's instances

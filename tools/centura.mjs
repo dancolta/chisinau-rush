@@ -129,6 +129,7 @@ const roof = { at: [466, 14, 150], to: [478 + 12, 7, 50] }
 const live = await ev(async (roof) => {
   const g = window.__game, H = g.world.centura
   await window.__view(roof, 13, 3)
+  const humNear = H.hum
   const a = H.snapshot()
   await window.__frames(6)
   const b = H.snapshot()
@@ -149,8 +150,9 @@ const live = await ev(async (roof) => {
   // looking away from the east edge: nothing packed, nothing drawn
   await window.__view({ at: [0, 80, 0], to: [0, 0, 5] }, 13, 3)
   const away = [...H.models.values()].reduce((s, m) => s + m.mesh.count, 0) + H.litCount
-  return { moved, total: a.length, missed, packed, models: H.models.size, day: [dayOn[0] - dayOff[0], dayOn[1] - dayOff[1]], night: [nightOn[0] - nightOff[0], nightOn[1] - nightOff[1]], dayLights, nightLights: night, away }
+  return { hum: { amb: !!g.audio?.amb, near: humNear, away: H.hum }, moved, total: a.length, missed, packed, models: H.models.size, day: [dayOn[0] - dayOff[0], dayOn[1] - dayOff[1]], night: [nightOn[0] - nightOff[0], nightOn[1] - nightOff[1]], dayLights, nightLights: night, away }
 }, roof)
+check('traffic hum by the east edge, none in the middle of town', !live.hum.amb || (live.hum.near > 0.05 && live.hum.away < 0.01), JSON.stringify(live.hum))
 check('vehicles move in real time', live.moved > live.total * 0.8, `${live.moved} of ${live.total}`)
 check('culling: every vehicle on screen is drawn', live.missed === 0 && live.packed > 0, `missed ${live.missed}, drawn ${live.packed}`)
 check('culling: looking away from the edge draws none', live.away === 0, `${live.away}`)
@@ -168,7 +170,7 @@ if (shots) {
     await window.__frames(2)
     // a street spot by the east wall for the player's own view
     let spot = null
-    for (let z = 90; z < 260 && !spot; z += 10) for (let x = 470; x > 430 && !spot; x -= 4) if (g.physics.groundHeight(x, z, 6) < 0.5) spot = [x, z]
+    for (let z = 120; z < 300 && !spot; z += 10) for (let x = 400; x > 340 && !spot; x -= 4) if (g.physics.groundHeight(x, z, 6) < 0.5) spot = [x, z]
     window.__spot = spot
   })
   const shot = async (name, cam, hour, player, prep) => {
