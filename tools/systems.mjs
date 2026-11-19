@@ -58,9 +58,13 @@ r = await ev(async () => {
   g.police.clear()
   const lei0 = g.progress.lei
   g.progress.hurt(1000)
-  await new Promise((r) => setTimeout(r, 7000))
+  // the faint plays out in game time: on a slow machine 7 s of wall clock isn't always enough, so wait
+  // (up to a minute) for the player to be back home and in control
   const home = g.world.places.acasa
-  return { d: Math.hypot(g.player.pos.x - home.x, g.player.pos.z - home.z), hp: g.progress.hp, lost: lei0 - g.progress.lei, control: g.player.control }
+  const d = () => Math.hypot(g.player.pos.x - home.x, g.player.pos.z - home.z)
+  await new Promise((r) => setTimeout(r, 2000))
+  for (let i = 0; i < 116 && !(d() < 6 && g.player.control); i++) await new Promise((r) => setTimeout(r, 500))
+  return { d: d(), hp: g.progress.hp, lost: lei0 - g.progress.lei, control: g.player.control }
 })
 check('fainting sends you home', r.d < 6 && r.hp > 0 && r.control, JSON.stringify(r))
 
