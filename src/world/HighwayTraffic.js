@@ -157,6 +157,9 @@ export class HighwayTraffic {
   // the atlas material, with the body cell moved per instance (the same remap as Assets.recolor)
   material(M, tex, i) {
     const mat = M.atlas(tex, { key: 'centura' + i })
+    // (Materials caches it: patch it once, however many times it's asked for)
+    if (mat.userData.centura) return mat
+    mat.userData.centura = true
     const base = mat.onBeforeCompile, cache = mat.customProgramCacheKey
     mat.onBeforeCompile = (shader, r) => {
       base.call(mat, shader, r)

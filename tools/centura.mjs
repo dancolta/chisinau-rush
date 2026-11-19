@@ -71,13 +71,14 @@ check('every ordinary VEHICLES model drives (no police, no trolleybus)', JSON.st
 check('varied models and paint', models.used >= Math.min(3, models.have.length) && models.paints >= 8, `models ${models.used}, model+paint ${models.paints}`)
 
 // ---- a long run, fast-forwarded: lanes, deck, direction, gaps, speeds, the checkpoints -----------
-const run = await ev(() => {
-  const g = window.__game, H = g.world.centura, { LANES, deckY } = window.__T, { x0: X0, x1: X1 } = window.__L.BOUNDS
+// a long run of a traffic instance, fast-forwarded in 0.2 s steps (runs in the page)
+const runFn = (H, steps) => {
+  const { LANES, deckY } = window.__T, { x0: X0, x1: X1 } = window.__L.BOUNDS
   const out = { samples: 0, lane: [], deck: [], dir: [], overlap: [], inside: [], offRoad: [], turned: new Set(), speeds: [], back: [] }
   const corners = (c) => { const rx = c.fz, rz = -c.fx, n = Math.hypot(rx, rz) || 1; return [[1, 1], [1, -1], [-1, -1], [-1, 1]].map(([a, b]) => [c.x + c.fx * c.hl * a + rx / n * c.hw * b, c.z + c.fz * c.hl * a + rz / n * c.hw * b]) }
   const sep = (A, B) => { for (const P of [A, B]) for (let i = 0; i < 4; i++) { const [x0, z0] = P[i], [x1, z1] = P[(i + 1) % 4], nx = z1 - z0, nz = x0 - x1; let a0 = 1e9, a1 = -1e9, b0 = 1e9, b1 = -1e9; for (const [x, z] of A) { const d = x * nx + z * nz; a0 = Math.min(a0, d); a1 = Math.max(a1, d) } for (const [x, z] of B) { const d = x * nx + z * nz; b0 = Math.min(b0, d); b1 = Math.max(b1, d) } if (a1 < b0 || b1 < a0) return true } return false }
   let prev = H.snapshot()
-  for (let k = 0; k < 900; k++) {
+  for (let k = 0; k < steps; k++) {
     H.step(0.2)
     const s = H.snapshot()
     if (k % 3 === 0) {
@@ -111,7 +112,9 @@ const run = await ev(() => {
   const sp = out.speeds.sort((a, b) => a - b), q = (f) => +sp[Math.floor(f * (sp.length - 1))].toFixed(1)
   const roadCars = H.cars.filter((c) => c.lane.road).length
   return { samples: out.samples, lane: out.lane.slice(0, 3), nLane: out.lane.length, deck: out.deck.slice(0, 3), nDeck: out.deck.length, dir: out.dir.length, back: out.back.length, backEx: out.back.slice(0, 3), overlap: out.overlap.length, overlapEx: out.overlap.slice(0, 3), inside: out.inside.length, insideEx: out.inside.slice(0, 3), offRoad: out.offRoad.length, offEx: out.offRoad.slice(0, 3), turned: out.turned.size, roadCars, kmh: { p1: q(0.01), p50: q(0.5), p99: q(0.99), max: q(1) } }
-})
+}
+await page.evaluate(`window.__run = ${runFn}`)
+const run = await ev(() => window.__run(window.__game.world.centura, 900))
 const n = `${run.samples} samples over 180 s`
 check('highway: everything inside its lane', run.nLane === 0, `${n}; ${JSON.stringify(run.lane)}`)
 check('highway: on the deck surface', run.nDeck === 0, JSON.stringify(run.deck))
@@ -122,6 +125,25 @@ check('highway speeds about 70-110 km/h', run.kmh.p1 >= 62 && run.kmh.max <= 112
 check('roads out: nothing ever reaches the checkpoint barrier', run.inside === 0, JSON.stringify(run.insideEx))
 check('roads out: on the carriageway', run.offRoad === 0, JSON.stringify(run.offEx))
 check('roads out: cars come up to the checkpoint and turn back', run.turned >= Math.ceil(run.roadCars / 2), `${run.turned} of ${run.roadCars}`)
+
+// a stand-in for the vans and lorries on their way to VEHICLES: a stretched, taller sedan under a
+// new name joins the traffic on its own, keeps to the slow lanes and still never overlaps
+const lorry = await ev(() => {
+  const g = window.__game, V = window.__V.VEHICLES, k = g.assets.kay.car_sedan
+  g.assets.kay.test_lorry = { geometry: k.geometry.clone().scale(1.15, 2.1, 2.4), wheels: k.wheels }
+  V.lorry = { name: 'Lorry', kay: 'test_lorry', body: 'steel', colors: ['white', 'red', 'blue'], dims: [1.1, 1.6, 5.3] }
+  const H = new window.__T.HighwayTraffic(g.world)
+  delete V.lorry; delete g.assets.kay.test_lorry
+  H.populate('ultra')
+  const heavy = H.cars.filter((c) => c.model.heavy)
+  const r = window.__run(H, 450)
+  H.group.removeFromParent()
+  return { models: [...H.models.keys()], heavy: heavy.length, lanes: [...new Set(heavy.filter((c) => !c.lane.road).map((c) => H.hw.indexOf(c.lane)))], amber: heavy[0]?.model.lights.filter((l) => l[3] === 2).length, r }
+})
+check('a new VEHICLES model joins the traffic by itself', lorry.models.includes('test_lorry:steel') && lorry.heavy > 0, `${lorry.heavy} lorries; ${lorry.models.join(', ')}`)
+check('lorries keep to the slow lanes, with amber roof markers', lorry.lanes.length && lorry.lanes.every((l) => l === 0 || l === 3) && lorry.amber === 2, JSON.stringify({ lanes: lorry.lanes, amber: lorry.amber }))
+const lr = lorry.r
+check('with lorries: lanes, deck, gaps, barrier, direction all hold', lr.nLane + lr.nDeck + lr.dir + lr.back + lr.overlap + lr.inside + lr.offRoad === 0 && lr.kmh.p1 >= 62, JSON.stringify({ lane: lr.nLane, deck: lr.nDeck, dir: lr.dir, back: lr.back, overlap: lr.overlapEx, inside: lr.inside, off: lr.offEx, kmh: lr.kmh }))
 
 // ---- in real time: moving, lights, culling, draw calls ------------------------------------------
 // from a balcony by the east wall, looking up the Centura
@@ -179,7 +201,7 @@ if (shots) {
       // a car coming up to the checkpoint, for the road out
       if (prep) for (let i = 0; i < 3000 && !H.cars.some((c) => c.lane.side === prep && (H.pose(c), Math.abs(c.p.x) - 478 < 75)); i++) H.step(0.1)
       if (player) { const [x, z] = window.__spot; g.player.teleport(x, g.physics.groundHeight(x, z, 6), z, player) }
-      await window.__view(cam, hour, player ? 25 : 4)
+      await window.__view(cam, hour, player ? 14 : 4)
     }, [cam, hour, player, prep])
     await page.screenshot({ path: path.join(shots, name) })
   }
