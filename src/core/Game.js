@@ -353,6 +353,8 @@ export class Game {
       this.cameraRig.update(dt, rawDt)
       this.renderer.updateShadowFocus(this.player ? (this.player.vehicle ? this.player.vehicle.mesh.position : this.player.char.mesh.position) : this.cameraRig.target)
     }
+    // (after the camera has moved: it packs only the vehicles in this frame's view)
+    this.safe('centura', () => this.world?.centura?.update(this.paused ? 0 : dt, this.camera))
   }
 
   // skid marks, tyre smoke and a smoking bonnet when a car is hurt

@@ -12,6 +12,7 @@ import { mulberry } from './rng.js'
 import { buildHorizon } from './Horizon.js'
 import { buildTerrain, buildCanopy } from './Terrain.js'
 import { Edge } from './Edge.js'
+import { HighwayTraffic } from './HighwayTraffic.js'
 
 // Builds and owns the static city: ground, buildings, landmarks, props, colliders,
 // plus registries (named places, lamps, parking, benches…) used by every other system.
@@ -124,6 +125,8 @@ export class World {
     // where the city ends (before the props: it adds lamps, trees and signs of its own)
     this.edge = new Edge(this)
     this.edge.build()
+    // traffic on the Centura and the roads out: scenery, it never comes in
+    this.centura = new HighwayTraffic(this)
     await tick()
     progress(0.55, 'copaci, felinare, troleibuze')
     const props = new Props(this)
