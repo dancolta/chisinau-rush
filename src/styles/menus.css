@@ -439,9 +439,10 @@ table.ctl tr:hover td { background: rgba(246, 236, 216, 0.04); }
   .create .actions .btn:not(.go) { gap: 0; font-size: 0; }
   .create .actions .btn:not(.go) .ico { font-size: 17px; }
 }
-/* the keyboard is up on a phone on its side (where it shrinks the page): only the form, so the field you type in has the room */
+/* the keyboard is up on a phone on its side (where it shrinks the page): only the form, so the field you type in has the room.
+   Only while a field has the focus: a short screen with no keyboard keeps its title and its way back */
 @media (max-height: 300px) {
-  .acct-screen .top, .acct-screen .foot { display: none; }
+  html.touch .acct-screen:has(input:focus) .top, html.touch .acct-screen:has(input:focus) .foot { display: none; }
   .acct-screen .body { padding: 8px 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
