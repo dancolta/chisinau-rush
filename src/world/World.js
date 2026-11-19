@@ -12,6 +12,7 @@ import { mulberry } from './rng.js'
 import { buildHorizon } from './Horizon.js'
 import { buildTerrain, buildCanopy } from './Terrain.js'
 import { Edge } from './Edge.js'
+import { DistanceLod } from './Lod.js'
 
 // Builds and owns the static city: ground, buildings, landmarks, props, colliders,
 // plus registries (named places, lamps, parking, benches…) used by every other system.
@@ -224,14 +225,18 @@ export class World {
     // shadow map only ever covers the ground round the player, and the player is always inside)
     mats.vcol.static_far = mats.vcol.static
     mats.vcol.tree_far = mats.vcol.tree
+    mats.vcol.tree_lod = mats.vcol.tree
     mats.atlas.props_far = mats.atlas.props
     this.meshes.push(...this.batches.finalize(this.scene, mats, {
       markings: { cast: false, recv: true },
       static_far: { cast: false, recv: true },
       tree_far: { cast: false, recv: true },
+      // (only ever drawn well past the shadow map)
+      tree_lod: { cast: false, recv: true },
       props_far: { cast: false, recv: true },
       'flat:fence': { cast: true, recv: true },
     }))
+    this.lod = new DistanceLod(this.meshes)
   }
 
   update(dt) {

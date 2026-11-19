@@ -10,12 +10,16 @@ import { SHARED, RES } from './Materials.js'
 
 // peds / cars: how many people walk the streets and how many cars drive round you at the busiest
 // hour (Pedestrians and Traffic scale them down by the clock); every person is a draw call of its
-// own, so phones get fewer
+// own, so phones get fewer.
+// far: the camera's far plane (the TV tower is under 2 km from anywhere in the city); fog: where the
+// haze starts and where it hides everything; haze: how far the sky turns to the fog's colour down at
+// the horizon, so what's culled past the fog leaves no gap in the skyline; lod: what the far field
+// is spared (DistanceLod, world/Lod.js), none drawing everything as built
 export const QUALITY = {
-  low: { label: 'Scăzută', post: false, shadows: false, shadowMap: 1024, shadowSize: 50, ao: false, bloom: false, smaa: false, maxDpr: 1, antialias: false, lamps: 2, msaa: 0, peds: 30, cars: 20 },
-  medium: { label: 'Medie', post: true, shadows: true, shadowMap: 1024, shadowSize: 60, ao: false, bloom: true, smaa: true, maxDpr: 1.25, antialias: false, lamps: 4, msaa: 2, peds: 44, cars: 28 },
-  high: { label: 'Înaltă', post: true, shadows: true, shadowMap: 2048, shadowSize: 70, ao: true, bloom: true, smaa: true, maxDpr: 1.5, antialias: false, lamps: 8, msaa: 4, peds: 54, cars: 32 },
-  ultra: { label: 'Ultra', post: true, shadows: true, shadowMap: 4096, shadowSize: 90, ao: true, bloom: true, smaa: true, maxDpr: 2, antialias: false, lamps: 12, msaa: 4, peds: 64, cars: 38 },
+  low: { label: 'Scăzută', post: false, shadows: false, shadowMap: 1024, shadowSize: 50, ao: false, bloom: false, smaa: false, maxDpr: 1, antialias: false, lamps: 2, msaa: 0, peds: 30, cars: 20, far: 2000, fog: [140, 560], haze: 1, lod: { twin: 250, tree: 650, static: 600, props: 360, tall: 24 } },
+  medium: { label: 'Medie', post: true, shadows: true, shadowMap: 1024, shadowSize: 60, ao: false, bloom: true, smaa: true, maxDpr: 1.25, antialias: false, lamps: 4, msaa: 2, peds: 44, cars: 28, far: 2400, fog: [140, 760], haze: 0.5, lod: { twin: 400, tree: 850, static: 800, props: 520, tall: 24 } },
+  high: { label: 'Înaltă', post: true, shadows: true, shadowMap: 2048, shadowSize: 70, ao: true, bloom: true, smaa: true, maxDpr: 1.5, antialias: false, lamps: 8, msaa: 4, peds: 54, cars: 32, far: 2400, fog: [140, 900], haze: 0 },
+  ultra: { label: 'Ultra', post: true, shadows: true, shadowMap: 4096, shadowSize: 90, ao: true, bloom: true, smaa: true, maxDpr: 2, antialias: false, lamps: 12, msaa: 4, peds: 64, cars: 38, far: 2400, fog: [140, 900], haze: 0 },
 }
 
 const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _mi = new THREE.Matrix4()
@@ -85,6 +89,9 @@ export class Renderer {
     sc.left = -s; sc.right = s; sc.top = s; sc.bottom = -s; sc.near = 1; sc.far = 500
     sc.updateProjectionMatrix()
     this.dynScale = 1
+    this.camera.far = q.far
+    this.scene.fog.near = q.fog[0]
+    this.sky.uniforms.uHaze.value = q.haze
 
     if (this.composer) { this.composer.dispose(); this.composer = null }
     if (q.post) {
@@ -184,8 +191,9 @@ export class Renderer {
     this.renderer.setClearColor(s.fog)
     SHARED.uNight.value = s.lamps
     this.renderer.toneMappingExposure = s.exposure * (this.settings?.brightness ?? 1)
-    this.scene.fog.far = 900
+    this.scene.fog.far = this.q.fog[1]
     this.weather?.apply(this)
+    u.uFog.value.copy(this.scene.fog.color)
     // indoors: the lamp lights the room, the sky only comes in through the window
     if (this.indoors) { this.sun.intensity *= 0.12; this.hemi.intensity *= 0.55 }
   }
@@ -218,6 +226,7 @@ export class Renderer {
     SHARED.uTime.value += dt
     this.sky.uniforms.uTime.value += dt
     if (!draw) return
+    this.lod?.update(this.camera, this.q.lod)
     this.renderer.info.reset()
     if (this.composer) this.composer.render(dt)
     else this.renderer.render(this.scene, this.camera)

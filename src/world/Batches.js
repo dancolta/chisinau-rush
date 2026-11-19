@@ -5,6 +5,9 @@ import { FacadeBuilder } from './Facade.js'
 
 export const CHUNK = 100
 // size: coarser chunks for long, thin things out at the edge of the map (fewer draw calls)
+// ground, road markings and facades are a handful of triangles per 100 m but a draw call each: they
+// go in bigger chunks (markings and ground cast no shadow, facades only a cheap one)
+const FLAT_CHUNK = 300, MARK_CHUNK = 300, FACADE_CHUNK = 200
 export const chunkKey = (x, z, size = CHUNK) => `${size === CHUNK ? '' : size + ':'}${Math.floor(x / size)}_${Math.floor(z / size)}`
 
 // Flat textured surfaces with world-space UVs (ground, sidewalks, plazas).
@@ -76,14 +79,14 @@ export class Batches {
     this.surfaces = []       // every ground rect/disc laid, with its surface kind (kept after finalize)
   }
 
-  facade(x, z, size) {
+  facade(x, z, size = FACADE_CHUNK) {
     const k = chunkKey(x, z, size)
     let f = this.facades.get(k)
     if (!f) { f = new FacadeBuilder(); this.facades.set(k, f) }
     return f
   }
 
-  vcol(x, z, kind = 'static', size) {
+  vcol(x, z, kind = 'static', size = kind === 'markings' ? MARK_CHUNK : CHUNK) {
     const k = `${kind}|${chunkKey(x, z, size)}`
     let e = this.vcols.get(k)
     if (!e) { e = { builder: new GeoBuilder(), kind }; this.vcols.set(k, e) }
@@ -97,7 +100,7 @@ export class Batches {
     e.items.push({ geometry, matrix })
   }
 
-  flat(x, z, surface, uvScale, size) {
+  flat(x, z, surface, uvScale, size = FLAT_CHUNK) {
     const k = `${surface}|${chunkKey(x, z, size)}`
     let e = this.flats.get(k)
     if (!e) {

@@ -108,6 +108,7 @@ export class Game {
     this.nightLights = new NightLights(this, this.renderer.q.lamps ?? 8)
     this.grass = new GrassField(this)
     this.weather = this.renderer.weather = new Weather(this)
+    this.renderer.lod = this.world.lod
     this.progress = new Progress(this)
     this.ui = new UI(this)
     this.portraits = new Portraits(this)
