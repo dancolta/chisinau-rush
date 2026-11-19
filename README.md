@@ -105,6 +105,7 @@ node tools/trailer.mjs --format both               # the 25 s teaser (16:9 + 9:1
 
 - Idea and production: Dan Colta
 - 3D assets: [KayKit City Builder Bits](https://kaylousberg.itch.io/city-builder-bits) by Kay Lousberg (CC0)
+- Trucks and motorbike: [Kenney Starter Kit Racing](https://github.com/KenneyNL/Starter-Kit-Racing) (MIT, licence in `public/assets/kenney/`), recoloured onto the KayKit palette by `tools/kenney-convert.mjs`
 - Sounds and textures: [Kenney](https://kenney.nl) (CC0)
 - Fonts: Bungee, Bangers, Paytone One, Rubik (SIL Open Font License)
 

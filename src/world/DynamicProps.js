@@ -46,12 +46,18 @@ export class DynamicProps {
   build(list) {
     const kayMat = this.w.materials.atlas(this.w.assets.textures.atlas)
     const vmat = this.w.materials.vcol({ roughness: 0.75 })
-    const kayDumpster = this.w.assets.kay.dumpster.geometry.clone()
-    kayDumpster.computeBoundingBox()
-    const db = kayDumpster.boundingBox
-    kayDumpster.translate(0, -(db.max.y - db.min.y) / 2, 0)
+    // KayKit models stand on y = 0; bodies are centred, so drop the mesh by half its height
+    const kay = (name, mass) => {
+      const geo = this.w.assets.kay[name].geometry.clone()
+      geo.computeBoundingBox()
+      const b = geo.boundingBox
+      geo.translate(0, -(b.max.y - b.min.y) / 2, 0)
+      return { geo, mat: kayMat, shape: 'box', hx: (b.max.x - b.min.x) / 2, hy: (b.max.y - b.min.y) / 2, hz: (b.max.z - b.min.z) / 2, mass }
+    }
     const defs = {
-      dumpster: { geo: kayDumpster, mat: kayMat, shape: 'box', hx: (db.max.x - db.min.x) / 2, hy: (db.max.y - db.min.y) / 2, hz: (db.max.z - db.min.z) / 2, mass: 160 },
+      dumpster: kay('dumpster', 160),
+      trash_A: kay('trash_A', 4),
+      trash_B: kay('trash_B', 2),
       bin: { geo: buildBin(), mat: vmat, shape: 'box', hx: 0.3, hy: 0.45, hz: 0.3, mass: 14 },
       crate: { geo: buildCrate(), mat: vmat, shape: 'box', hx: 0.4, hy: 0.3, hz: 0.3, mass: 9 },
       watermelon: { geo: buildMelon(), mat: vmat, shape: 'ball', r: 0.28, mass: 5 },

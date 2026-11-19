@@ -31,6 +31,7 @@ export class World {
     this.benchSpots = []
     this.benches = []
     this.dynamicProps = []
+    this.streetProps = [] // static kerb furniture with colliders: { type, x, z }
     this.busStops = []
     this.kiosks = []
     this.signSlots = []
