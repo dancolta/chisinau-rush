@@ -104,7 +104,9 @@ async function measure(root, tag, cacheDir) {
         hooked.push([o, own])
       })
       const actors = []
-      scene.traverse((o) => { if (o.visible && (o.isSkinnedMesh || (o.isMesh && !o.isInstancedMesh && o.matrixAutoUpdate && !o.name))) actors.push(o) })
+      // (the Centura's traffic too: instanced and hand-placed, so it looks static, but how many cars and
+      // which models are in view is random and depends on the preset)
+      scene.traverse((o) => { if (o.visible && (o.isSkinnedMesh || (o.isMesh && !o.isInstancedMesh && o.matrixAutoUpdate && !o.name) || o.name.startsWith('centura:'))) actors.push(o) })
       for (const o of actors) o.visible = false
       R.render(0)
       for (const o of actors) o.visible = true
