@@ -60,8 +60,9 @@ async function shot(page, file) {
 
 // ---- the measuring: everything from bounding rects in the page ----------------------------------------
 // need: present and visible · inside: within the screen · apart: [a, b] never intersect · fit: no text
-// out of its box (cut on purpose with an ellipsis or a line clamp is fine; a scroller may scroll down,
-// never sideways) · within: [a, b] a drawn inside b · tall: [sel, px] at least that high.
+// out of its box: never sideways, and not past the bottom of a box that clips (cut on purpose with an
+// ellipsis or a line clamp is fine; a scroller may scroll down; a display face's letters may stand
+// a little above and below a tight line, the overlap checks see what they reach) · within: [a, b] a drawn inside b · tall: [sel, px] at least that high.
 // "sel::text" measures the letters, not the box (a centred title in a full-width block)
 function measure(spec) {
   const vw = innerWidth, vh = innerHeight, bad = []
@@ -91,8 +92,8 @@ function measure(spec) {
     for (const e of all(sel)) {
       const cs = getComputedStyle(e)
       if (cs.display === 'inline' || cs.textOverflow === 'ellipsis' || cs.webkitLineClamp !== 'none') continue
-      const scrolls = /auto|scroll/.test(cs.overflowY)
-      if (e.scrollWidth > e.clientWidth + 2 || (!scrolls && e.scrollHeight > e.clientHeight + 2)) bad.push(`text out of ${sel} "${label(e)}" ${e.scrollWidth}×${e.scrollHeight} in ${e.clientWidth}×${e.clientHeight}`)
+      const clips = /hidden|clip/.test(cs.overflowY)
+      if (e.scrollWidth > e.clientWidth + 2 || (clips && e.scrollHeight > e.clientHeight + 2)) bad.push(`text out of ${sel} "${label(e)}" ${e.scrollWidth}×${e.scrollHeight} in ${e.clientWidth}×${e.clientHeight}`)
     }
   }
   for (const [a, b] of spec.within || []) {
@@ -136,14 +137,14 @@ const CREATE = {
 const HUD_TL = '.hud-tl > :not(.hidden)', HUD_TR = '.hud-tr > :not(.toasts):not(.rw-stack), .hud-tr .toast, .hud-tr .rw-chip'
 const HUD = {
   need: ['.hud-money', '.minimap-wrap', '.objective', '.vitals'],
-  inside: [HUD_TL, HUD_TR, '.hud-bl', '.aura-chip', '.tbtn', '.prompt', '.ticker .lbl'],
+  inside: [HUD_TL, HUD_TR, '.hud-bl', '.aura-chip', '.tbtn', '.prompt', '.ticker .lbl', '.gcard'],
   apart: [[HUD_TL, HUD_TR], [HUD_TL, '.ttop'], [HUD_TL, '.hud-bl'], [HUD_TL, '.aura-chip'], [HUD_TR, '.ttop'], [HUD_TR, '.tbtns .tbtn'], [HUD_TR, '.hud-bl'],
     ['.hud-bl', '.tbtns .tbtn'], ['.aura-chip', '.tbtns .tbtn'], ['.prompt', '.tbtn'], ['.prompt', '.hud-bl'], ['.prompt', HUD_TL], ['.prompt', HUD_TR],
-    ['.tbtns .tbtn', '.tbtns .tbtn'], ['.ttop .tbtn', '.ttop .tbtn']],
+    ['.tbtns .tbtn', '.tbtns .tbtn'], ['.ttop .tbtn', '.ttop .tbtn'], ['.gcard', '.tbtns .tbtn'], ['.gcard', '.hud-bl'], ['.gcard', HUD_TL], ['.gcard', '.prompt']],
   fit: ['.objective .o', '.objective .sub', '.objective .t', '.tip', '.toast', '.rw-chip .v', '.hud-weapon', '.hud-money', '.prompt', '.aura-chip'],
 }
 const TOUCH_NEED = ['.tbtns .tbtn', '.ttop .tbtn']
-const DRIVE = { ...HUD, inside: [...HUD.inside, '.hud-br'], apart: [...HUD.apart, ['.hud-br', '.tbtns .tbtn'], ['.hud-br', '.hud-bl'], ['.hud-br', '.prompt'], ['.hud-br', HUD_TR]],
+const DRIVE = { ...HUD, inside: [...HUD.inside, '.hud-br'], apart: [...HUD.apart, ['.hud-br', '.tbtns .tbtn'], ['.hud-br', '.hud-bl'], ['.hud-br', '.prompt'], ['.hud-br', HUD_TR], ['.hud-br', '.gcard']],
   fit: [...HUD.fit, '.speedo', '.vname'] }
 const DIALOG = {
   need: ['.dialog .card', '.dialog .choice'],
@@ -266,10 +267,10 @@ async function city(page, [w, h], touch) {
     await look(page, `${tag} ${name} card`, CARD, name === 'LEȘINAT' && `${f}-wasted`)
     await ev(page, () => { document.querySelectorAll('.overlay-msg').forEach((e) => e.remove()); document.getElementById('viewport')?.classList.remove('drained') })
   }
-  await ev(page, () => window.__game.ui.missionBanner('CAPITOLUL 2 · DOSARELE PRIMĂRIEI', 'Sergentul care nu lua mită'))
+  await ev(page, () => { window.__game.ui.missionBanner('CAPITOLUL 2 · DOSARELE PRIMĂRIEI', 'Sergentul care nu lua mită') })
   await look(page, `${tag} mission banner`, { ...BANNER, need: [...BANNER.need, ...need] }, `${f}-banner`)
   await ev(page, () => document.querySelectorAll('.mbanner').forEach((e) => e.remove()))
-  await ev(page, () => window.__game.ui.bigMessage('MISIUNE ÎNDEPLINITĂ', '+500 lei · +120 XP · gopnicii te respectă un pic mai mult', { secs: 1e6 }))
+  await ev(page, () => { window.__game.ui.bigMessage('MISIUNE ÎNDEPLINITĂ', '+500 lei · +120 XP · gopnicii te respectă un pic mai mult', { secs: 1e6 }) })
   await look(page, `${tag} mission passed`, { ...PASSED, need: [...PASSED.need, ...need] }, `${f}-passed`)
   await ev(page, () => document.querySelectorAll('.bigmsg').forEach((e) => e.remove()))
   await ev(page, () => { const ui = window.__game.ui; ui.toastsEl.innerHTML = ''; ui.rewards.clear() })

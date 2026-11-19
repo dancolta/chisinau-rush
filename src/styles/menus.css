@@ -430,6 +430,15 @@ table.ctl tr:hover td { background: rgba(246, 236, 216, 0.04); }
   .sp-row { font-size: 12.5px; }
   .sp-badge { min-height: 16px; margin: 4px 0 6px; }
 }
+/* a phone on its side: character creation drops the kicker and the field's label (the placeholder says
+   it), and "Înapoi" keeps only its arrow, so the buttons share a row and the list shows more than one */
+@media (max-height: 400px) {
+  .cr-kick, .cr-name > span { display: none; }
+  .create h2 { margin-top: 0; }
+  .create .actions { flex-wrap: nowrap; }
+  .create .actions .btn:not(.go) { gap: 0; font-size: 0; }
+  .create .actions .btn:not(.go) .ico { font-size: 17px; }
+}
 /* the keyboard is up on a phone on its side (where it shrinks the page): only the form, so the field you type in has the room */
 @media (max-height: 300px) {
   .acct-screen .top, .acct-screen .foot { display: none; }
