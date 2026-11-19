@@ -236,7 +236,7 @@ export class World {
       props_far: { cast: false, recv: true },
       'flat:fence': { cast: true, recv: true },
     }))
-    this.lod = new DistanceLod(this.meshes)
+    this.lod = new DistanceLod(this.meshes, this.dyn)
   }
 
   update(dt) {

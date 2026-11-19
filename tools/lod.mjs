@@ -1,5 +1,6 @@
 // Dev tool: what the scenery costs per quality preset. Draw calls and triangles (every pass of one
-// frame, shadows and post included) at fixed viewpoints: the title flyover, on foot at Blocul 7, in a
+// frame, shadows and post included; people and traffic left out, as they come and go at random) at
+// fixed viewpoints: the title flyover, on foot at Blocul 7, in a
 // taxi on the boulevard, the east edge facing the Centura and the north edge over the Bîc. With
 // --base it measures a checkout of the old code first and prints before/after, then checks that low
 // draws at least 30% less where the far scenery is most of the frame, and still draws everything
@@ -102,7 +103,11 @@ async function measure(root, tag, cacheDir) {
         o.onBeforeRender = before(0); o.onAfterRender = after(1, false); o.onBeforeShadow = before(2); o.onAfterShadow = after(3, true)
         hooked.push([o, own])
       })
+      const actors = []
+      scene.traverse((o) => { if (o.visible && (o.isSkinnedMesh || (o.isMesh && !o.isInstancedMesh && o.matrixAutoUpdate && !o.name))) actors.push(o) })
+      for (const o of actors) o.visible = false
       R.render(0)
+      for (const o of actors) o.visible = true
       const calls = r.info.render.calls, tris = r.info.render.triangles
       for (const [o, own] of hooked) ['onBeforeRender', 'onAfterRender', 'onBeforeShadow', 'onAfterShadow'].forEach((f, i) => { if (own[i]) o[f] = own[i]; else delete o[f] })
       // static meshes drawn whose bounds come within `near` m of the camera (a batch of trees

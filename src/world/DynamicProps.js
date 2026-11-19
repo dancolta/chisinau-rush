@@ -97,6 +97,28 @@ export class DynamicProps {
     this.types[item.type].mesh.setMatrixAt(item.index, d.matrix)
   }
 
+  // the cheap presets leave out the clutter past `range` m of the camera: the slots are dealt out
+  // afresh, near ones first, and only those get drawn (again once the camera has moved 10 m)
+  cull(p, range) {
+    if (range === (this.range || 0) && (!range || p.distanceToSquared(this.at) < 100)) return
+    this.range = range
+    this.at ||= p.clone()
+    this.at.copy(p)
+    const byType = {}
+    for (const it of this.items) {
+      const t = it.body.translation()
+      const e = byType[it.type] ||= [[], []]
+      e[!range || Math.hypot(t.x - p.x, t.z - p.z) < range ? 0 : 1].push(it)
+    }
+    for (const [type, [near, far]] of Object.entries(byType)) {
+      const m = this.types[type].mesh
+      near.concat(far).forEach((it, i) => { it.index = i; this.write(it) })
+      m.count = near.length
+      m.visible = near.length > 0
+      m.instanceMatrix.needsUpdate = true
+    }
+  }
+
   // shove clutter out of a car-sized box (a car being spawned or teleported there), so a car
   // never materialises inside a bin or the melon pile and gets ground up by the overlap
   clearBox(x, z, ry, hx, hz, pad = 0.3) {
