@@ -108,6 +108,7 @@ export class Game {
     this.nightLights = new NightLights(this, this.renderer.q.lamps ?? 8)
     this.grass = new GrassField(this)
     this.weather = this.renderer.weather = new Weather(this)
+    this.renderer.lod = this.world.lod
     this.progress = new Progress(this)
     this.ui = new UI(this)
     this.portraits = new Portraits(this)
@@ -353,6 +354,8 @@ export class Game {
       this.cameraRig.update(dt, rawDt)
       this.renderer.updateShadowFocus(this.player ? (this.player.vehicle ? this.player.vehicle.mesh.position : this.player.char.mesh.position) : this.cameraRig.target)
     }
+    // (after the camera has moved: it packs only the vehicles in this frame's view)
+    this.safe('centura', () => this.world?.centura?.update(this.paused ? 0 : dt, this.camera))
   }
 
   // skid marks, tyre smoke and a smoking bonnet when a car is hurt

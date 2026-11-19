@@ -91,7 +91,7 @@ export class Weather {
     renderer.sun.intensity *= 1 - 0.7 * k
     renderer.hemi.intensity *= 1 - 0.25 * k
     renderer.scene.fog.color.lerp(grey, 0.55 * k)
-    renderer.scene.fog.far = 900 - 480 * k
+    renderer.scene.fog.far *= 1 - k * 480 / 900
     const u = renderer.sky.uniforms
     u.uTop.value.lerp(grey, 0.6 * k); u.uHorizon.value.lerp(grey, 0.6 * k)
     u.uCloud.value = Math.min(1, u.uCloud.value + 0.5 * k)

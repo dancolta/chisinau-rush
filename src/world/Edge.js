@@ -19,13 +19,13 @@ import { SignAtlas } from '../render/Textures.js'
 // Beyond the barriers the scenery carries on (the far bank, the woods, the highway, the yard)
 // on the land Terrain.js lays out, and past that the horizon (Horizon.js).
 //
-// What stands past the barriers (and the small props) uses the '_far' kinds, one batch each for the
-// whole map (shared with the horizon's): same materials, but no shadows, since the shadow map only
+// What stands past the barriers (and the small props) uses the '_far' kinds, in 400 m batches (the
+// cheaper presets drop the ones out in the fog): same materials, but no shadows, since the shadow map only
 // ever covers the ground round the player, who is always inside. The barriers and what's next to
 // them cast shadows, and come in 250 m batches so the shadow pass only draws the ones nearby.
 
 const { x0: X0, x1: X1, z0: Z0, z1: Z1 } = BOUNDS
-const C = 250, CF = 1e5
+const C = 250, CF = 400
 const MARK_Y = 0.016
 const WHITE = 0xe9e6dc, ASPHALT = 0x3d3f43
 const STONE = [0xcdbf98, 0xc2b28a, 0xd4c7a2, 0xbca982] // Cricova limestone courses

@@ -7,3 +7,6 @@ dist
 .vercel
 .data
 downloads
+
+# agent worktrees (each a full checkout of this repo, made by the coding agent)
+.claude/worktrees/

@@ -55,9 +55,10 @@ export class Stage {
       const hold = blocked || (c.tall && this.game.ui.subText)
       if (hold && !this.frozen) { if (!c.held) { c.held = true; c.el.classList.add('held') } return }
       if (c.held) { c.held = false; c.el.classList.remove('held') }
-      // got into a car (or out of one) while it's up: out of the speedo's way
-      const car = this.carOn()
-      if (car !== c.car) { c.car = car; this.place(c.el) }
+      // got into a car (or out of one), turned the phone, or the touch buttons came back (it may have
+      // come up over the pause menu) while it's up: out of their way
+      const car = this.carOn(), at = `${car}|${innerWidth}×${innerHeight}|${!!this.game.touch?.btns?.offsetParent}`
+      if (at !== c.at) { c.at = at; c.car = car; this.place(c.el) }
       if (this.frozen) return
       c.t += raw
       if (c.roll) this.roll(c)

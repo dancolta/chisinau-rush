@@ -75,6 +75,7 @@ Open city with ~40 landmarks (PMAN, Casa Guvernului, Arcul de Triumf, Catedrala,
 - **Rapier 3D** physics: arcade vehicles (bicycle model steering, grip/drift, contact damage), kinematic character controller, raycast line-of-sight.
 - Procedural city, characters (rigid-skinned, procedurally animated) and vehicles; CC0 models from **KayKit City Builder Bits** (Kay Lousberg).
 - Buildings are dressed from a painted texture array (Soviet panel blocks, loggias, shopfronts, classical and brick townhouses, offices, ruins) picked per module with a stable integer hash, so facades never shimmer; ground surfaces carry generated normal maps (slabs, granite, asphalt).
+- Past the walls the Centura ring road and the roads out are busy: instanced traffic from the game's own car models keeps its lanes at highway speed, turns back at the closed checkpoints and lights up after dark, at a few draw calls in all.
 - Night: the street lamps nearest the action become real point lights (a fixed number of them, so shaders never recompile), light pools on the pavement, a fill light on the player and headlights on your car. Lawns near the player grow swaying grass tufts.
 - **Web Audio** engine built for the game: procedural music (brass, accordion, țambal…), ambience, positional sfx, engines with Doppler, sirens, dialogue voices. Samples from **Kenney** (CC0).
 - Story runner where missions read top to bottom like a screenplay (`src/story/missions/*`).
@@ -88,6 +89,7 @@ node tools/story.mjs [--only rating,favors]     # mission ratings, replays, phon
 node tools/aura.mjs                             # AURA, levels, stunts, daily challenges, street events
 node tools/density.mjs [--quality low] [--perf]  # how full the streets are: people, traffic, scenes per district and hour
 node tools/comisariat.mjs [--shot station.png]  # the police station, and every arrest ending on its steps
+node tools/centura.mjs [--shots dir]            # traffic on the Centura and the roads out: lanes, gaps, lights, draw calls
 node tools/shot.mjs --out shot.png --eval "…"   # screenshots
 node tools/gallery.mjs --missions eban,mitingul    # capture every cutscene of the given missions
 node tools/views.mjs --out views --only night,play_day  # fixed review shots (day, dusk, night, gameplay camera)
@@ -103,6 +105,7 @@ node tools/trailer.mjs --format both               # the 25 s teaser (16:9 + 9:1
 
 - Idea and production: Dan Colta
 - 3D assets: [KayKit City Builder Bits](https://kaylousberg.itch.io/city-builder-bits) by Kay Lousberg (CC0)
+- Trucks and motorbike: [Kenney Starter Kit Racing](https://github.com/KenneyNL/Starter-Kit-Racing) (MIT, licence in `public/assets/kenney/`), recoloured onto the KayKit palette by `tools/kenney-convert.mjs`
 - Sounds and textures: [Kenney](https://kenney.nl) (CC0)
 - Fonts: Bungee, Bangers, Paytone One, Rubik (SIL Open Font License)
 

@@ -24,6 +24,8 @@ uniform float uSunDisc;
 uniform float uStars;
 uniform float uTime;
 uniform float uCloud;
+uniform vec3 uFog;
+uniform float uHaze;
 uniform float uMoon;
 varying vec3 vDir;
 
@@ -81,6 +83,10 @@ void main() {
     col = mix(col, cc, dens * 0.92);
   }
 
+  // the cheap presets draw less of the far field: toward the horizon the sky turns to the fog's
+  // colour, so what stops being drawn out there (fog-coloured already) leaves no hole against it
+  col = mix(col, uFog, uHaze * (1.0 - smoothstep(-0.01, 0.1, h)));
+
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -103,6 +109,8 @@ export class Sky {
       uMoon: { value: 0 },
       uTime: { value: 0 },
       uCloud: { value: 0.6 },
+      uFog: { value: new THREE.Color() },
+      uHaze: { value: 0 },
     }
     const mat = new THREE.ShaderMaterial({
       uniforms: this.uniforms,

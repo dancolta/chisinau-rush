@@ -33,7 +33,8 @@ const DOWN = 'Serverul de conturi nu răspunde acum. Mai încearcă puțin mai t
 const load = (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch (e) { return null } }
 const store = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)) } catch (e) { /* storage blocked */ } }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-const errorOf = (r) => r.data?.error || (r.status === 0 ? OFFLINE : DOWN)
+// our API always explains itself in a sentence; anything else (no answer, someone else's error) gets ours
+const errorOf = (r) => (typeof r.data?.error === 'string' && r.data.error) || (r.status === 0 ? OFFLINE : DOWN)
 
 // a game started but not played yet (prologue unfinished) doesn't count as progress to protect
 export const isFresh = (d) => !d || (!(d.story?.done?.length > 0) && !(d.xp > 0))
@@ -124,12 +125,19 @@ export class Cloud {
     const ctrl = new AbortController()
     const timer = setTimeout(() => ctrl.abort(), timeout)
     try {
+      // same-origin: on a Vercel deployment behind Vercel Authentication (preview links) the visitor's
+      // login cookie has to come along, or Vercel turns the request away before it reaches the API.
+      // Cross-origin (the GitHub Pages build) it sends nothing: the API only reads the Bearer token
       const res = await fetch(API_BASE + path, {
-        method, headers, keepalive, signal: ctrl.signal, credentials: 'omit', cache: 'no-store',
+        method, headers, keepalive, signal: ctrl.signal, credentials: 'same-origin', cache: 'no-store',
         body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
       })
       let data = null
       try { data = await res.json() } catch (e) { /* not our API (a static host's 404 page, say) */ }
+      // an error that isn't one of our sentences came from the platform in front of the API (a
+      // protected deployment, a function that didn't start): the server isn't answering, which is
+      // different from our API saying 401 (that one ends the session)
+      if (data && 'error' in data && typeof data.error !== 'string') return { status: 503, ok: false, data: null }
       return { status: res.status, ok: res.ok && data !== null, data }
     } catch (e) {
       return { status: 0, ok: false, data: null }

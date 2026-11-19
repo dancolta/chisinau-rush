@@ -4,6 +4,7 @@ import { roadProfile } from './Ground.js'
 import { mulberry } from './rng.js'
 import { makeGlow } from '../render/Textures.js'
 import { SHARED } from '../render/Materials.js'
+import { CELL } from '../core/Assets.js'
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _e = new THREE.Euler()
 const mat4 = (x, y, z, ry = 0, s = 1) => { _q.setFromEuler(_e.set(0, ry, 0)); return _m.compose(_p.set(x, y, z), _q, _s.set(s, s, s)).clone() }
@@ -86,8 +87,11 @@ function foliageShade(cy, h) {
   }
 }
 
-// y: the ground under the tree (kerb height by default); lod: see blob()
-export function addTreeGeometry(g, x, z, rnd, kind = null, { y = CURB_H, lod = false } = {}) {
+// y: the ground under the tree (kerb height by default); lod: see blob(); twin: a builder that gets
+// the same tree in low poly (the far LOD of a city tree: same shape and colours, no limbs)
+export function addTreeGeometry(g, x, z, rnd, kind = null, { y = CURB_H, lod = false, twin = null } = {}) {
+  const cyl = (r0, r1, h, seg, o) => { g.cyl(r0, r1, h, lod ? 5 : seg, o); twin?.cyl(r0, r1, h, 5, o) }
+  const leaves = (i, o) => { g.add(blob(i, lod), o); twin?.add(blob(i, true), o) }
   const k = kind ?? (rnd() < 0.62 ? 'broad' : rnd() < 0.55 ? 'poplar' : rnd() < 0.5 ? 'small' : 'spruce')
   const s = rnd.range(0.85, 1.25)
   const autumn = rnd() < 0.12
@@ -98,7 +102,7 @@ export function addTreeGeometry(g, x, z, rnd, kind = null, { y = CURB_H, lod = f
   let trunk = null // [bottom radius, top radius, height] of the drawn trunk
   if (k === 'broad') {
     const th = 2.7 * s
-    g.cyl(0.16 * s, 0.27 * s, th + 0.8 * s, lod ? 5 : 8, { x, y, z, color: bark, shade: trunkShade })
+    cyl(0.16 * s, 0.27 * s, th + 0.8 * s, 8, { x, y, z, color: bark, shade: trunkShade })
     trunk = [0.27 * s, 0.16 * s, th + 0.8 * s]
     // limbs reaching into the crown
     for (let i = 0; i < (lod ? 0 : 2); i++) {
@@ -112,30 +116,30 @@ export function addTreeGeometry(g, x, z, rnd, kind = null, { y = CURB_H, lod = f
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + rnd() * 0.7, rr = rnd.range(0.55, 1.0) * R * 0.58
       const bs = rnd.range(1.45, 1.85) * s
-      g.add(blob(Math.floor(rnd() * 6), lod), { x: x + Math.cos(a) * rr, y: cy + rnd.range(-0.5, 0.7) * s, z: z + Math.sin(a) * rr, sx: bs, sy: bs * 0.9, sz: bs, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
+      leaves(Math.floor(rnd() * 6), { x: x + Math.cos(a) * rr, y: cy + rnd.range(-0.5, 0.7) * s, z: z + Math.sin(a) * rr, sx: bs, sy: bs * 0.9, sz: bs, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
     }
-    g.add(blob(Math.floor(rnd() * 6), lod), { x, y: cy + 0.95 * s, z, sx: 1.75 * s, sy: 1.45 * s, sz: 1.75 * s, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
+    leaves(Math.floor(rnd() * 6), { x, y: cy + 0.95 * s, z, sx: 1.75 * s, sy: 1.45 * s, sz: 1.75 * s, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
   } else if (k === 'poplar') {
-    g.cyl(0.13 * s, 0.24 * s, 3.4 * s, lod ? 5 : 7, { x, y, z, color: bark, shade: trunkShade })
+    cyl(0.13 * s, 0.24 * s, 3.4 * s, 7, { x, y, z, color: bark, shade: trunkShade })
     trunk = [0.24 * s, 0.13 * s, 3.4 * s]
     const cy = y + 5.6 * s, center = { x, y: cy, z }
     const shade = foliageShade(cy, 3.4 * s)
     for (let i = 0; i < 4; i++) {
       const bs = (1.3 - Math.abs(i - 1.3) * 0.2) * s
-      g.add(blob(i + Math.floor(rnd() * 3), lod), { x: x + rnd.range(-0.2, 0.2) * s, y: y + (3.0 + i * 1.6) * s, z: z + rnd.range(-0.2, 0.2) * s, sx: bs, sy: bs * 1.45, sz: bs, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.7 })
+      leaves(i + Math.floor(rnd() * 3), { x: x + rnd.range(-0.2, 0.2) * s, y: y + (3.0 + i * 1.6) * s, z: z + rnd.range(-0.2, 0.2) * s, sx: bs, sy: bs * 1.45, sz: bs, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.7 })
     }
   } else if (k === 'small') {
-    g.cyl(0.09 * s, 0.15 * s, 1.9 * s, lod ? 5 : 6, { x, y, z, color: bark, shade: trunkShade })
+    cyl(0.09 * s, 0.15 * s, 1.9 * s, 6, { x, y, z, color: bark, shade: trunkShade })
     trunk = [0.15 * s, 0.09 * s, 1.9 * s]
     const cy = y + 2.6 * s, center = { x, y: cy, z }
     const shade = foliageShade(cy, 1.1 * s)
     for (let i = 0; i < 2; i++) {
       const a = i * 3.1 + rnd(), rr = 0.4 * s
-      g.add(blob(Math.floor(rnd() * 6), lod), { x: x + Math.cos(a) * rr, y: cy + rnd.range(-0.2, 0.3) * s, z: z + Math.sin(a) * rr, sx: 1.1 * s, sy: 0.95 * s, sz: 1.1 * s, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
+      leaves(Math.floor(rnd() * 6), { x: x + Math.cos(a) * rr, y: cy + rnd.range(-0.2, 0.3) * s, z: z + Math.sin(a) * rr, sx: 1.1 * s, sy: 0.95 * s, sz: 1.1 * s, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
     }
   } else {
     // spruce: tiers of drooping star skirts, darker toward the trunk and the ground
-    g.cyl(0.12 * s, 0.2 * s, 2.2 * s, lod ? 5 : 7, { x, y, z, color: 0x46342a, shade: trunkShade })
+    cyl(0.12 * s, 0.2 * s, 2.2 * s, 7, { x, y, z, color: 0x46342a, shade: trunkShade })
     const tiers = lod ? 4 : 6, H = 7.6 * s
     const dark = rnd() < 0.5 ? 0x264c2c : 0x2b5431
     for (let i = 0; i < tiers; i++) {
@@ -146,7 +150,9 @@ export function addTreeGeometry(g, x, z, rnd, kind = null, { y = CURB_H, lod = f
       const shade = (p, n) => (0.5 + 0.55 * Math.min(1, (p.y - y) / H)) * (0.84 + 0.22 * Math.max(0, n.y)) * (0.72 + 0.4 * Math.min(1, Math.hypot(p.x - x, p.z - z) / r))
       g.add(skirt(i + Math.floor(rnd() * 4)), { x, y: yy, z, sx: r, sy: h, sz: r, ry: rnd() * 6.3, color: i % 2 ? dark : 0x2e5a34, shade, bendTo: { x, y: yy - h * 0.6, z }, bend: 0.3 })
     }
-    g.cone(0.3 * s, 1.3 * s, 7, { x, y: y + H - 0.6 * s, z, color: 0x315f37, shade: () => 1.05 })
+    // (far off, the tiers read as one dark cone)
+    twin?.cone(2.35 * s, H - 0.2 * s, 7, { x, y: y + 0.9 * s, z, color: dark, shade: (p) => 0.55 + 0.5 * Math.min(1, (p.y - y) / H) })
+    for (const b of [g, twin]) b?.cone(0.3 * s, 1.3 * s, 7, { x, y: y + H - 0.6 * s, z, color: 0x315f37, shade: () => 1.05 })
   }
   // the collider matches the drawn trunk at hip height (a spruce's skirts reach the ground, so
   // it keeps its wider one)
@@ -170,6 +176,7 @@ export class Props {
     this.streetLamps()
     this.trolleyWires()
     this.trafficLights()
+    this.hydrants()
     this.busStops()
     this.streetPlates()
     this.kiosks()
@@ -182,7 +189,7 @@ export class Props {
   // y: the ground under it, for trees on bare ground rather than on a kerbed block
   tree(x, z, kind, y = CURB_H) {
     const g = this.B.vcol(x, z, 'tree')
-    const t = addTreeGeometry(g, x, z, this.rnd, kind, { y })
+    const t = addTreeGeometry(g, x, z, this.rnd, kind, { y, twin: this.B.vcol(x, z, 'tree_lod') })
     this.P.cylinder(x, y + 1.5, z, 1.5, t.r)
   }
 
@@ -287,9 +294,20 @@ export class Props {
     this.w.trolleyLaneZ = laneZ
   }
 
-  // ---- traffic lights on controlled intersections -------------------------
+  // ---- traffic lights on controlled intersections (KayKit, CC0) -----------
   trafficLights() {
     const heads = []
+    // the models face +z with the arm along -x; their painted lenses go dark and the instanced
+    // discs below show the live phase. lens: [x, z, red y, yellow y, green y] in metres on the model
+    const A = this.w.assets, AMBER = [2, 3]
+    const dark = (name, cells) => cells.reduce((g, c) => A.recolor(g, c, CELL.tyre), this.kay[name].geometry)
+    const models = {
+      A: { geo: dark('trafficlight_A', [CELL.red, AMBER, CELL.green]), lens: [-0.21, 0.5, 3.27, 2.95, 2.64] },
+      B: { geo: dark('trafficlight_B', [CELL.red, AMBER, CELL.green]), lens: [-0.21, 0.5, 3.27, 2.95, 2.64] },
+      // the mast arm hangs the lights over the lane; its green cell also paints the street sign
+      C: { geo: dark('trafficlight_C', [CELL.red, AMBER]), lens: [-3.19, 0.4, 4.42, 4.1, 3.78] },
+    }
+    let n = 0
     for (const it of this.w.controlled) {
       const { v, h } = it
       // one pole per approach, on the right-hand far corner as seen by the approaching driver
@@ -300,17 +318,18 @@ export class Props {
         { x: v.x + v.w / 2 + 1.2, z: h.z - h.w / 2 - 1.2, face: '+x', axis: 'ew' }, // westbound
       ]
       for (const c of cfg) {
-        const g = this.B.vcol(c.x, c.z, 'static')
-        g.cyl(0.08, 0.1, 3.4, 8, { x: c.x, y: CURB_H, z: c.z, color: 0x2e3238 })
         const ry = { '+z': 0, '-z': Math.PI, '+x': Math.PI / 2, '-x': -Math.PI / 2 }[c.face]
-        g.box(0.42, 1.25, 0.34, { x: c.x, y: CURB_H + 2.7, z: c.z, ry, color: 0x23262b })
-        const fx = Math.sin(ry) * 0.18, fz = Math.cos(ry) * 0.18
-        heads.push({ x: c.x + fx, z: c.z + fz, y: CURB_H + 2.7, ry, axis: c.axis, it })
+        // mast arms over the wider roads, plain poles on the side streets
+        const m = models[(c.axis === 'ns' ? v.w : h.w) >= 14 ? 'C' : n++ % 2 ? 'B' : 'A']
+        this.B.atlas(c.x, c.z, m.geo, mat4(c.x, CURB_H, c.z, ry), 'props')
+        const [lx, lz, ...ys] = m.lens, cs = Math.cos(ry), sn = Math.sin(ry)
+        heads.push({ x: c.x + lx * cs + lz * sn, z: c.z - lx * sn + lz * cs, y: CURB_H + ys[2], ys: ys.map((y) => CURB_H + y), ry, axis: c.axis, it })
         this.P.cylinder(c.x, CURB_H + 1.7, c.z, 1.7, 0.12)
+        this.w.streetProps.push({ type: 'trafficlight', x: c.x, z: c.z })
       }
     }
     // instanced lamps: red / yellow / green discs; colours updated by the traffic system
-    const disc = new THREE.CircleGeometry(0.13, 12)
+    const disc = new THREE.CircleGeometry(0.14, 12)
     const mk = () => {
       const im = new THREE.InstancedMesh(disc, new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false, fog: true }), heads.length)
       im.frustumCulled = false
@@ -319,15 +338,34 @@ export class Props {
     }
     const lamps = { r: mk(), y: mk(), g: mk() }
     heads.forEach((hd, i) => {
-      ;[['r', 1.08], ['y', 0.72], ['g', 0.36]].forEach(([k, dy]) => {
-        const m = mat4(hd.x, hd.y + dy + 0.08, hd.z, hd.ry)
-        lamps[k].setMatrixAt(i, m)
+      ;['r', 'y', 'g'].forEach((k, j) => {
+        lamps[k].setMatrixAt(i, mat4(hd.x, hd.ys[j], hd.z, hd.ry))
         lamps[k].setColorAt(i, new THREE.Color(0x222222))
       })
     })
     for (const k of ['r', 'y', 'g']) { lamps[k].instanceMatrix.needsUpdate = true; lamps[k].instanceColor.needsUpdate = true }
     this.w.trafficHeads = heads
     this.w.trafficLamps = lamps
+  }
+
+  // ---- fire hydrants (KayKit, CC0) on the kerb of the side streets, halfway between lamps --
+  hydrants() {
+    const geo = this.kay.firehydrant.geometry
+    const put = (x, z, ry) => {
+      if (this.w.keepClear(x, z)) return
+      this.B.atlas(x, z, geo, mat4(x, CURB_H, z, ry), 'props')
+      this.P.cylinder(x, CURB_H + 0.5, z, 0.5, 0.25)
+      this.w.streetProps.push({ type: 'hydrant', x, z, ry })
+    }
+    for (const v of V_ROADS) {
+      const off = v.w / 2 + 0.6
+      for (let i = 0; i < H_ROADS.length - 1; i++) {
+        // the lamps stand every 34 m from a on the west kerb and from a + 17 on the east one
+        const a = H_ROADS[i].z + H_ROADS[i].w / 2 + 9, b = H_ROADS[i + 1].z - H_ROADS[i + 1].w / 2 - 9
+        if (v.id !== 'VW' && a + 51 < b) put(v.x - off, a + 51, Math.PI / 2)
+        if (v.id !== 'VE' && a + 34 < b) put(v.x + off, a + 34, -Math.PI / 2)
+      }
+    }
   }
 
   // ---- bus / trolleybus shelters -----------------------------------------

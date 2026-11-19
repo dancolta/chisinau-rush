@@ -45,11 +45,14 @@ export class RewardStack {
     this.queue.push({ kind, n, key, t0: now, why: o.why || '', o, life: LIFE + (o.tier ? 1.2 : 0) })
   }
 
-  // where the dialogue box starts (chips must stay above it); null when there's none. The card,
-  // not .dialog: that's a full-screen layer (the shade behind the box)
-  dialogTop() {
+  // where chips must end: above the dialogue box and, on a phone, above the touch buttons; null when
+  // nothing's under them. The card, not .dialog: that's a full-screen layer (the shade behind the box)
+  floor() {
     const d = this.ui.top.querySelector('.dialog .card') || this.ui.top.querySelector('.dialog')
-    return d ? d.getBoundingClientRect().top : null
+    let y = d ? d.getBoundingClientRect().top : null
+    const btns = this.ui.game?.touch?.btns
+    if (btns?.offsetParent) for (const b of btns.children) { const t = b.getBoundingClientRect().top; if (y == null || t < y) y = t }
+    return y
   }
 
   // dev/screenshots: chips stay up, numbers at their final value (a slow capture would miss them)
@@ -68,16 +71,16 @@ export class RewardStack {
       if (c.roll && now - c.born < ROLL + 60) this.paint(c)
     }
     const toasts = this.ui.toastsEl?.children || []
-    const dTop = this.live.length || this.queue.length || toasts.length ? this.dialogTop() : null
-    // a dialogue opened under chips (or the notifications below them) that were already up: tuck
-    // away the ones in its way until it's gone
+    const dTop = this.live.length || this.queue.length || toasts.length ? this.floor() : null
+    // a dialogue opened under chips (or the notifications below them) that were already up, or the
+    // stack ran down to the touch buttons: tuck away the ones in the way until there's room
     for (const e of [...this.live.map((c) => c.el), ...toasts]) {
       if (dTop != null) e.classList.toggle('tuck', e.getBoundingClientRect().bottom > dTop - 6)
       else if (e.classList.contains('tuck')) e.classList.remove('tuck')
     }
     if (!this.queue.length || (now < this.nextAt && !this.frozen)) return
     if (this.live.filter((c) => !c.out).length >= MAX) return
-    // room check: the next chip must end above the dialogue box
+    // room check: the next chip must end above the dialogue box (and the touch buttons)
     if (dTop != null) {
       const r = this.root.getBoundingClientRect()
       if (r.bottom + 34 > dTop - 6) return
