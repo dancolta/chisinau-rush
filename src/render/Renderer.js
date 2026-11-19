@@ -16,7 +16,7 @@ import { SHARED, RES } from './Materials.js'
 // the horizon, so what's culled past the fog leaves no gap in the skyline; lod: what the far field
 // is spared (DistanceLod, world/Lod.js), none drawing everything as built
 export const QUALITY = {
-  low: { label: 'Scăzută', post: false, shadows: false, shadowMap: 1024, shadowSize: 50, ao: false, bloom: false, smaa: false, maxDpr: 1, antialias: false, lamps: 2, msaa: 0, peds: 30, cars: 20, far: 2000, fog: [140, 560], haze: 1, lod: { twin: 160, tree: 600, static: 600, props: 360, bld: 650, tall: 24 } },
+  low: { label: 'Scăzută', post: false, shadows: false, shadowMap: 1024, shadowSize: 50, ao: false, bloom: false, smaa: false, maxDpr: 1, antialias: false, lamps: 2, msaa: 0, peds: 30, cars: 20, far: 2000, fog: [140, 560], haze: 1, lod: { twin: 160, tree: 600, static: 560, props: 320, bld: 650, tall: 24 } },
   medium: { label: 'Medie', post: true, shadows: true, shadowMap: 1024, shadowSize: 60, ao: false, bloom: true, smaa: true, maxDpr: 1.25, antialias: false, lamps: 4, msaa: 2, peds: 44, cars: 28, far: 2400, fog: [140, 760], haze: 0.5, lod: { twin: 300, tree: 850, static: 800, props: 520, bld: 900, tall: 24 } },
   high: { label: 'Înaltă', post: true, shadows: true, shadowMap: 2048, shadowSize: 70, ao: true, bloom: true, smaa: true, maxDpr: 1.5, antialias: false, lamps: 8, msaa: 4, peds: 54, cars: 32, far: 2400, fog: [140, 900], haze: 0 },
   ultra: { label: 'Ultra', post: true, shadows: true, shadowMap: 4096, shadowSize: 90, ao: true, bloom: true, smaa: true, maxDpr: 2, antialias: false, lamps: 12, msaa: 4, peds: 64, cars: 38, far: 2400, fog: [140, 900], haze: 0 },

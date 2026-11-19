@@ -17,9 +17,9 @@ const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.a
 const BASE = arg('--base'), SHOTS = arg('--shots'), BREAK = process.argv.includes('--breakdown')
 const PRESETS = ['low', 'medium', 'high']
 const VIEWS = ['flyover', 'acasa', 'boulevard', 'east', 'north']
-// where the far scenery is most of the frame (what lies wholly past 150 m is over half the
-// triangles high draws): low has to come down by a third there
-const farHeavy = (r) => r.high.farShare >= 0.5
+// where the far scenery is most of the frame (what lies wholly past 150 m was over half of what
+// low drew): low has to come down by a third there
+const farHeavy = (v) => before[v].low.farShare >= 0.5
 // how far round the camera low must still draw all that high draws (ahead of the car: further)
 const NEAR = { acasa: 150, boulevard: 250, east: 150, north: 150 }
 if (SHOTS) mkdirSync(SHOTS, { recursive: true })
@@ -86,7 +86,7 @@ async function measure(root, tag, cacheDir) {
       // main-pass triangles of what lies wholly past 150 m (the far field's share of the frame)
       const s = new cam.position.constructor()
       const dist = (o) => { const b = o.geometry?.boundingSphere; return b ? s.copy(b.center).applyMatrix4(o.matrixWorld).distanceTo(cam.position) - b.radius * o.matrixWorld.getMaxScaleOnAxis() : 0 }
-      let farTris = 0
+      let farTris = 0, mainTris = 0
       const hooked = []
       scene.traverse((o) => {
         if (!o.isMesh && !o.isPoints && !o.isLine && !o.isSprite) return
@@ -96,7 +96,7 @@ async function measure(root, tag, cacheDir) {
         const before = (i) => function (...a) { c0 = r.info.render.calls; t0 = r.info.render.triangles; return base[i].apply(this, a) }
         const after = (i, sh) => function (...a) {
           add(k, sh, r.info.render.calls - c0, r.info.render.triangles - t0)
-          if (!sh) { drawn.add(o); if (dist(o) > 150) farTris += r.info.render.triangles - t0 }
+          if (!sh) { drawn.add(o); mainTris += r.info.render.triangles - t0; if (dist(o) > 150) farTris += r.info.render.triangles - t0 }
           return base[i].apply(this, a)
         }
         o.onBeforeRender = before(0); o.onAfterRender = after(1, false); o.onBeforeShadow = before(2); o.onAfterShadow = after(3, true)
@@ -117,7 +117,7 @@ async function measure(root, tag, cacheDir) {
           close.push(m.uuid + ' ' + (m.name || m.type))
         }
       }
-      return { calls, tris, farShare: farTris / (tris || 1), per: [...per.values()].sort((a, b) => b.calls + b.sCalls - a.calls - a.sCalls).slice(0, 12), close, far: cam.far, fog: [scene.fog.near, scene.fog.far] }
+      return { calls, tris, farShare: farTris / (mainTris || 1), per: [...per.values()].sort((a, b) => b.calls + b.sCalls - a.calls - a.sCalls).slice(0, 12), close, far: cam.far, fog: [scene.fog.near, scene.fog.far] }
     }
   })
   const out = {}
@@ -148,11 +148,12 @@ if (BASE) {
 }
 const after = await measure(process.cwd(), 'after')
 
-console.log(`\n${'view'.padEnd(10)}${'preset'.padEnd(8)}${'calls'.padStart(18)}${'triangles'.padStart(26)}   far share / camera.far / fog`)
+console.log(`\n${'view'.padEnd(10)}${'preset'.padEnd(8)}${'calls'.padStart(18)}${'triangles'.padStart(26)}   far share of the scene / camera.far / fog`)
 for (const v of VIEWS) for (const p of PRESETS) {
   const a = after[v][p], b = before?.[v][p]
   const col = (k, w) => (b ? `${b[k]} → ${a[k]} ${pct(b[k], a[k])}` : `${a[k]}`).padStart(w)
-  console.log(`${v.padEnd(10)}${p.padEnd(8)}${col('calls', 18)}${col('tris', 26)}   ${Math.round(a.farShare * 100)}% / ${a.far} / ${a.fog.map(Math.round).join('-')}`)
+  const share = (r) => `${Math.round(r.farShare * 100)}%`
+  console.log(`${v.padEnd(10)}${p.padEnd(8)}${col('calls', 18)}${col('tris', 26)}   ${b ? share(b) + ' → ' : ''}${share(a)} / ${a.far} / ${a.fog.map(Math.round).join('-')}`)
 }
 if (BREAK) for (const v of VIEWS) for (const p of PRESETS) {
   console.log(`\n${v} ${p}: kind  calls/tris  (shadow calls/tris)`)
@@ -160,7 +161,7 @@ if (BREAK) for (const v of VIEWS) for (const p of PRESETS) {
 }
 console.log('')
 
-if (before) for (const v of VIEWS.filter((v) => farHeavy(after[v]))) {
+if (before) for (const v of VIEWS.filter(farHeavy)) {
   const a = after[v].low, b = before[v].low
   check(`${v}: low draws at least 30% fewer calls and triangles`, a.calls <= b.calls * 0.7 && a.tris <= b.tris * 0.7, `calls ${b.calls} → ${a.calls}, triangles ${b.tris} → ${a.tris}`)
 }
