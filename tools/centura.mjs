@@ -63,11 +63,11 @@ for (const q of ['low', 'medium', 'high', 'ultra']) {
 await ev(async () => { window.__game.renderer.applyQuality('low'); await window.__frames(2) })
 const models = await ev(() => {
   const g = window.__game, H = g.world.centura
-  const want = Object.entries(window.__V.VEHICLES).filter(([, d]) => d.kay && !d.police && !d.trolley && g.assets.kay[d.kay]).map(([, d]) => d.kay)
+  const want = Object.entries(window.__V.VEHICLES).filter(([, d]) => d.kay && !d.police && !d.trolley && d.highway !== false && g.assets.kay[d.kay]).map(([, d]) => d.kay)
   const s = H.snapshot()
   return { want: [...new Set(want)].sort(), have: [...H.models.values()].map((m) => m.key.split(':')[0]).sort(), tris: Object.fromEntries([...H.models.values()].map((m) => [m.key, m.tris])), used: new Set(s.map((c) => c.model)).size, paints: new Set(g.world.centura.cars.map((c) => c.model.key + c.shift)).size, heavy: s.filter((c) => c.heavy).length }
 })
-check('every ordinary VEHICLES model drives (no police, no trolleybus)', JSON.stringify(models.want) === JSON.stringify(models.have) && !models.have.includes('car_police'), JSON.stringify(models))
+check('every ordinary VEHICLES model drives (no police, no trolleybus, nothing marked highway: false)', JSON.stringify(models.want) === JSON.stringify(models.have) && !models.have.includes('car_police'), JSON.stringify(models))
 check('varied models and paint', models.used >= Math.min(3, models.have.length) && models.paints >= 8, `models ${models.used}, model+paint ${models.paints}`)
 
 // ---- a long run, fast-forwarded: lanes, deck, direction, gaps, speeds, the checkpoints -----------
@@ -138,7 +138,7 @@ const lorry = await ev(() => {
   const heavy = H.cars.filter((c) => c.model.heavy)
   const r = window.__run(H, 450)
   H.group.removeFromParent()
-  return { models: [...H.models.keys()], heavy: heavy.length, lanes: [...new Set(heavy.filter((c) => !c.lane.road).map((c) => H.hw.indexOf(c.lane)))], amber: heavy[0]?.model.lights.filter((l) => l[3] === 2).length, r }
+  return { models: [...H.models.keys()], heavy: heavy.length, lanes: [...new Set(heavy.filter((c) => !c.lane.road).map((c) => H.hw.indexOf(c.lane)))], amber: heavy.find((c) => c.model.key === 'test_lorry:steel')?.model.lights.filter((l) => l[3] === 2).length, r }
 })
 check('a new VEHICLES model joins the traffic by itself', lorry.models.includes('test_lorry:steel') && lorry.heavy > 0, `${lorry.heavy} lorries; ${lorry.models.join(', ')}`)
 check('lorries keep to the slow lanes, with amber roof markers', lorry.lanes.length && lorry.lanes.every((l) => l === 0 || l === 3) && lorry.amber === 2, JSON.stringify({ lanes: lorry.lanes, amber: lorry.amber }))
