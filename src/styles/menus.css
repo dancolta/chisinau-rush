@@ -332,7 +332,9 @@ table.ctl tr:hover td { background: rgba(246, 236, 216, 0.04); }
   .tabs button:not(.on) { gap: 0; font-size: 0; letter-spacing: 0; padding: 11px 12px 12px; }
   .tabs button:not(.on)::before { width: 17px; height: 17px; }
 }
-@media (max-width: 760px) {
+/* narrow and tall (a phone held upright, a slim window): the title and character creation stack;
+   a phone on its side keeps them side by side (the max-height block below) */
+@media (max-width: 760px) and (min-height: 521px) {
   .mainmenu, .create { grid-template-columns: 1fr; grid-template-rows: 1fr auto; grid-template-areas: "side" "stage"; }
   .mainmenu .side { background: radial-gradient(130% 45% at 0% 0%, rgba(255, 122, 28, 0.17), transparent 62%), var(--grain-l), linear-gradient(180deg, rgba(38, 22, 34, 0.95), rgba(22, 13, 20, 0.86)); }
   .mm-stage::before, .create .turntable::before { display: none; }
@@ -345,10 +347,12 @@ table.ctl tr:hover td { background: rgba(246, 236, 216, 0.04); }
   .create { grid-template-rows: 34vh 1fr; grid-template-areas: "stage" "side"; }
   .create .side { background: var(--grain-l), linear-gradient(180deg, rgba(38, 22, 34, 0.97), rgba(22, 13, 20, 0.97)); box-shadow: 0 -12px 30px rgba(12, 4, 9, 0.5); }
   .create .turn-hint { bottom: 12px; font-size: 16px; }
-  .pause .col.legend { width: 200px; }
   .sp-cards { grid-template-columns: 1fr; }
   .pause .top { flex-wrap: wrap; }
   .tabs { width: 100%; }
+}
+@media (max-width: 760px) {
+  .pause .col.legend { width: 200px; }
   .pause .body { flex-direction: column; overflow-y: auto; }
   .pause .body > .col { flex: none !important; max-width: none !important; overflow: visible; }
   .bigmap { flex: none; min-height: 56vh; }
@@ -374,11 +378,13 @@ table.ctl tr:hover td { background: rgba(246, 236, 216, 0.04); }
 }
 @media (max-height: 520px) {
   .mainmenu { grid-template-columns: clamp(300px, 40vw, 420px) 1fr; }
-  .mainmenu .side { padding: 16px 22px 14px; }
+  .mainmenu .side { padding: 22px 22px 14px; } /* (the tilted logo's corner clears the top) */
   .mm-logo { font-size: clamp(30px, 9.4vh, 52px); }
   .mm-tag, .mm-foot .k { display: none; }
-  .mm-btns { margin-top: 14px; gap: 7px; }
-  .mm-btns .btn { padding: 7px 14px 6px; font-size: 13px; }
+  /* the one that matters keeps its own row, the others pair up when they fit, so the note under them stays in sight */
+  .mm-btns { display: flex; flex-wrap: wrap; margin-top: 14px; gap: 7px; }
+  .mm-btns .btn { flex: 1 1 auto; padding: 7px 14px 6px; font-size: 13px; }
+  .mm-btns .btn.primary { flex-basis: 100%; }
   .mainmenu .side::after { display: none; }
   .mm-btns .btn.primary { padding-right: 52px; }
   .mm-btns .btn.primary::after { width: 28px; height: 18px; margin-top: -10px; right: 12px; }
@@ -386,9 +392,9 @@ table.ctl tr:hover td { background: rgba(246, 236, 216, 0.04); }
   .mm-save b { display: none; }
   .mm-daily { left: 30px; top: 14px; width: 250px; }
   .mm-foot { font-size: 10.5px; }
-  .create { grid-template-columns: clamp(320px, 46vw, 460px) 1fr; }
+  .create { grid-template-columns: clamp(340px, 50vw, 460px) 1fr; }
   .create .side { padding: 14px 18px; }
-  .create h2 { font-size: 32px; }
+  .create h2 { font-size: 28px; line-height: 1.08; }
   .create .q { display: none; }
   .cr-kick { font-size: 9.5px; }
   .create input { font-size: 22px; padding: 5px 12px 3px; }
@@ -397,10 +403,23 @@ table.ctl tr:hover td { background: rgba(246, 236, 216, 0.04); }
   .type .bl { display: none; }
   .type .pk { margin-top: 3px; font-size: 11.5px; }
   .type.sel::after { top: 6px; font-size: 10px; padding: 4px 5px 3px; }
-  .create .actions .btn { padding: 8px 14px 7px; font-size: 13px; }
-  .create .btn.primary.go { padding-right: 52px; }
+  .create .actions { gap: 8px; }
+  .create .actions .btn { padding: 8px 12px 7px; font-size: 13px; }
+  .create .btn.primary.go { padding-right: 46px; }
   .create .btn.primary.go::after { width: 28px; height: 18px; margin-top: -10px; right: 12px; }
   .create .turn-hint { bottom: 12px; font-size: 16px; }
+  .bigmap { flex: 1 1 0; min-height: 0; }
+  /* the account form: what it is on the left, the fields on the right, the button in sight without scrolling */
+  .acct-screen .body { padding-top: 16px; align-items: flex-start; }
+  .acct:has(> .acct-form) { max-width: 760px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto 1fr; grid-template-areas: "h seg" "p form" "note form"; column-gap: 22px; align-items: start; }
+  .acct > .acct-h { grid-area: h; } .acct > .acct-p { grid-area: p; } .acct > .acct-note { grid-area: note; margin-top: 0; }
+  .acct > .acct-seg { grid-area: seg; margin-bottom: 0; } .acct > .acct-form { grid-area: form; margin-top: 10px; }
+  .acct-p { margin-bottom: 10px; font-size: 13.5px; line-height: 1.45; }
+  .acct-tab { padding: 8px 10px 7px; }
+  .acct-form { gap: 9px; }
+  .acct-l { gap: 4px; }
+  .acct input { padding: 8px 12px; }
+  .acct-go { padding-top: 9px; padding-bottom: 8px; }
   .confirm .box { padding: 18px 20px 16px; }
   .confirm h3 { font-size: 28px; }
   .sp-box h3 { font-size: 26px; }
@@ -410,6 +429,20 @@ table.ctl tr:hover td { background: rgba(246, 236, 216, 0.04); }
   .sp-name small { display: none; }
   .sp-row { font-size: 12.5px; }
   .sp-badge { min-height: 16px; margin: 4px 0 6px; }
+}
+/* a phone on its side: character creation drops the kicker and the field's label (the placeholder says
+   it), and "Înapoi" keeps only its arrow, so the buttons share a row and the list shows more than one */
+@media (max-height: 400px) {
+  .cr-kick, .cr-name > span { display: none; }
+  .create h2 { margin-top: 0; }
+  .create .actions { flex-wrap: nowrap; }
+  .create .actions .btn:not(.go) { gap: 0; font-size: 0; }
+  .create .actions .btn:not(.go) .ico { font-size: 17px; }
+}
+/* the keyboard is up on a phone on its side (where it shrinks the page): only the form, so the field you type in has the room */
+@media (max-height: 300px) {
+  .acct-screen .top, .acct-screen .foot { display: none; }
+  .acct-screen .body { padding: 8px 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .mainmenu .side, .create .side, .mm-logo, .mm-btns .btn, .mm-save, .mm-daily, .type, .pause, .pause .body > *, .pause .foot .btn, .confirm, .confirm .box,
