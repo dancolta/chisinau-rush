@@ -87,8 +87,11 @@ function foliageShade(cy, h) {
   }
 }
 
-// y: the ground under the tree (kerb height by default); lod: see blob()
-export function addTreeGeometry(g, x, z, rnd, kind = null, { y = CURB_H, lod = false } = {}) {
+// y: the ground under the tree (kerb height by default); lod: see blob(); twin: a builder that gets
+// the same tree in low poly (the far LOD of a city tree: same shape and colours, no limbs)
+export function addTreeGeometry(g, x, z, rnd, kind = null, { y = CURB_H, lod = false, twin = null } = {}) {
+  const cyl = (r0, r1, h, seg, o) => { g.cyl(r0, r1, h, lod ? 5 : seg, o); twin?.cyl(r0, r1, h, 5, o) }
+  const leaves = (i, o) => { g.add(blob(i, lod), o); twin?.add(blob(i, true), o) }
   const k = kind ?? (rnd() < 0.62 ? 'broad' : rnd() < 0.55 ? 'poplar' : rnd() < 0.5 ? 'small' : 'spruce')
   const s = rnd.range(0.85, 1.25)
   const autumn = rnd() < 0.12
@@ -99,7 +102,7 @@ export function addTreeGeometry(g, x, z, rnd, kind = null, { y = CURB_H, lod = f
   let trunk = null // [bottom radius, top radius, height] of the drawn trunk
   if (k === 'broad') {
     const th = 2.7 * s
-    g.cyl(0.16 * s, 0.27 * s, th + 0.8 * s, lod ? 5 : 8, { x, y, z, color: bark, shade: trunkShade })
+    cyl(0.16 * s, 0.27 * s, th + 0.8 * s, 8, { x, y, z, color: bark, shade: trunkShade })
     trunk = [0.27 * s, 0.16 * s, th + 0.8 * s]
     // limbs reaching into the crown
     for (let i = 0; i < (lod ? 0 : 2); i++) {
@@ -113,30 +116,30 @@ export function addTreeGeometry(g, x, z, rnd, kind = null, { y = CURB_H, lod = f
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + rnd() * 0.7, rr = rnd.range(0.55, 1.0) * R * 0.58
       const bs = rnd.range(1.45, 1.85) * s
-      g.add(blob(Math.floor(rnd() * 6), lod), { x: x + Math.cos(a) * rr, y: cy + rnd.range(-0.5, 0.7) * s, z: z + Math.sin(a) * rr, sx: bs, sy: bs * 0.9, sz: bs, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
+      leaves(Math.floor(rnd() * 6), { x: x + Math.cos(a) * rr, y: cy + rnd.range(-0.5, 0.7) * s, z: z + Math.sin(a) * rr, sx: bs, sy: bs * 0.9, sz: bs, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
     }
-    g.add(blob(Math.floor(rnd() * 6), lod), { x, y: cy + 0.95 * s, z, sx: 1.75 * s, sy: 1.45 * s, sz: 1.75 * s, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
+    leaves(Math.floor(rnd() * 6), { x, y: cy + 0.95 * s, z, sx: 1.75 * s, sy: 1.45 * s, sz: 1.75 * s, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
   } else if (k === 'poplar') {
-    g.cyl(0.13 * s, 0.24 * s, 3.4 * s, lod ? 5 : 7, { x, y, z, color: bark, shade: trunkShade })
+    cyl(0.13 * s, 0.24 * s, 3.4 * s, 7, { x, y, z, color: bark, shade: trunkShade })
     trunk = [0.24 * s, 0.13 * s, 3.4 * s]
     const cy = y + 5.6 * s, center = { x, y: cy, z }
     const shade = foliageShade(cy, 3.4 * s)
     for (let i = 0; i < 4; i++) {
       const bs = (1.3 - Math.abs(i - 1.3) * 0.2) * s
-      g.add(blob(i + Math.floor(rnd() * 3), lod), { x: x + rnd.range(-0.2, 0.2) * s, y: y + (3.0 + i * 1.6) * s, z: z + rnd.range(-0.2, 0.2) * s, sx: bs, sy: bs * 1.45, sz: bs, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.7 })
+      leaves(i + Math.floor(rnd() * 3), { x: x + rnd.range(-0.2, 0.2) * s, y: y + (3.0 + i * 1.6) * s, z: z + rnd.range(-0.2, 0.2) * s, sx: bs, sy: bs * 1.45, sz: bs, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.7 })
     }
   } else if (k === 'small') {
-    g.cyl(0.09 * s, 0.15 * s, 1.9 * s, lod ? 5 : 6, { x, y, z, color: bark, shade: trunkShade })
+    cyl(0.09 * s, 0.15 * s, 1.9 * s, 6, { x, y, z, color: bark, shade: trunkShade })
     trunk = [0.15 * s, 0.09 * s, 1.9 * s]
     const cy = y + 2.6 * s, center = { x, y: cy, z }
     const shade = foliageShade(cy, 1.1 * s)
     for (let i = 0; i < 2; i++) {
       const a = i * 3.1 + rnd(), rr = 0.4 * s
-      g.add(blob(Math.floor(rnd() * 6), lod), { x: x + Math.cos(a) * rr, y: cy + rnd.range(-0.2, 0.3) * s, z: z + Math.sin(a) * rr, sx: 1.1 * s, sy: 0.95 * s, sz: 1.1 * s, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
+      leaves(Math.floor(rnd() * 6), { x: x + Math.cos(a) * rr, y: cy + rnd.range(-0.2, 0.3) * s, z: z + Math.sin(a) * rr, sx: 1.1 * s, sy: 0.95 * s, sz: 1.1 * s, ry: rnd() * 6, color: leaf(), shade, bendTo: center, bend: 0.72 })
     }
   } else {
     // spruce: tiers of drooping star skirts, darker toward the trunk and the ground
-    g.cyl(0.12 * s, 0.2 * s, 2.2 * s, lod ? 5 : 7, { x, y, z, color: 0x46342a, shade: trunkShade })
+    cyl(0.12 * s, 0.2 * s, 2.2 * s, 7, { x, y, z, color: 0x46342a, shade: trunkShade })
     const tiers = lod ? 4 : 6, H = 7.6 * s
     const dark = rnd() < 0.5 ? 0x264c2c : 0x2b5431
     for (let i = 0; i < tiers; i++) {
@@ -147,7 +150,9 @@ export function addTreeGeometry(g, x, z, rnd, kind = null, { y = CURB_H, lod = f
       const shade = (p, n) => (0.5 + 0.55 * Math.min(1, (p.y - y) / H)) * (0.84 + 0.22 * Math.max(0, n.y)) * (0.72 + 0.4 * Math.min(1, Math.hypot(p.x - x, p.z - z) / r))
       g.add(skirt(i + Math.floor(rnd() * 4)), { x, y: yy, z, sx: r, sy: h, sz: r, ry: rnd() * 6.3, color: i % 2 ? dark : 0x2e5a34, shade, bendTo: { x, y: yy - h * 0.6, z }, bend: 0.3 })
     }
-    g.cone(0.3 * s, 1.3 * s, 7, { x, y: y + H - 0.6 * s, z, color: 0x315f37, shade: () => 1.05 })
+    // (far off, the tiers read as one dark cone)
+    twin?.cone(2.35 * s, H - 0.2 * s, 7, { x, y: y + 0.9 * s, z, color: dark, shade: (p) => 0.55 + 0.5 * Math.min(1, (p.y - y) / H) })
+    for (const b of [g, twin]) b?.cone(0.3 * s, 1.3 * s, 7, { x, y: y + H - 0.6 * s, z, color: 0x315f37, shade: () => 1.05 })
   }
   // the collider matches the drawn trunk at hip height (a spruce's skirts reach the ground, so
   // it keeps its wider one)
@@ -184,7 +189,7 @@ export class Props {
   // y: the ground under it, for trees on bare ground rather than on a kerbed block
   tree(x, z, kind, y = CURB_H) {
     const g = this.B.vcol(x, z, 'tree')
-    const t = addTreeGeometry(g, x, z, this.rnd, kind, { y })
+    const t = addTreeGeometry(g, x, z, this.rnd, kind, { y, twin: this.B.vcol(x, z, 'tree_lod') })
     this.P.cylinder(x, y + 1.5, z, 1.5, t.r)
   }
 
