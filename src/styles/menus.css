@@ -378,7 +378,7 @@ table.ctl tr:hover td { background: rgba(246, 236, 216, 0.04); }
 }
 @media (max-height: 520px) {
   .mainmenu { grid-template-columns: clamp(300px, 40vw, 420px) 1fr; }
-  .mainmenu .side { padding: 16px 22px 14px; }
+  .mainmenu .side { padding: 22px 22px 14px; } /* (the tilted logo's corner clears the top) */
   .mm-logo { font-size: clamp(30px, 9.4vh, 52px); }
   .mm-tag, .mm-foot .k { display: none; }
   /* the one that matters keeps its own row, the others pair up when they fit, so the note under them stays in sight */

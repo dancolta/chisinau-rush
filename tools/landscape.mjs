@@ -157,7 +157,7 @@ const PAUSE = {
   need: ['.pause .tabs button.on', '.pause .body > *'],
   inside: ['.pause .top h1', '.tabs button.on', '.pause .foot .btn', '.pause .body'],
   apart: [['.pause .foot .btn', '.pause .foot .btn'], ['.pause .top h1', '.tabs'], ['.pause .body', '.pause .foot']],
-  fit: ['.tabs button.on', '.pause .foot .btn', '.pause .body', '.pause .col', '.stat-row', '.setting', '.mission-item'],
+  fit: ['.tabs button.on', '.pause .foot .btn', '.pause .body', '.pause .col:not(.hartie)', '.stat-row', '.setting', '.mission-item'],
   within: [['.tabs button.on', '.tabs']],
 }
 const TABS = ['map', 'missions', 'progress', 'ach', 'char', 'aura', 'controls', 'settings', 'account']
@@ -223,7 +223,8 @@ async function city(page, [w, h], touch) {
   const tag = `${w}×${h}${touch ? ' touch' : ''}`, f = `${w}x${h}`
   await page.setViewportSize({ width: w, height: h })
   const need = touch ? TOUCH_NEED : []
-  // on foot: a long objective with a timer, a tip, two notifications, three reward chips, a prompt, two stars
+  // on foot: a long objective, a tip, two notifications, three reward chips, a prompt (no wanted level:
+  // the police would come and turn it into a talk)
   await ev(page, (OBJ) => {
     const g = window.__game, ui = g.ui
     ui.setObjective(OBJ, { title: 'CAPITOLUL 1 · PROFETUL', sub: 'Taxiul e parcat lângă bloc, pe partea cealaltă.', flash: false })
@@ -234,7 +235,6 @@ async function city(page, [w, h], touch) {
     ui.rewards.push('xp', 80, { why: 'Misiune: Profetul' })
     ui.rewards.push('respect', 5, { k: 'gop', icon: '👊', who: 'gopnici', why: 'ai câștigat bătaia' })
     ui.prompt('Vorbește cu {y}Tanti Galea{/y}')
-    g.police.heat = 20; g.police.level = 2
   }, OBJ)
   await look(page, `${tag} HUD on foot`, { ...HUD, need: [...HUD.need, ...need] }, `${f}-foot`)
   // at the wheel
@@ -244,7 +244,7 @@ async function city(page, [w, h], touch) {
   })
   await sleep(400)
   await look(page, `${tag} HUD at the wheel`, { ...DRIVE, need: [...HUD.need, ...need, '.hud-br'] }, `${f}-drive`)
-  await ev(page, () => { const g = window.__game; g.vehicles.exit(true); g.police.heat = 0; g.police.level = 0; g.ui.tip(null) })
+  await ev(page, () => { const g = window.__game; g.vehicles.exit(true); g.ui.tip(null) })
   // a dialogue with choices that carry chips
   await ev(page, () => {
     window.__dlg = window.__game.ui.dialogue({ name: 'Tanti Galea', role: 'vecina de la etajul trei, care știe tot' },
