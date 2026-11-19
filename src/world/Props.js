@@ -350,7 +350,7 @@ export class Props {
       if (this.w.keepClear(x, z)) return
       this.B.atlas(x, z, geo, mat4(x, CURB_H, z, ry), 'props')
       this.P.cylinder(x, CURB_H + 0.5, z, 0.5, 0.25)
-      this.w.streetProps.push({ type: 'hydrant', x, z })
+      this.w.streetProps.push({ type: 'hydrant', x, z, ry })
     }
     for (const v of V_ROADS) {
       const off = v.w / 2 + 0.6

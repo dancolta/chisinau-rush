@@ -85,7 +85,7 @@ export class Interaction {
       return
     }
     if (best) g.ui.prompt(label)
-    else if (veh) g.ui.prompt(veh.driver && veh.driver !== 'player' ? `Fură mașina (${veh.def.name})` : `Urcă în ${veh.def.name}`)
+    else if (veh) g.ui.prompt(veh.driver && veh.driver !== 'player' ? `Fură ${veh.def.moto ? 'motocicleta' : 'mașina'} (${veh.def.name})` : `Urcă în ${veh.def.name}`)
     else g.ui.prompt(null)
     if (g.input.pressed('interact') && !this.busy && !p.char.ko) {
       const cur = this.current

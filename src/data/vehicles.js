@@ -18,12 +18,12 @@ export const VEHICLES = {
   trolleybus: { name: 'Troleibuz', proc: 'trolleybus', colors: [0xf1f1ec], mass: 11000, maxSpeed: 20, accel: 3.8, grip: 7, steer: 0.4, dims: [1.25, 1.35, 6.0], ride: 0.45, trolley: true, highway: false },
   camioneta: { name: 'Camionetă', kay: 'vehicle-truck-red', body: 'red', colors: ['red', 'cream', 'blue', 'forest', 'maroon', 'steel'], mass: 1900, maxSpeed: 38, accel: 9, grip: 7.2, steer: 0.56, dims: [1.1, 0.78, 2.1], ride: 0.42, lamps: { head: [[-0.72, 0.95, 0.04], [0.72, 0.95, 0.04]], tail: [[-0.8, 1.0, 0.04], [0.8, 1.0, 0.04]] } },
   pickup: { name: 'Pick-up', kay: 'vehicle-truck-purple', body: 'blue', colors: ['blue', 'grey', 'cream', 'maroon', 'teal', 'black'], mass: 1800, maxSpeed: 40, accel: 9.5, grip: 7.3, steer: 0.57, dims: [1.1, 0.78, 2.1], ride: 0.42, lamps: { head: [[-0.72, 0.95, 0.04], [0.72, 0.95, 0.04]], tail: [[-0.8, 1.0, 0.04], [0.8, 1.0, 0.04]] } },
-  furgon: { name: 'Furgon', kay: 'vehicle-truck-yellow', body: 'yellow', colors: ['yellow', 'cream', 'orange', 'sky', 'grey'], mass: 2600, maxSpeed: 35, accel: 7.5, grip: 7, steer: 0.52, dims: [1.1, 0.97, 2.1], ride: 0.42, lamps: { head: [[-0.72, 0.95, 0.04], [0.72, 0.95, 0.04]], tail: [[-0.8, 1.0, 0.04], [0.8, 1.0, 0.04]] } },
-  teren: { name: 'Teren 4x4', kay: 'vehicle-truck-green', body: 'green', colors: ['green', 'forest', 'black', 'taupe', 'orange'], mass: 2200, maxSpeed: 39, accel: 9.5, grip: 7.6, steer: 0.56, dims: [1.1, 0.86, 2.14], ride: 0.42, lamps: { head: [[-0.72, 0.95, 0.04], [0.72, 0.95, 0.04]], tail: [[-0.8, 1.0, 0.04], [0.8, 1.0, 0.04]] } },
+  jeep: { name: 'Jeep 4x4', kay: 'vehicle-truck-yellow', body: 'yellow', colors: ['yellow', 'cream', 'orange', 'sky', 'grey'], mass: 2600, maxSpeed: 35, accel: 7.5, grip: 7, steer: 0.52, dims: [1.1, 0.97, 2.1], ride: 0.42, lamps: { head: [[-0.72, 0.95, 0.04], [0.72, 0.95, 0.04]], tail: [[-0.8, 1.0, 0.04], [0.8, 1.0, 0.04]] } },
+  santier: { name: 'Camionetă de șantier', kay: 'vehicle-truck-green', body: 'green', colors: ['green', 'forest', 'black', 'taupe', 'orange'], mass: 2200, maxSpeed: 39, accel: 9.5, grip: 7.6, steer: 0.56, dims: [1.1, 0.86, 2.14], ride: 0.42, lamps: { head: [[-0.72, 0.95, 0.04], [0.72, 0.95, 0.04]], tail: [[-0.8, 1.0, 0.04], [0.8, 1.0, 0.04]] } },
   moto: { name: 'Motocicletă', kay: 'vehicle-motorcycle', body: 'green', colors: ['green', 'red', 'black', 'blue', 'orange'], mass: 320, maxSpeed: 46, accel: 13.5, grip: 8.6, steer: 0.68, dims: [0.42, 0.55, 1.08], ride: 0.25, moto: true, seat: [0.86, -0.3], lamps: { head: [[0, 1.0, 0.12]], tail: [[0, 0.82, 0.05]] } },
 }
 
-export const TRAFFIC_MIX = ['logan', 'logan', 'logan', 'hatch', 'combi', 'taxi', 'jiguli', 'jiguli', 'logan', 'hatch', 'gwagon', 'rutiera', 'camioneta', 'pickup', 'furgon', 'teren', 'moto']
+export const TRAFFIC_MIX = ['logan', 'logan', 'logan', 'hatch', 'combi', 'taxi', 'jiguli', 'jiguli', 'logan', 'hatch', 'gwagon', 'rutiera', 'camioneta', 'pickup', 'jeep', 'santier', 'moto']
 
 function wheel(g, x, y, z, r = 0.34, w = 0.26) {
   g.cyl(r, r, w, 16, { x, y, z, rz: Math.PI / 2, center: true, color: 0x151518 })

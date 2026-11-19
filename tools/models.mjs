@@ -9,7 +9,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import zlib from 'node:zlib'
 
-const KINDS = ['camioneta', 'pickup', 'furgon', 'teren', 'moto']
+const KINDS = ['camioneta', 'pickup', 'jeep', 'santier', 'moto']
 const MODELS = ['vehicle-truck-red', 'vehicle-truck-green', 'vehicle-truck-purple', 'vehicle-truck-yellow', 'vehicle-motorcycle', 'trash_A', 'trash_B', 'trafficlight_B', 'trafficlight_C', 'firehydrant']
 const ADDED = ['public/assets/kenney']
 const args = process.argv.slice(2)
@@ -146,40 +146,45 @@ check('fire hydrants on the kerbs, solid, clear of doorways and roads', props.hy
 check('trash bags by the dumpsters, knock-over-able', props.trash > 0 && props.trashBodies)
 
 if (shots) {
+  // the HUD and any chat with a passer-by stay out of the pictures
+  await page.setViewportSize({ width: 960, height: 540 })
+  const bare = () => { for (const e of document.querySelectorAll('body *')) if (e.tagName !== 'CANVAS' && !e.querySelector('canvas')) e.style.visibility = 'hidden' }
   // line-ups on the open square: the new kinds between a KayKit Logan and the player
   const line = ['logan', ...KINDS]
-  for (const [n, view] of [['front', { h: 0.55, cam: [4, 5.5, 15], look: [0, 0.8, 0] }], ['side', { h: Math.PI / 2, cam: [0, 2.2, 16], look: [0, 1, 0] }]]) {
-    await ev(async ([line, view]) => {
+  for (const [n, h] of [['front', 0.55], ['rear', Math.PI + 0.55]]) {
+    await ev(async ([line, h, bare]) => {
       const g = window.__game, S = window.__spot, p = g.player
+      new Function(bare)()
       g.vehicles.clearSpot(S.x, S.z, 20)
       window.__line?.forEach((v) => g.vehicles.remove(v))
       window.__line = line.map((k, i) => {
-        const v = g.vehicles.spawn(k, S.x + (i - (line.length - 1) / 2) * 3.6, S.z, view.h, { color: undefined })
+        const v = g.vehicles.spawn(k, S.x + (i - (line.length - 1) / 2) * 3.6, S.z, h)
         if (v.def.moto) v.driver = { eject() {} }
         return v
       })
       p.teleport(S.x + (line.length / 2 + 0.2) * 3.6, g.physics.groundHeight(S.x + 12, S.z, 6), S.z + 1, 0)
       const c = g.camera.position.clone()
-      g.cameraRig.shot({ from: c.clone().set(S.x + view.cam[0], view.cam[1], S.z + view.cam[2]), look: c.clone().set(S.x + view.look[0], view.look[1], S.z + view.look[2]), dur: 1e6 })
+      g.cameraRig.shot({ from: c.clone().set(S.x + 2.5, 6, S.z + 15), look: c.clone().set(S.x + 0.5, 0.4, S.z), dur: 1e6 })
       await window.__frames(20)
-    }, [line, view])
+    }, [line, h, `(${bare})()`])
     await page.screenshot({ path: `${shots}/models_${n}.png` })
   }
   await ev(() => { const g = window.__game; window.__line.forEach((v) => g.vehicles.remove(v)) })
-  // the nearest traffic light as its drivers see it, and the nearest hydrant
+  // the nearest traffic light as its drivers see it, and the nearest hydrant from the road
   for (const n of ['lights', 'hydrant']) {
-    await ev(async (n) => {
+    await ev(async ([n, bare]) => {
       const g = window.__game, S = window.__spot, c = g.camera.position.clone()
+      new Function(bare)()
       const near = (list) => list.reduce((a, b) => ((b.x - S.x) ** 2 + (b.z - S.z) ** 2 < (a.x - S.x) ** 2 + (a.z - S.z) ** 2 ? b : a))
       if (n === 'lights') {
         const h = near(g.world.trafficHeads)
-        g.cameraRig.shot({ from: c.clone().set(h.x + Math.sin(h.ry) * 10, 2.4, h.z + Math.cos(h.ry) * 10), look: c.clone().set(h.x, h.ys[1] - 0.8, h.z), dur: 1e6 })
+        g.cameraRig.shot({ from: c.clone().set(h.x + Math.sin(h.ry) * 7, 3, h.z + Math.cos(h.ry) * 7), look: c.clone().set(h.x, h.ys[1] - 0.6, h.z), dur: 1e6 })
       } else {
-        const h = near(g.world.streetProps.filter((p) => p.type === 'hydrant'))
-        g.cameraRig.shot({ from: c.clone().set(h.x + 3, 1.9, h.z + 4), look: c.clone().set(h.x, 0.6, h.z), dur: 1e6 })
+        const h = near(g.world.streetProps.filter((p) => p.type === 'hydrant')), s = Math.sin(h.ry)
+        g.cameraRig.shot({ from: c.clone().set(h.x + s * 4, 1.8, h.z + 2.5), look: c.clone().set(h.x, 0.6, h.z), dur: 1e6 })
       }
       await window.__frames(20)
-    }, n)
+    }, [n, `(${bare})()`])
     await page.screenshot({ path: `${shots}/props_${n}.png` })
   }
   await ev(() => window.__game.cameraRig.endShot())
