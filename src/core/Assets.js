@@ -13,6 +13,13 @@ const KAY_MODELS = [
   'car_hatchback', 'car_police', 'car_sedan', 'car_stationwagon', 'car_taxi',
 ]
 
+// Kenney Starter Kit Racing vehicles (MIT), moved onto the KayKit atlas by tools/kenney-convert.mjs;
+// authored at 1 unit = 1 m but toy-sized, so each gets its own scale next to the KayKit cars
+export const KENNEY_SCALE = {
+  'vehicle-truck-red': 1.5, 'vehicle-truck-green': 1.5, 'vehicle-truck-purple': 1.5, 'vehicle-truck-yellow': 1.5,
+  'vehicle-motorcycle': 0.9,
+}
+
 const AUDIO = [
   'engine', 'engine-motorcycle', 'skid', 'impact', 'jump', 'land', 'fall', 'walking', 'coin', 'break',
   'ambience', 'toggle', 'placement-a', 'rotate',
@@ -36,7 +43,7 @@ export class Assets {
 
   async load(onProgress = () => {}) {
     let done = 0
-    const total = KAY_MODELS.length + AUDIO.length + 4
+    const total = KAY_MODELS.length + Object.keys(KENNEY_SCALE).length + AUDIO.length + 4
     const tick = (label) => { done++; onProgress(done / total, label) }
 
     const atlas = await this.texLoader.loadAsync(BASE + 'assets/kaykit/citybits_texture.png')
@@ -63,6 +70,11 @@ export class Assets {
       this.kay[name.replace('_withoutBase', '')] = k
       tick('modele 3D')
     }))
+    await Promise.all(Object.entries(KENNEY_SCALE).map(async ([name, s]) => {
+      const g = await this.gltf.loadAsync(BASE + `assets/kenney/${name}.gltf`)
+      this.kay[name] = this.bakeKay(g.scene, name, s)
+      tick('modele 3D')
+    }))
 
     await Promise.all(AUDIO.map(async (name) => {
       try {
@@ -74,12 +86,12 @@ export class Assets {
   }
 
   // Bakes a KayKit scene into metre-scaled geometry. Cars keep their wheels separate.
-  bakeKay(root, name) {
+  bakeKay(root, name, s = KAY) {
     root.updateMatrixWorld(true)
-    const isCar = name.startsWith('car_')
+    const isCar = name.startsWith('car_') || name.startsWith('vehicle-')
     const body = []
     const wheels = []
-    const scale = new THREE.Matrix4().makeScale(KAY, KAY, KAY)
+    const scale = new THREE.Matrix4().makeScale(s, s, s)
     root.traverse((o) => {
       if (!o.isMesh) return
       if (o.material && o.material.map) { o.material.map.dispose() }
@@ -87,9 +99,9 @@ export class Assets {
       if (isCar && /wheel/.test(o.name + (o.parent ? o.parent.name : ''))) {
         // wheel: keep geometry centred at its pivot; remember pivot offset in metres
         const node = /wheel/.test(o.name) ? o : o.parent
-        const pivot = new THREE.Vector3().setFromMatrixPosition(node.matrixWorld).multiplyScalar(KAY)
+        const pivot = new THREE.Vector3().setFromMatrixPosition(node.matrixWorld).multiplyScalar(s)
         const local = new THREE.Matrix4().copy(o.matrixWorld)
-        local.premultiply(new THREE.Matrix4().makeTranslation(-pivot.x / KAY, -pivot.y / KAY, -pivot.z / KAY))
+        local.premultiply(new THREE.Matrix4().makeTranslation(-pivot.x / s, -pivot.y / s, -pivot.z / s))
         g.applyMatrix4(local).applyMatrix4(scale)
         wheels.push({ geometry: g, pivot, name: node.name })
       } else {
@@ -100,7 +112,14 @@ export class Assets {
     const geometry = mergeSimple(body)
     geometry.computeBoundingBox()
     geometry.computeBoundingSphere()
-    return { geometry, wheels, size: geometry.boundingBox.getSize(new THREE.Vector3()) }
+    const k = { geometry, wheels, size: geometry.boundingBox.getSize(new THREE.Vector3()) }
+    if (wheels.length) {
+      // body lift that puts the tyres on the road (the KayKit cars were tuned by eye at 0.336)
+      wheels[0].geometry.computeBoundingBox()
+      k.wheelR = wheels[0].geometry.boundingBox.max.y
+      k.lift = s === KAY ? 0.336 : k.wheelR - wheels[0].pivot.y + 0.03
+    }
+    return k
   }
 
   // dominant saturated colour of a model's vertical faces (for generated rear facades)

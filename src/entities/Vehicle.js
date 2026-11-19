@@ -72,13 +72,22 @@ export class Vehicle {
       }
       const body = new THREE.Mesh(geo, game.materials.atlas(game.assets.textures.atlas))
       body.castShadow = true; body.receiveShadow = true
-      const off = 0.336
+      const off = kay.lift
       body.position.y = off
       group.add(body)
       this.wheelDefs = kay.wheels.map((w) => ({ x: w.pivot.x, y: w.pivot.y + off, z: w.pivot.z, front: w.pivot.z > 0, geo: w.geometry, kay: true }))
+      this.wheelR = kay.wheelR
       const L = kay.size.z / 2
-      head = [[-0.62, 0.62 + off * 0.2, L - 0.02], [0.62, 0.62 + off * 0.2, L - 0.02]]
-      tail = [[-0.7, 0.66 + off * 0.2, -L + 0.02], [0.7, 0.66 + off * 0.2, -L + 0.02]]
+      if (d.lamps) {
+        // [x, y, inset] measured on the model, from its front and rear faces
+        const bb = kay.geometry.boundingBox
+        head = d.lamps.head.map(([x, y, i]) => [x, y, bb.max.z - i])
+        tail = d.lamps.tail.map(([x, y, i]) => [x, y, bb.min.z + i])
+      } else {
+        head = [[-0.62, 0.62 + off * 0.2, L - 0.02], [0.62, 0.62 + off * 0.2, L - 0.02]]
+        tail = [[-0.7, 0.66 + off * 0.2, -L + 0.02], [0.7, 0.66 + off * 0.2, -L + 0.02]]
+      }
+      if (d.moto) this.addRider(group, d.seat)
       if (d.police) {
         lb.box(0.5, 0.14, 0.26, { x: -0.3, y: 1.82, z: -0.2, color: 0xff2a2a, emit: 0.2 })
         lb.box(0.5, 0.14, 0.26, { x: 0.3, y: 1.82, z: -0.2, color: 0x2a5aff, emit: 0.2 })
@@ -113,6 +122,26 @@ export class Vehicle {
     this.mesh = group
     this.mesh.userData.vehicle = this
     game.scene.add(group)
+  }
+
+  // a bike can't hide its driver behind glass: a rider sits on it while anyone drives it
+  addRider(group, [seatY, seatZ]) {
+    const b = new GeoBuilder()
+    const jacket = 0x2b2f36, jeans = 0x34496a, skin = 0xd9a882, helmet = [0xd8d8d4, 0xb02a2a, 0x1c1c1e][this.id % 3]
+    for (const s of [-1, 1]) {
+      b.box(0.15, 0.15, 0.48, { x: s * 0.17, y: seatY - 0.02, z: seatZ + 0.2, color: jeans })
+      b.box(0.13, 0.5, 0.15, { x: s * 0.2, y: seatY - 0.42, z: seatZ + 0.42, color: jeans })
+      b.box(0.14, 0.09, 0.24, { x: s * 0.2, y: seatY - 0.46, z: seatZ + 0.5, color: 0x1a1a1a })
+      b.box(0.11, 0.11, 0.52, { x: s * 0.25, y: seatY + 0.48, z: seatZ + 0.36, rx: 0.5, center: true, color: jacket })
+      b.box(0.09, 0.09, 0.1, { x: s * 0.25, y: seatY + 0.36, z: seatZ + 0.6, center: true, color: skin })
+    }
+    b.box(0.44, 0.6, 0.26, { y: seatY + 0.3, z: seatZ + 0.06, rx: 0.32, center: true, color: jacket })
+    b.box(0.3, 0.32, 0.34, { y: seatY + 0.76, z: seatZ + 0.2, center: true, color: helmet })
+    b.box(0.24, 0.1, 0.04, { y: seatY + 0.78, z: seatZ + 0.38, center: true, color: 0x101418 })
+    this.rider = new THREE.Mesh(b.build(), this.game.materials.vcol({ roughness: 0.7, key: 'rider' }))
+    this.rider.castShadow = true
+    this.rider.visible = false
+    group.add(this.rider)
   }
 
   // emissive per light group (headlights / taillights / police bar)
@@ -263,7 +292,9 @@ export class Vehicle {
     const acc = (this.speed - (this.lastSpeed ?? this.speed)) / Math.max(dt, 1e-3)
     this.lastSpeed = this.speed
     const tp = THREE.MathUtils.clamp(-acc * 0.004, -0.06, 0.06)
-    const tr = THREE.MathUtils.clamp(this.steerVis * this.speed * 0.006 + this.lateral * 0.012, -0.08, 0.08)
+    // cars roll out of a turn, a bike leans into it
+    const tr = this.def.moto ? THREE.MathUtils.clamp(-this.steerVis * this.speed * 0.03, -0.35, 0.35)
+      : THREE.MathUtils.clamp(this.steerVis * this.speed * 0.006 + this.lateral * 0.012, -0.08, 0.08)
     this.pitch += (tp - this.pitch) * (1 - Math.exp(-6 * dt))
     this.roll += (tr - this.roll) * (1 - Math.exp(-6 * dt))
     this.bump *= Math.exp(-8 * dt)
@@ -273,12 +304,14 @@ export class Vehicle {
     if (this.pose) { _e.x += this.pose.pitch || 0; _e.z += this.pose.roll || 0; m.position.y += this.pose.dy || 0 }
     m.quaternion.setFromEuler(_e)
     // wheels
-    const r0 = this.def.kay ? 0.34 : 0.35
-    this.spin += (this.speed * dt) / r0
+    this.spin += (this.speed * dt) / (this.wheelR || 0.35)
+    // the bike's fork is part of its body, so its front wheel stays in line with it
+    const lock = this.def.moto ? 0 : 1.1
     for (let i = 0; i < this.wheels.length; i++) {
       const w = this.wheels[i], def = this.wheelDefs[i]
-      w.rotation.set(this.spin, def.front ? this.steerVis * 1.1 : 0, 0)
+      w.rotation.set(this.spin, def.front ? this.steerVis * lock : 0, 0)
     }
+    if (this.rider) this.rider.visible = !!this.driver && !this.broken
     // lights
     const night = SHARED.uNight.value > 0.35
     const headOn = night || this.lights ? 1 : 0.0

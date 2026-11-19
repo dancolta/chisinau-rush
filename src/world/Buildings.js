@@ -300,7 +300,12 @@ export class Buildings {
     }
     // dumpster corner
     const dx = r.x1 - 3, dz = r.z0 + 2
-    if (!inKeep(dx - 1.5, dz - 1.5, dx + 1.5, dz + 1.5)) this.w.dynamicProps.push({ type: 'dumpster', x: dx, z: dz, ry: 0 })
+    if (!inKeep(dx - 1.5, dz - 1.5, dx + 1.5, dz + 1.5)) {
+      this.w.dynamicProps.push({ type: 'dumpster', x: dx, z: dz, ry: 0 })
+      // the bags that didn't make it in (KayKit trash, CC0); a hash, so the block's dice stay as they were
+      const h = Math.abs(Math.sin(dx * 12.9898 + dz * 78.233) * 43758.5453) % 1
+      if (h < 0.75 && !inKeep(dx - 1.5, dz + 1, dx + 1.5, dz + 2.6)) this.w.dynamicProps.push({ type: h < 0.4 ? 'trash_A' : 'trash_B', x: dx - 0.6 + h, z: dz + 1.8, ry: h * 6.28 })
+    }
   }
 
   garageRow(x0, z, n, ry, rnd) {

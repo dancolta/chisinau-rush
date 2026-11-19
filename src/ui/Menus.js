@@ -63,7 +63,7 @@ export class Menus {
         <div class="mm-save"></div>
         <div class="mm-cloud"></div>
       </div>
-      <div class="mm-stage"><div class="mm-daily"></div><div class="mm-foot"><div class="k">W/S mers · A/D rotire · Shift sprint · E acțiune · Click/J lovește · Space sari / frână · Q armă · V cameră · M hartă · Esc pauză</div><div class="cr">Asset-uri CC0: KayKit (Kay Lousberg), Kenney. Satiră. Orice asemănare cu primari reali e… lucrăm la asta.</div></div></div>`)
+      <div class="mm-stage"><div class="mm-daily"></div><div class="mm-foot"><div class="k">W/S mers · A/D rotire · Shift sprint · E acțiune · Click/J lovește · Space sari / frână · Q armă · V cameră · M hartă · Esc pauză</div><div class="cr">Asset-uri: KayKit (Kay Lousberg, CC0), Kenney (CC0, MIT). Satiră. Orice asemănare cu primari reali e… lucrăm la asta.</div></div></div>`)
     const btns = m.querySelector('.mm-btns')
     const ico = (name) => `<i class="ico ${name}"></i>`
     const add = (label, cls, fn) => { const b = el('button', 'btn ' + cls, label); b.onclick = () => { g.audio?.resume(); g.audio?.sfx('confirm', { bus: 'ui' }); fn(b) }; b.onmouseenter = () => g.audio?.sfx('hover', { bus: 'ui', vol: 0.4 }); btns.appendChild(b); return b }

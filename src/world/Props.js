@@ -4,6 +4,7 @@ import { roadProfile } from './Ground.js'
 import { mulberry } from './rng.js'
 import { makeGlow } from '../render/Textures.js'
 import { SHARED } from '../render/Materials.js'
+import { CELL } from '../core/Assets.js'
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _e = new THREE.Euler()
 const mat4 = (x, y, z, ry = 0, s = 1) => { _q.setFromEuler(_e.set(0, ry, 0)); return _m.compose(_p.set(x, y, z), _q, _s.set(s, s, s)).clone() }
@@ -170,6 +171,7 @@ export class Props {
     this.streetLamps()
     this.trolleyWires()
     this.trafficLights()
+    this.hydrants()
     this.busStops()
     this.streetPlates()
     this.kiosks()
@@ -287,9 +289,20 @@ export class Props {
     this.w.trolleyLaneZ = laneZ
   }
 
-  // ---- traffic lights on controlled intersections -------------------------
+  // ---- traffic lights on controlled intersections (KayKit, CC0) -----------
   trafficLights() {
     const heads = []
+    // the models face +z with the arm along -x; their painted lenses go dark and the instanced
+    // discs below show the live phase. lens: [x, z, red y, yellow y, green y] in metres on the model
+    const A = this.w.assets, AMBER = [2, 3]
+    const dark = (name, cells) => cells.reduce((g, c) => A.recolor(g, c, CELL.tyre), this.kay[name].geometry)
+    const models = {
+      A: { geo: dark('trafficlight_A', [CELL.red, AMBER, CELL.green]), lens: [-0.21, 0.5, 3.27, 2.95, 2.64] },
+      B: { geo: dark('trafficlight_B', [CELL.red, AMBER, CELL.green]), lens: [-0.21, 0.5, 3.27, 2.95, 2.64] },
+      // the mast arm hangs the lights over the lane; its green cell also paints the street sign
+      C: { geo: dark('trafficlight_C', [CELL.red, AMBER]), lens: [-3.19, 0.4, 4.42, 4.1, 3.78] },
+    }
+    let n = 0
     for (const it of this.w.controlled) {
       const { v, h } = it
       // one pole per approach, on the right-hand far corner as seen by the approaching driver
@@ -300,17 +313,18 @@ export class Props {
         { x: v.x + v.w / 2 + 1.2, z: h.z - h.w / 2 - 1.2, face: '+x', axis: 'ew' }, // westbound
       ]
       for (const c of cfg) {
-        const g = this.B.vcol(c.x, c.z, 'static')
-        g.cyl(0.08, 0.1, 3.4, 8, { x: c.x, y: CURB_H, z: c.z, color: 0x2e3238 })
         const ry = { '+z': 0, '-z': Math.PI, '+x': Math.PI / 2, '-x': -Math.PI / 2 }[c.face]
-        g.box(0.42, 1.25, 0.34, { x: c.x, y: CURB_H + 2.7, z: c.z, ry, color: 0x23262b })
-        const fx = Math.sin(ry) * 0.18, fz = Math.cos(ry) * 0.18
-        heads.push({ x: c.x + fx, z: c.z + fz, y: CURB_H + 2.7, ry, axis: c.axis, it })
+        // mast arms over the wider roads, plain poles on the side streets
+        const m = models[(c.axis === 'ns' ? v.w : h.w) >= 14 ? 'C' : n++ % 2 ? 'B' : 'A']
+        this.B.atlas(c.x, c.z, m.geo, mat4(c.x, CURB_H, c.z, ry), 'props')
+        const [lx, lz, ...ys] = m.lens, cs = Math.cos(ry), sn = Math.sin(ry)
+        heads.push({ x: c.x + lx * cs + lz * sn, z: c.z - lx * sn + lz * cs, y: CURB_H + ys[2], ys: ys.map((y) => CURB_H + y), ry, axis: c.axis, it })
         this.P.cylinder(c.x, CURB_H + 1.7, c.z, 1.7, 0.12)
+        this.w.streetProps.push({ type: 'trafficlight', x: c.x, z: c.z })
       }
     }
     // instanced lamps: red / yellow / green discs; colours updated by the traffic system
-    const disc = new THREE.CircleGeometry(0.13, 12)
+    const disc = new THREE.CircleGeometry(0.14, 12)
     const mk = () => {
       const im = new THREE.InstancedMesh(disc, new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false, fog: true }), heads.length)
       im.frustumCulled = false
@@ -319,15 +333,34 @@ export class Props {
     }
     const lamps = { r: mk(), y: mk(), g: mk() }
     heads.forEach((hd, i) => {
-      ;[['r', 1.08], ['y', 0.72], ['g', 0.36]].forEach(([k, dy]) => {
-        const m = mat4(hd.x, hd.y + dy + 0.08, hd.z, hd.ry)
-        lamps[k].setMatrixAt(i, m)
+      ;['r', 'y', 'g'].forEach((k, j) => {
+        lamps[k].setMatrixAt(i, mat4(hd.x, hd.ys[j], hd.z, hd.ry))
         lamps[k].setColorAt(i, new THREE.Color(0x222222))
       })
     })
     for (const k of ['r', 'y', 'g']) { lamps[k].instanceMatrix.needsUpdate = true; lamps[k].instanceColor.needsUpdate = true }
     this.w.trafficHeads = heads
     this.w.trafficLamps = lamps
+  }
+
+  // ---- fire hydrants (KayKit, CC0) on the kerb of the side streets, halfway between lamps --
+  hydrants() {
+    const geo = this.kay.firehydrant.geometry
+    const put = (x, z, ry) => {
+      if (this.w.keepClear(x, z)) return
+      this.B.atlas(x, z, geo, mat4(x, CURB_H, z, ry), 'props')
+      this.P.cylinder(x, CURB_H + 0.5, z, 0.5, 0.25)
+      this.w.streetProps.push({ type: 'hydrant', x, z })
+    }
+    for (const v of V_ROADS) {
+      const off = v.w / 2 + 0.6
+      for (let i = 0; i < H_ROADS.length - 1; i++) {
+        // the lamps stand every 34 m from a on the west kerb and from a + 17 on the east one
+        const a = H_ROADS[i].z + H_ROADS[i].w / 2 + 9, b = H_ROADS[i + 1].z - H_ROADS[i + 1].w / 2 - 9
+        if (v.id !== 'VW' && a + 51 < b) put(v.x - off, a + 51, Math.PI / 2)
+        if (v.id !== 'VE' && a + 34 < b) put(v.x + off, a + 34, -Math.PI / 2)
+      }
+    }
   }
 
   // ---- bus / trolleybus shelters -----------------------------------------
