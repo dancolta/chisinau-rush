@@ -147,9 +147,10 @@ export function addTreeGeometry(g, x, z, rnd, kind = null, { y = CURB_H, lod = f
       const h = (1.75 - t * 0.55) * s
       const yy = y + (1.25 + t * (H - 2.6 * s) / s) * s
       const shade = (p, n) => (0.5 + 0.55 * Math.min(1, (p.y - y) / H)) * (0.84 + 0.22 * Math.max(0, n.y)) * (0.72 + 0.4 * Math.min(1, Math.hypot(p.x - x, p.z - z) / r))
-      const sk = skirt(i + Math.floor(rnd() * 4)), o = { x, y: yy, z, sx: r, sy: h, sz: r, ry: rnd() * 6.3, color: i % 2 ? dark : 0x2e5a34, shade, bendTo: { x, y: yy - h * 0.6, z }, bend: 0.3 }
-      g.add(sk, o); twin?.add(sk, o)
+      g.add(skirt(i + Math.floor(rnd() * 4)), { x, y: yy, z, sx: r, sy: h, sz: r, ry: rnd() * 6.3, color: i % 2 ? dark : 0x2e5a34, shade, bendTo: { x, y: yy - h * 0.6, z }, bend: 0.3 })
     }
+    // (far off, the tiers read as one dark cone)
+    twin?.cone(2.35 * s, H - 0.2 * s, 7, { x, y: y + 0.9 * s, z, color: dark, shade: (p) => 0.55 + 0.5 * Math.min(1, (p.y - y) / H) })
     for (const b of [g, twin]) b?.cone(0.3 * s, 1.3 * s, 7, { x, y: y + H - 0.6 * s, z, color: 0x315f37, shade: () => 1.05 })
   }
   // the collider matches the drawn trunk at hip height (a spruce's skirts reach the ground, so

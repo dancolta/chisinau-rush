@@ -1,9 +1,9 @@
 // Out in the fog the cheaper presets stop drawing what nobody can make out: a batch of city trees
-// swaps to its low-poly twin, then trees, street furniture and the small static stuff go. A batch
+// swaps to its low-poly twin, then trees, street furniture, low trim and small static stuff go. A batch
 // that stands tall stays (its silhouette is the skyline) and so does the ground, so nothing leaves a
 // hole. The presets' `lod` (Renderer.js) holds the distances, from the camera to a batch's bounds:
-// { twin, tree, static, props, tall }; without one, everything is drawn as built.
-const KINDS = { 'vcol:tree': 'tree', 'vcol:static': 'static', 'atlas:props': 'props' }
+// { twin, tree, static, props, bld, tall }; without one, everything is drawn as built.
+const KINDS = { 'vcol:tree': 'tree', 'vcol:static': 'static', 'atlas:props': 'props', 'vcol:bld': 'bld' }
 
 export class DistanceLod {
   constructor(meshes) {
