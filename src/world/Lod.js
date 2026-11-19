@@ -4,7 +4,11 @@
 // hole. The presets' `lod` (Renderer.js) holds the distances, from the camera to a batch's bounding
 // box: { twin, tree, static, props, bld, tall }, and `clutter` for the knockable props
 // (DynamicProps.cull); without one, everything is drawn as built.
-const KINDS = { 'vcol:tree': 'tree', 'vcol:static': 'static', 'atlas:props': 'props', 'vcol:bld': 'bld' }
+// (what stands past the edge of the map too; the horizon's own batch is tall, so it always stays)
+const KINDS = {
+  'vcol:tree': 'tree', 'vcol:static': 'static', 'atlas:props': 'props', 'vcol:bld': 'bld',
+  'vcol:tree_far': 'tree', 'vcol:static_far': 'static', 'atlas:props_far': 'props',
+}
 
 export class DistanceLod {
   constructor(meshes, clutter = null) {
