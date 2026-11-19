@@ -95,6 +95,14 @@
 /* ---- world-space: bubbles, pow, markers ---- */
 .bubble { position: absolute; transform: translate(-50%, -100%); background: #fff8ea; color: #1b1510; font-size: 13px; font-weight: 500; padding: 6px 10px; border-radius: 12px; max-width: 220px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.35); animation: bubblein 0.25s cubic-bezier(.3,1.6,.6,1); white-space: normal; line-height: 1.25; }
 .bubble:after { content: ''; position: absolute; left: 50%; bottom: -7px; margin-left: -7px; border: 7px solid transparent; border-bottom: 0; border-top-color: #fff8ea; }
+/* a bubble lifted above another one no longer points at a head */
+.bubble.lifted:after { display: none; }
+/* a story line is in the subtitle: over the speaker only the dots that say who's talking */
+.bubble.dots { display: flex; gap: 4px; align-items: center; padding: 7px 10px; }
+.bubble.dots i { width: 6px; height: 6px; border-radius: 50%; background: #1b1510; opacity: 0.3; animation: talkdot 1.1s infinite; }
+.bubble.dots i:nth-child(2) { animation-delay: 0.18s; }
+.bubble.dots i:nth-child(3) { animation-delay: 0.36s; }
+@keyframes talkdot { 0%, 60%, 100% { opacity: 0.3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-2px); } }
 @keyframes bubblein { from { transform: translate(-50%, -80%) scale(0.5); opacity: 0; } }
 .pow { position: absolute; transform: translate(-50%, -50%); font-family: var(--title); font-size: 34px; color: #ffe14a; -webkit-text-stroke: 2px #3a1400; text-shadow: 0 4px 0 #3a1400; animation: pow 0.7s ease-out forwards; }
 @keyframes pow { 0% { transform: translate(-50%, -50%) scale(0.3) rotate(-12deg); opacity: 0; } 20% { transform: translate(-50%, -60%) scale(1.25) rotate(4deg); opacity: 1; } 100% { transform: translate(-50%, -110%) scale(1) rotate(0); opacity: 0; } }

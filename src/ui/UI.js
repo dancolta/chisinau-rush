@@ -382,14 +382,19 @@ export class UI {
     return { x: (_v.x * 0.5 + 0.5) * window.innerWidth, y: (-_v.y * 0.5 + 0.5) * window.innerHeight, behind: false }
   }
 
-  bubble(npc, text, dur = 2.6) {
+  // dots: the words are in the subtitle (a story line), so over the speaker only "talking…"
+  bubble(npc, text, dur = 2.6, { dots = false } = {}) {
     // a bark pulled from a list goes straight here: [[his|hers]] follows the hero
     text = text == null ? '' : fill(this.game, text)
     let b = this.bubbles.get(npc)
     if (!b) { b = { el: el('div', 'bubble') }; this.world.appendChild(b.el); this.bubbles.set(npc, b) }
-    b.el.textContent = text
+    b.el.className = dots ? 'bubble dots' : 'bubble'
+    if (dots) b.el.innerHTML = '<i></i><i></i><i></i>'
+    else b.el.textContent = text
     b.el.style.animation = 'none'; void b.el.offsetWidth; b.el.style.animation = ''
-    b.until = performance.now() + dur * 1000
+    b.w = 0
+    b.t0 = performance.now()
+    b.until = b.t0 + dur * 1000
     if (npc.voice && this.game.audio) { if (b.stop) b.stop(); b.stop = this.game.audio.voiceStart(npc.voice, text) }
   }
 
@@ -677,13 +682,33 @@ export class UI {
 
   updateWorldElements() {
     const now = performance.now()
+    // speech bubbles never cover each other or the subtitle: the newest keeps its place over the head,
+    // an older one that would sit on it climbs above it, and one with no room left waits
+    const live = []
     for (const [npc, b] of this.bubbles) {
       if (now > b.until || !npc.char || !npc.char.visible) { b.el.remove(); this.bubbles.delete(npc); continue }
       const m = npc.char.mesh.position
       const s = this.project(m.x, m.y + 2.35, m.z)
       if (!s) { b.el.style.display = 'none'; continue }
       b.el.style.display = ''
-      b.el.style.left = s.x + 'px'; b.el.style.top = s.y + 'px'
+      live.push({ b, x: s.x, y: s.y })
+    }
+    if (live.length) {
+      for (const p of live) if (!p.b.w) { p.b.w = p.b.el.offsetWidth; p.b.h = p.b.el.offsetHeight }
+      const taken = []
+      if (!this.subEl.classList.contains('hidden')) { const r = this.subEl.getBoundingClientRect(); taken.push({ l: r.left, r: r.right, t: r.top - 4, b: r.bottom }) }
+      const hit = (l, r, t, h) => taken.find((o) => l < o.r && r > o.l && t < o.b && t + h > o.t)
+      live.sort((p, q) => q.b.t0 - p.b.t0)
+      for (const { b, x, y } of live) {
+        const l = x - b.w / 2 - 3, r = x + b.w / 2 + 3
+        let t = y - b.h, o
+        for (let k = 0; k < 4 && (o = hit(l, r, t, b.h)); k++) t = o.t - 5 - b.h
+        if (t < 2 || hit(l, r, t, b.h)) { b.el.style.visibility = 'hidden'; continue }
+        b.el.style.visibility = ''
+        b.el.classList.toggle('lifted', t + b.h < y - 1)
+        taken.push({ l, r, t, b: t + b.h })
+        b.el.style.left = x + 'px'; b.el.style.top = t + b.h + 'px'
+      }
     }
     // waypoint marker first (it has priority over tags), with an edge arrow when off-screen
     const placed = []

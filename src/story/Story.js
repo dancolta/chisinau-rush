@@ -20,6 +20,32 @@ export class MissionFail extends Error {
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z)
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
+// a line too long for a subtitle, cut at its sentence ends into pieces of up to ~110 letters that go
+// up one after another (never inside markup, never after "Str." and the like)
+const SUB_MAX = 110
+function subChunks(text) {
+  if (text.length <= SUB_MAX || text.includes('{')) return [text]
+  const parts = []
+  for (const p of text.match(/[^.!?…]+[.!?…]+["„“”»)]*\s*|[^.!?…]+$/g) || [text]) {
+    if (parts.length && /\b(Str|Bd|Sf|nr|dl|dna|Dr|ex)\.\s*$/i.test(parts[parts.length - 1])) parts[parts.length - 1] += p
+    else parts.push(p)
+  }
+  // a sentence that runs on and on is cut at the comma nearest its middle
+  const halve = (p) => {
+    if (p.length <= SUB_MAX * 1.35) return [p]
+    let at = -1
+    for (let i = p.indexOf(', '); i >= 0; i = p.indexOf(', ', i + 1)) if (at < 0 || Math.abs(i - p.length / 2) < Math.abs(at - p.length / 2)) at = i
+    return at < 0 ? [p] : [...halve(p.slice(0, at + 2)), ...halve(p.slice(at + 2))]
+  }
+  const out = []
+  let cur = ''
+  for (const p of parts.flatMap(halve)) {
+    if (cur && (cur + p).trim().length > SUB_MAX) { out.push(cur.trim()); cur = '' }
+    cur += p
+  }
+  if (cur.trim()) out.push(cur.trim())
+  return out
+}
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e }
 const pickOne = (a) => a[Math.floor(Math.random() * a.length)]
 // a trip longer than this (m) can be skipped where a mission allows it ([T] held)
@@ -278,20 +304,31 @@ class MissionContext {
   }
   choose(who, text, choices) { return this.say(who, [text], { choices }) }
 
-  // non-modal line (subtitle + voice blip + bubble), then waits roughly the reading time
+  // non-modal line: the words in the subtitle (a long line in sentence-sized pieces), and over the
+  // speaker only the dots that say who's talking, with the voice blip; then waits the reading time
   async talk(who, text, secs = null) {
     this.check()
     if (this.skipping) return
     text = fill(this.game, text)
     const sp = this.speaker(who)
-    const s = secs ?? clamp(1.4 + text.length * 0.05, 2.2, 6.5)
-    // the line stays up for as long as it lasts in game time (slow frames stretch both alike);
-    // the real-time timeout is only a safety net
-    this.ui.subtitle(sp.name, text, s * 4)
+    const parts = subChunks(text)
+    // each piece gets its own reading time; a caller's timing is shared out by length
+    const times = parts.map((t) => (secs != null ? secs * t.length / text.length : clamp(1.4 + t.length * 0.05, parts.length > 1 ? 1.8 : 2.2, 6.5)))
+    const all = times.reduce((a, b) => a + b, 0)
     const npc = this.npcFor(who)
-    if (npc && npc.char.visible && !npc.riding) npc.say(text, s)
-    else if (sp.voice && this.game.audio) { const stop = this.game.audio.voiceStart(sp.voice, text); setTimeout(() => stop && stop(), Math.min(s, 3) * 1000) }
-    try { await this.wait(s) } finally { if (this.ui.subText === text) this.ui.subtitle(null) }
+    if (npc && npc.char.visible && !npc.riding) this.ui.bubble(npc, text, all, { dots: true })
+    else if (sp.voice && this.game.audio) { const stop = this.game.audio.voiceStart(sp.voice, text); setTimeout(() => stop && stop(), Math.min(all, 3) * 1000) }
+    let shown = null
+    try {
+      for (let i = 0; i < parts.length; i++) {
+        // up for as long as it lasts in game time (slow frames stretch both alike); the real-time
+        // timeout is only a safety net
+        shown = parts[i]
+        this.ui.subtitle(sp.name, shown, times[i] * 4)
+        await this.wait(times[i])
+        if (this.skipping) break
+      }
+    } finally { if (shown && this.ui.subText === shown) this.ui.subtitle(null) }
   }
 
   // a phone call in the middle of a mission (the banter on a long drive): non-modal, you keep
