@@ -99,7 +99,8 @@ export class HighwayTraffic {
     this.night = 0
   }
 
-  // every ordinary road vehicle that has a model: police, trolleybuses and the like stay in town
+  // every ordinary road vehicle that has a model: police, trolleybuses and the like stay in town, and
+  // so does any kind marked `highway: false` (see src/data/vehicles.js)
   buildModels() {
     const A = this.world.assets, M = this.world.materials
     this.models = new Map()
@@ -107,7 +108,7 @@ export class HighwayTraffic {
     const mats = new Map()
     const T = (x, y, z) => new THREE.Matrix4().makeTranslation(x, y, z)
     for (const [id, d] of Object.entries(VEHICLES)) {
-      if (!d.kay || d.police || d.trolley || d.special) continue
+      if (!d.kay || d.police || d.trolley || d.special || d.highway === false) continue
       const k = A.kay[d.kay]
       if (!k?.geometry) continue
       const from = CELL[d.body]

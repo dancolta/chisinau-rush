@@ -4,7 +4,7 @@ import { GeoBuilder } from '../render/GeoBuilder.js'
 // Vehicle catalogue. KayKit cars (CC0) and Kenney trucks and bike (MIT, moved onto the same atlas)
 // are recoloured through the palette atlas; Chișinău-specific vehicles (trolleybus, rutieră,
 // G-Wagon, Jiguli) are procedural. Scenery traffic may pick any kind here; `highway: false` keeps
-// one off the highway. `lamps` places the lights on a model ([x, y, inset from the front/rear face]).
+// one off the highway (the motorbike: the highway draws no rider). `lamps` places the lights on a model ([x, y, inset from the front/rear face]).
 
 export const VEHICLES = {
   logan: { name: 'Dacia Logan', kay: 'car_sedan', body: 'steel', colors: ['white', 'silver', 'grey', 'steel', 'maroon', 'beige'], mass: 1150, maxSpeed: 42, accel: 10.5, grip: 7.5, steer: 0.62, dims: [0.98, 0.62, 2.2], ride: 0.34, price: 0 },
@@ -20,7 +20,7 @@ export const VEHICLES = {
   pickup: { name: 'Pick-up', kay: 'vehicle-truck-purple', body: 'blue', colors: ['blue', 'grey', 'cream', 'maroon', 'teal', 'black'], mass: 1800, maxSpeed: 40, accel: 9.5, grip: 7.3, steer: 0.57, dims: [1.1, 0.78, 2.1], ride: 0.42, lamps: { head: [[-0.72, 0.95, 0.04], [0.72, 0.95, 0.04]], tail: [[-0.8, 1.0, 0.04], [0.8, 1.0, 0.04]] } },
   jeep: { name: 'Jeep 4x4', kay: 'vehicle-truck-yellow', body: 'yellow', colors: ['yellow', 'cream', 'orange', 'sky', 'grey'], mass: 2600, maxSpeed: 35, accel: 7.5, grip: 7, steer: 0.52, dims: [1.1, 0.97, 2.1], ride: 0.42, lamps: { head: [[-0.72, 0.95, 0.04], [0.72, 0.95, 0.04]], tail: [[-0.8, 1.0, 0.04], [0.8, 1.0, 0.04]] } },
   santier: { name: 'Camionetă de șantier', kay: 'vehicle-truck-green', body: 'green', colors: ['green', 'forest', 'black', 'taupe', 'orange'], mass: 2200, maxSpeed: 39, accel: 9.5, grip: 7.6, steer: 0.56, dims: [1.1, 0.86, 2.14], ride: 0.42, lamps: { head: [[-0.72, 0.95, 0.04], [0.72, 0.95, 0.04]], tail: [[-0.8, 1.0, 0.04], [0.8, 1.0, 0.04]] } },
-  moto: { name: 'Motocicletă', kay: 'vehicle-motorcycle', body: 'green', colors: ['green', 'red', 'black', 'blue', 'orange'], mass: 320, maxSpeed: 46, accel: 13.5, grip: 8.6, steer: 0.68, dims: [0.42, 0.55, 1.08], ride: 0.25, moto: true, seat: [0.86, -0.3], lamps: { head: [[0, 1.0, 0.12]], tail: [[0, 0.82, 0.05]] } },
+  moto: { name: 'Motocicletă', kay: 'vehicle-motorcycle', body: 'green', colors: ['green', 'red', 'black', 'blue', 'orange'], mass: 320, maxSpeed: 46, accel: 13.5, grip: 8.6, steer: 0.68, dims: [0.42, 0.55, 1.08], ride: 0.25, moto: true, highway: false, seat: [0.86, -0.3], lamps: { head: [[0, 1.0, 0.12]], tail: [[0, 0.82, 0.05]] } },
 }
 
 export const TRAFFIC_MIX = ['logan', 'logan', 'logan', 'hatch', 'combi', 'taxi', 'jiguli', 'jiguli', 'logan', 'hatch', 'gwagon', 'rutiera', 'camioneta', 'pickup', 'jeep', 'santier', 'moto']
