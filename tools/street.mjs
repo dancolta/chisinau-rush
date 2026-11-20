@@ -237,12 +237,14 @@ r = await ev(async () => {
   await T.frames(4)
   const lei0 = pr.lei, n0 = T.lines.length
   g.autoChoices = [0]
-  // a seated gopnik looks from 1.1 m up: a parked or passing van in the gap hides you from him (as it
-  // should), so the gap is cleared, and he gets ~2 s to start over (seeing you takes ~0.6 s)
-  g.vehicles.clearSpot(s.x + 3, s.z, 7)
+  // the bench fight before this one leaves the encounter cooldown running (20 s after one ends, the
+  // spot's own 90 s): this check is about strangers, so it starts with them over
+  const H = g.life.hood
+  H.nextEnc = 0
+  H.mem(s).cd = 0
   T.place(s.x + 6, s.z)
   const said = () => T.lines.slice(n0).some((l) => /zece lei|Taxă de drum/.test(l))
-  const started = await T.until(() => g.life.shake || said(), 120)
+  const started = await T.until(() => g.life.shake || said(), 40)
   const asked = await T.until(said, 250)
   await T.until(() => !g.ui.modalOpen, 60)
   await T.frames(3)

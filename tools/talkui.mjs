@@ -23,7 +23,9 @@ const check = (name, ok, info = '') => { console.log(`${ok ? 'PASS' : 'FAIL'}  $
 const ev = (fn, a) => page.evaluate(fn, a)
 const js = (x) => JSON.stringify(x)?.slice(0, 500)
 
-await page.goto(base)
+// turbo: the scene's lines wait in game time, and software GL on a busy machine draws few frames a
+// second; 4x game time per frame plays the whole scene well inside the time limit
+await page.goto(base + '?turbo=4')
 await page.waitForFunction(() => window.__game && window.__game.state === 'menu', null, { timeout: 300000 })
 await ev(async () => {
   const g = window.__game
@@ -78,7 +80,7 @@ const run = ev(async ([LONG, SHORT, BARK]) => {
       done()
     },
   })
-  await Promise.race([finished, new Promise((r) => setTimeout(r, 240000))])
+  await Promise.race([finished, new Promise((r) => setTimeout(r, 600000))])
   on = false
   return frames
 }, [LONG, SHORT, BARK])

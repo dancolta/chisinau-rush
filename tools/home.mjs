@@ -301,8 +301,12 @@ r = await ev(async () => {
     if (!pr.weapons.includes(k)) pr.weapons.push(k)
     pr.weapon = k; p.setWeapon(k)
     const x0 = p.pos.x, z0 = p.pos.z
-    for (let i = 0; i < 6 && target.hp >= 60; i++) { p.attackCD = 0; p.aimYaw = null; p.attack(); const f0 = g.frame; for (let j = 0; j < 40 && g.frame < f0 + 8; j++) await new Promise((r) => setTimeout(r, 80)) }
-    return { hit: target.hp < 60, moved: +Math.hypot(p.pos.x - x0, p.pos.z - z0).toFixed(2) }
+    // a stun is noted while it lasts: it can wear off (1.3 s) before the last swing's frames are up
+    let stunned = false
+    const look = () => { stunned ||= target.stun > 0 || !!target.char.ko }
+    for (let i = 0; i < 6 && target.hp >= 60; i++) { p.attackCD = 0; p.aimYaw = null; p.attack(); const f0 = g.frame; for (let j = 0; j < 40 && g.frame < f0 + 8; j++) { await new Promise((r) => setTimeout(r, 80)); look() } }
+    look()
+    return { hit: target.hp < 60, moved: +Math.hypot(p.pos.x - x0, p.pos.z - z0).toFixed(2), stunned }
   }
   const far = civ(6)
   out.pistol = await swing('pistol', far)
@@ -310,7 +314,7 @@ r = await ev(async () => {
   g.peds.remove(far)
   const pan = civ(1.2)
   out.pan = await swing('tigaie', pan)
-  out.panStun = pan.stun > 0 || pan.char.ko
+  out.panStun = out.pan.stunned
   const a = civ(1.4, -0.7), b = civ(1.4, 0.7)
   out.broom = await swing('matura', a)
   out.broomBoth = a.hp < 60 && b.hp < 60
